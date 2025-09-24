@@ -37,8 +37,7 @@ var _ = Describe("NodeArtifact Controller", func() {
 		ctx := context.Background()
 
 		typeNamespacedName := types.NamespacedName{
-			Name:      resourceName,
-			Namespace: "default", // TODO(user):Modify as needed
+			Name: resourceName,
 		}
 		nodeartifact := &metalk8sv1alpha1.NodeArtifact{}
 
@@ -48,10 +47,20 @@ var _ = Describe("NodeArtifact Controller", func() {
 			if err != nil && errors.IsNotFound(err) {
 				resource := &metalk8sv1alpha1.NodeArtifact{
 					ObjectMeta: metav1.ObjectMeta{
-						Name:      resourceName,
-						Namespace: "default",
+						Name: resourceName,
 					},
 					// TODO(user): Specify other spec details if needed.
+					Spec: metalk8sv1alpha1.NodeArtifactSpec{
+						Name:     "my-new-solution",
+						Version:  "1.2.0",
+						NodeName: "node-1",
+						Validation: metalk8sv1alpha1.ArtifactValidation{
+							Checksum: metalk8sv1alpha1.NodeArtifactChecksum{
+								Type:  "sha256",
+								Value: "123abc",
+							},
+						},
+					},
 				}
 				Expect(k8sClient.Create(ctx, resource)).To(Succeed())
 			}
