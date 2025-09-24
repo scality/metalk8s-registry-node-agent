@@ -20,22 +20,36 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
-// NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
+type NodeArtifactChecksum struct {
+	// Type of digest
+	// +kubebuilder:validation:Enum:=sha256
+	Type string `json:"type"`
+	// Value of the digest
+	Value string `json:"value"`
+}
+
+type ArtifactValidation struct {
+	// Checksum of the Artifact
+	Checksum NodeArtifactChecksum `json:"checksum"`
+}
 
 // NodeArtifactSpec defines the desired state of NodeArtifact.
 type NodeArtifactSpec struct {
-	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
-
-	// Foo is an example field of NodeArtifact. Edit nodeartifact_types.go to remove/update
-	Foo string `json:"foo,omitempty"`
+	// Name of the Artifact
+	Name string `json:"name"`
+	// Version of the Artifact
+	Version string `json:"version"`
+	// Name of the Node
+	NodeName string `json:"nodeName"`
+	// Validation details for the Artifact
+	Validation ArtifactValidation `json:"validation"`
 }
 
 // NodeArtifactStatus defines the observed state of NodeArtifact.
 type NodeArtifactStatus struct {
-	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
+	// Availability of the Artifact on the Node
+	Available  *bool              `json:"available,omitempty"`
+	Conditions []metav1.Condition `json:"conditions,omitempty"`
 }
 
 // +kubebuilder:object:root=true
