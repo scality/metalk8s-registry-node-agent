@@ -1,0 +1,9 @@
+apiVersion: metalk8s.scality.com/v1alpha1
+kind: NodeArtifact
+metadata:
+  labels:
+    app.kubernetes.io/name: metalk8s-registry-node-agent
+    app.kubernetes.io/managed-by: kustomize
+  name: nodeartifact-sample
+spec:
+  # TODO(user): Add fields here
