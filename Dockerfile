@@ -1,19 +1,23 @@
 # Build the manager binary
-FROM golang:1.24 AS builder
+FROM golang:1.25.1-alpine3.22 AS builder
 ARG TARGETOS
 ARG TARGETARCH
 
+RUN apk add --no-cache git
 WORKDIR /workspace
 # Copy the Go Modules manifests
 COPY go.mod go.mod
 COPY go.sum go.sum
 # cache deps before building and copying source so that we don't need to re-download as much
 # and so that source changes don't invalidate our downloaded layer
-RUN go mod download
+RUN --mount=type=secret,id=GIT_AUTH_TOKEN \
+    git config --global url."https://oauth2:$(cat /run/secrets/GIT_AUTH_TOKEN)@github.com/".insteadOf "https://github.com/" && \
+    go mod download
 
 # Copy the go source
-COPY cmd/main.go cmd/main.go
+COPY cmd/ cmd/
 COPY api/ api/
+COPY pkg/ pkg/
 COPY internal/ internal/
 
 # Build

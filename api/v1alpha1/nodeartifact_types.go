@@ -17,7 +17,9 @@ limitations under the License.
 package v1alpha1
 
 import (
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/ptr"
 )
 
 type NodeArtifactChecksum struct {
@@ -83,4 +85,30 @@ type NodeArtifactList struct {
 
 func init() {
 	SchemeBuilder.Register(&NodeArtifact{}, &NodeArtifactList{})
+}
+
+func (na *NodeArtifact) SetAvailable() {
+	condition := metav1.Condition{
+		Type:               "Available",
+		Status:             metav1.ConditionTrue,
+		LastTransitionTime: metav1.Now(),
+		Reason:             "ImagesAvailable",
+		Message:            "The images are available in the registry.",
+		ObservedGeneration: na.Generation,
+	}
+	meta.SetStatusCondition(&na.Status.Conditions, condition)
+	na.Status.Available = ptr.To(true)
+}
+
+func (na *NodeArtifact) SetUnavailable() {
+	condition := metav1.Condition{
+		Type:               "Available",
+		Status:             metav1.ConditionFalse,
+		LastTransitionTime: metav1.Now(),
+		Reason:             "ImagesUnavailable",
+		Message:            "The images are not available in the registry.",
+		ObservedGeneration: na.Generation,
+	}
+	meta.SetStatusCondition(&na.Status.Conditions, condition)
+	na.Status.Available = ptr.To(false)
 }

@@ -17,10 +17,17 @@ limitations under the License.
 package main
 
 import (
+	"context"
 	"crypto/tls"
+	"errors"
 	"flag"
+	"log"
+	"net/http"
 	"os"
+	"os/signal"
 	"path/filepath"
+	"syscall"
+	"time"
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	// to ensure that exec-entrypoint and run can make use of them.
@@ -31,6 +38,8 @@ import (
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/certwatcher"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/metrics/filters"
@@ -38,13 +47,19 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
 	metalk8sv1alpha1 "github.com/scality/metalk8s-registry-node-agent/api/v1alpha1"
+	"github.com/scality/metalk8s-registry-node-agent/cmd/config"
 	"github.com/scality/metalk8s-registry-node-agent/internal/controller"
+	"github.com/scality/metalk8s-registry-node-agent/pkg/infrastructure/di"
 	// +kubebuilder:scaffold:imports
 )
 
 var (
 	scheme   = runtime.NewScheme()
 	setupLog = ctrl.Log.WithName("setup")
+)
+
+const (
+	timeoutDurationInSecond = 5
 )
 
 func init() {
@@ -92,6 +107,28 @@ func main() {
 	flag.Parse()
 
 	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opts)))
+
+	// Initialize channels between Controller Manager and the HTTP server
+	filenameCh := make(chan string)
+	eventCh := make(chan event.GenericEvent)
+
+	// Start API server
+	log.Printf("Starting %s:%s\n", config.ApplicationName, config.ApplicationVersion)
+
+	// Initialize the base context of the application.
+	// 	Every dependency will be able to use this context.
+	ctx, cancel := context.WithTimeout(context.Background(), timeoutDurationInSecond*time.Second)
+	defer cancel()
+
+	// Load configuration from environment variables.
+	cfg, err := config.NewEnvironment(ctx)
+	if err != nil {
+		log.Fatalf("failed to load config: %v", err)
+	}
+	// Initialize the dependency container.
+	container := di.NewContainer(ctx, cfg, filenameCh, config.RootAPIPath)
+
+	logger := container.GetLogger()
 
 	// if the enable-http2 flag is false (the default), http/2 should be disabled
 	// due to its vulnerabilities. More specifically, disabling http/2 will
@@ -207,14 +244,44 @@ func main() {
 	}
 
 	if err := (&controller.NodeArtifactReconciler{
-		Client:   mgr.GetClient(),
-		Scheme:   mgr.GetScheme(),
-		NodeName: nodeName,
+		Client:    mgr.GetClient(),
+		Scheme:    mgr.GetScheme(),
+		NodeName:  nodeName,
+		Container: container,
+		EventChan: eventCh,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "NodeArtifact")
 		os.Exit(1)
 	}
 	// +kubebuilder:scaffold:builder
+
+	// Create a field index for the NodeArtifact object
+	// This will allow us to quickly find the NodeArtifact object by its Name and Version
+	f := func(rawObj client.Object) []string {
+		versionedNamed := rawObj.(*metalk8sv1alpha1.NodeArtifact).Spec.Name + "-" +
+			rawObj.(*metalk8sv1alpha1.NodeArtifact).Spec.Version
+		return []string{versionedNamed}
+	}
+	err = mgr.GetFieldIndexer().IndexField(
+		context.Background(),
+		&metalk8sv1alpha1.NodeArtifact{},
+		"ArtifactNameVersion",
+		f,
+	)
+	if err != nil {
+		setupLog.Error(err, "Failed to create field index for NodeArtifact")
+		os.Exit(1)
+	}
+
+	// Start the goroutine that listens on the channel
+	// This will listen for file events and trigger a reconcile of the NodeArtifact object
+	go controller.ListenForFileEvents(
+		ctx,
+		logger,
+		mgr.GetClient(),
+		filenameCh,
+		eventCh,
+	)
 
 	if metricsCertWatcher != nil {
 		setupLog.Info("Adding metrics certificate watcher to manager")
@@ -241,9 +308,53 @@ func main() {
 		os.Exit(1)
 	}
 
-	setupLog.Info("starting manager")
-	if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {
-		setupLog.Error(err, "problem running manager")
+	// Graceful shutdown handler.
+	sigCh := make(chan os.Signal, 1)
+	signal.Notify(sigCh, os.Interrupt, syscall.SIGTERM)
+
+	// Initialize the HTTP server.
+	// This step will initialize all the application dependencies.
+	httpServer := container.GetHTTPServer()
+
+	go func() {
+		logger.Info().Msg("http server starting")
+
+		// Start the HTTP server.
+		serveErr := httpServer.ListenAndServe()
+		if serveErr != nil {
+			sigCh <- syscall.SIGTERM // Triggers graceful shutdown
+
+			if !errors.Is(serveErr, http.ErrServerClosed) {
+				// Do not fatal here as it would break the shutdown process
+				logger.Error().Err(serveErr).Msg("http server failure during startup")
+			}
+		}
+
+		logger.Info().Msg("http server stopped")
+	}()
+
+	go func() {
+		setupLog.Info("starting manager", "NODE_NAME", nodeName)
+		if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {
+			setupLog.Error(err, "problem running manager")
+			os.Exit(1)
+		}
+	}()
+
+	// Start the watcher for the file system artifact storage
+	if err := container.GetFileSystemArtifactStorage().Start(filenameCh); err != nil {
+		setupLog.Error(err, "problem starting file system artifact storage")
 		os.Exit(1)
 	}
+
+	// Wait for a signal to shut down the server and important services.
+	<-sigCh
+
+	// Stop the watcher for the file system artifact storage
+	if err := container.GetFileSystemArtifactStorage().Stop(); err != nil {
+		setupLog.Error(err, "problem stopping file system artifact storage")
+		os.Exit(1)
+	}
+
+	logger.Info().Msg("service stopped")
 }

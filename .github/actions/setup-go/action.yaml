@@ -1,0 +1,31 @@
+name: 'Setup Private Go Environment'
+description: 'Configures Git, go and GOPRIVATE for company-private Go modules'
+inputs:
+  token:
+    description: 'A PAT token for accessing private repositories'
+    required: true
+
+runs:
+  using: "composite"
+  steps:
+    - name: ⚙️ Configure Git for private modules
+      shell: bash
+      env:
+        TOKEN: ${{ inputs.token }}
+      run: |
+        git config --global url."https://oauth2:${TOKEN}@github.com/scality".insteadOf "https://github.com/scality"
+
+    - name: Set up Go
+      uses: actions/setup-go@v6
+      with:
+        go-version-file: 'go.mod'
+
+    - name: 📦 Set GOPRIVATE
+      shell: bash
+      run: go env -w GOPRIVATE=github.com/scality/*
+
+    - name: Go module download & verify
+      shell: bash
+      run: |
+        go mod download
+        go mod verify
