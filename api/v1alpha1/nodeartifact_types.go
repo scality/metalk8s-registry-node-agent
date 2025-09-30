@@ -22,26 +22,33 @@ import (
 
 type NodeArtifactChecksum struct {
 	// Type of digest
+	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
 	// +kubebuilder:validation:Enum:=sha256
 	Type string `json:"type"`
 	// Value of the digest
+	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
 	Value string `json:"value"`
 }
 
 type ArtifactValidation struct {
 	// Checksum of the Artifact
+	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
 	Checksum NodeArtifactChecksum `json:"checksum"`
 }
 
 // NodeArtifactSpec defines the desired state of NodeArtifact.
 type NodeArtifactSpec struct {
 	// Name of the Artifact
+	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
 	Name string `json:"name"`
 	// Version of the Artifact
+	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
 	Version string `json:"version"`
 	// Name of the Node
+	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
 	NodeName string `json:"nodeName"`
 	// Validation details for the Artifact
+	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
 	Validation ArtifactValidation `json:"validation"`
 }
 

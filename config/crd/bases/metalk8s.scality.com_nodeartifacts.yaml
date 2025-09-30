@@ -42,9 +42,15 @@ spec:
               name:
                 description: Name of the Artifact
                 type: string
+                x-kubernetes-validations:
+                - message: Value is immutable
+                  rule: self == oldSelf
               nodeName:
                 description: Name of the Node
                 type: string
+                x-kubernetes-validations:
+                - message: Value is immutable
+                  rule: self == oldSelf
               validation:
                 description: Validation details for the Artifact
                 properties:
@@ -56,19 +62,34 @@ spec:
                         enum:
                         - sha256
                         type: string
+                        x-kubernetes-validations:
+                        - message: Value is immutable
+                          rule: self == oldSelf
                       value:
                         description: Value of the digest
                         type: string
+                        x-kubernetes-validations:
+                        - message: Value is immutable
+                          rule: self == oldSelf
                     required:
                     - type
                     - value
                     type: object
+                    x-kubernetes-validations:
+                    - message: Value is immutable
+                      rule: self == oldSelf
                 required:
                 - checksum
                 type: object
+                x-kubernetes-validations:
+                - message: Value is immutable
+                  rule: self == oldSelf
               version:
                 description: Version of the Artifact
                 type: string
+                x-kubernetes-validations:
+                - message: Value is immutable
+                  rule: self == oldSelf
             required:
             - name
             - nodeName
