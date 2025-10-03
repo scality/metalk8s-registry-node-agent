@@ -8,7 +8,7 @@ metadata:
   name: system
 ---
 apiVersion: apps/v1
-kind: Deployment
+kind: DaemonSet
 metadata:
   name: controller-manager
   namespace: system
@@ -21,7 +21,6 @@ spec:
     matchLabels:
       control-plane: controller-manager
       app.kubernetes.io/name: metalk8s-registry-node-agent
-  replicas: 1
   template:
     metadata:
       annotations:
@@ -50,6 +49,8 @@ spec:
       #             operator: In
       #             values:
       #               - linux
+      nodeSelector:
+        node-role.kubernetes.io/registry: ""
       securityContext:
         # Projects are configured by default to adhere to the "restricted" Pod Security Standards.
         # This ensures that deployments meet the highest security requirements for Kubernetes.
@@ -61,11 +62,16 @@ spec:
       - command:
         - /manager
         args:
-          - --leader-elect
           - --health-probe-bind-address=:8081
         image: controller:latest
         name: manager
         ports: []
+        env:
+        - name: NODE_NAME
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: spec.nodeName
         securityContext:
           allowPrivilegeEscalation: false
           capabilities:

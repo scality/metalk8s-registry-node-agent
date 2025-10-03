@@ -56,6 +56,10 @@ func init() {
 
 // nolint:gocyclo
 func main() {
+	// Get the node name from the environment variable
+	// to ensure the controller is aware of its node context
+	nodeName := os.Getenv("NODE_NAME")
+
 	var metricsAddr string
 	var metricsCertPath, metricsCertName, metricsCertKey string
 	var webhookCertPath, webhookCertName, webhookCertKey string
@@ -203,8 +207,9 @@ func main() {
 	}
 
 	if err := (&controller.NodeArtifactReconciler{
-		Client: mgr.GetClient(),
-		Scheme: mgr.GetScheme(),
+		Client:   mgr.GetClient(),
+		Scheme:   mgr.GetScheme(),
+		NodeName: nodeName,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "NodeArtifact")
 		os.Exit(1)

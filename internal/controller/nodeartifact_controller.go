@@ -21,8 +21,11 @@ import (
 
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/event"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
 	metalk8sv1alpha1 "github.com/scality/metalk8s-registry-node-agent/api/v1alpha1"
 )
@@ -30,7 +33,8 @@ import (
 // NodeArtifactReconciler reconciles a NodeArtifact object
 type NodeArtifactReconciler struct {
 	client.Client
-	Scheme *runtime.Scheme
+	Scheme   *runtime.Scheme
+	NodeName string
 }
 
 // +kubebuilder:rbac:groups=metalk8s.scality.com,resources=nodeartifacts,verbs=get;list;watch;create;update;patch;delete
@@ -54,10 +58,33 @@ func (r *NodeArtifactReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	return ctrl.Result{}, nil
 }
 
+func getNodeName(o client.Object) string {
+	if obj, ok := o.(*metalk8sv1alpha1.NodeArtifact); ok {
+		return obj.Spec.NodeName
+	}
+	return ""
+}
+
 // SetupWithManager sets up the controller with the Manager.
 func (r *NodeArtifactReconciler) SetupWithManager(mgr ctrl.Manager) error {
+	// Predicate will ensure that NodeArtifact from event is related to the current Node
+	p := predicate.Funcs{
+		CreateFunc: func(e event.CreateEvent) bool {
+			return getNodeName(e.Object) == r.NodeName
+		},
+		UpdateFunc: func(e event.UpdateEvent) bool {
+			return getNodeName(e.ObjectOld) == r.NodeName
+		},
+		GenericFunc: func(e event.GenericEvent) bool {
+			return getNodeName(e.Object) == r.NodeName
+		},
+		DeleteFunc: func(e event.DeleteEvent) bool {
+			return getNodeName(e.Object) == r.NodeName
+		},
+	}
+
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&metalk8sv1alpha1.NodeArtifact{}).
+		For(&metalk8sv1alpha1.NodeArtifact{}, builder.WithPredicates(p)).
 		Named("nodeartifact").
 		Complete(r)
 }
