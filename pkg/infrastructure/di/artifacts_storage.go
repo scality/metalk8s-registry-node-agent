@@ -31,3 +31,24 @@ func (c *Container) GetFileSystemArtifactStorage() service.StorageProvider {
 
 	return c.artifactStorage
 }
+
+func (c *Container) GetMockFileSystemArtifactStorage() service.StorageProvider {
+	if c.artifactStorage == nil {
+		c.artifactStorage = storageprovider.NewMockFileSystem(
+			&storageprovider.MockFileOpts{
+				RootLocation:               c.config.ArtifactStorageRootLocation,
+				InterestContentFilterRegex: artifactStorageNameRegexp,
+				Logger:                     c.GetLogger(),
+			},
+		)
+
+		err := c.artifactStorage.Init()
+		if err != nil {
+			c.GetLogger().Fatal().Err(err).Msg("could not initialize artifacts storage")
+		}
+
+		c.GetLogger().Info().Msg("Artifact storage initialized")
+	}
+
+	return c.artifactStorage
+}
