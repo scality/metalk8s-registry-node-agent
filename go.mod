@@ -3,11 +3,11 @@ module github.com/scality/metalk8s-registry-node-agent
 go 1.25.0
 
 require (
+	github.com/hashicorp/go-version v1.7.0
 	github.com/oapi-codegen/nethttp-middleware v1.1.2
 	github.com/oapi-codegen/runtime v1.1.2
 	github.com/onsi/ginkgo/v2 v2.25.3
 	github.com/onsi/gomega v1.38.2
-	github.com/rs/cors v1.11.1
 	github.com/scality/platform-library v0.0.4
 	k8s.io/apimachinery v0.33.0
 	k8s.io/client-go v0.33.0

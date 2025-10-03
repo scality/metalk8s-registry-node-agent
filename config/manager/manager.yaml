@@ -98,7 +98,14 @@ spec:
           requests:
             cpu: 10m
             memory: 64Mi
-        volumeMounts: []
-      volumes: []
+        volumeMounts:
+        - mountPath: /artifacts
+          name: metalk8s-registry-node-agent-artifacts
+          readOnly: false
+      volumes:
+      - name: metalk8s-registry-node-agent-artifacts
+        hostPath:
+          path: /srv/scality/metalk8s/artifacts
+          type: DirectoryOrCreate
       serviceAccountName: controller-manager
       terminationGracePeriodSeconds: 10

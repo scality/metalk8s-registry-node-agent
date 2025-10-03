@@ -42,6 +42,7 @@ type ArtifactValidation struct {
 type NodeArtifactSpec struct {
 	// Name of the Artifact
 	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
+	// +kubebuilder:validation:Pattern:=`^[a-zA-Z0-9][a-zA-Z0-9_\-\.]{1,98}[a-zA-Z0-9]$`
 	Name string `json:"name"`
 	// Version of the Artifact
 	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"

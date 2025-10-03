@@ -49,6 +49,7 @@ import (
 	metalk8sv1alpha1 "github.com/scality/metalk8s-registry-node-agent/api/v1alpha1"
 	"github.com/scality/metalk8s-registry-node-agent/cmd/config"
 	"github.com/scality/metalk8s-registry-node-agent/internal/controller"
+	webhookv1alpha1 "github.com/scality/metalk8s-registry-node-agent/internal/webhook/v1alpha1"
 	"github.com/scality/metalk8s-registry-node-agent/pkg/infrastructure/di"
 	// +kubebuilder:scaffold:imports
 )
@@ -252,6 +253,13 @@ func main() {
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "NodeArtifact")
 		os.Exit(1)
+	}
+	// nolint:goconst
+	if os.Getenv("ENABLE_WEBHOOKS") != "false" {
+		if err := webhookv1alpha1.SetupNodeArtifactWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "NodeArtifact")
+			os.Exit(1)
+		}
 	}
 	// +kubebuilder:scaffold:builder
 
