@@ -4,18 +4,35 @@
     "config:recommended",
     "abandonments:recommended"
   ],
+  
+  "customEnvVariables": {
+    "GOPRIVATE": "github.com/scality/*"
+  },
 
   "packageRules": [
     {
-      "matchDepNames": ["go"],
-      "matchDepTypes": ["golang"],
-      "rangeStrategy": "bump"
+      "matchDatasources": ["go"],
+      "matchManagers": ["gomod"],
+      "groupName": "golang-dependencies",
+      "postUpdateOptions": ["gomodTidy"],
+      "major": {
+        "automerge": false,
+        "addLabels": ["major-version-golang-dep"],
+        "prBody": "Major Golang dependency update detected.",
+        "prFooter": ""
+      },
+      "minor": {
+        "automerge": false,
+        "addLabels": ["minor-version-golang-dep"],
+        "prBody": "Minor Golang dependency update.",
+        "prFooter": ""
+      },
+      "patch": {
+        "automerge": false,
+        "addLabels": ["patch-version-golang-dep"],
+        "prBody": "Patch Golang dependency update.",
+        "prFooter": ""
+      }
     }
-  ],
-
-  "go": {
-    "privateRegistries": [
-      "github.com/scality"
-    ]
-  }
+  ]
 }
