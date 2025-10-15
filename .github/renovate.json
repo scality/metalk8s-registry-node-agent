@@ -5,7 +5,7 @@
     "abandonments:recommended"
   ],
   
-  "customEnvVariables": {
+  "env": {
     "GOPRIVATE": "github.com/scality/*"
   },
 
