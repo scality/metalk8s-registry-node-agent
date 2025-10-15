@@ -20,12 +20,14 @@ func NewStorage(
 	store service.StorageProvider,
 	logger *zerolog.Logger,
 ) *Storage {
-	l := logger.With().Str("infrastructure", "sessioninitializer").Logger()
+	l := logger.With().Str("infrastructure", "session_initializer").Logger()
 	return &Storage{
 		store:  store,
 		logger: &l,
 	}
 }
+
+var _ service.SessionInitializer = &Storage{}
 
 func (s *Storage) InitializeSession(solutionArchive *domain.SolutionArchive) (*domain.SessionStatus, error) {
 	s.store.Lock()

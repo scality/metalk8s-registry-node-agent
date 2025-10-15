@@ -11,6 +11,11 @@ type (
 		Hash    string `json:"hash"`
 	}
 
+	SolutionArchiveFile struct {
+		File io.ReadCloser `json:"file"`
+		Size int64         `json:"size"`
+	}
+
 	// SessionStatus.
 	SessionStatus struct {
 		Name                      string                 `json:"name"`

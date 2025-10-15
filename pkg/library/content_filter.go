@@ -124,7 +124,7 @@ func ListDirContent(
 	if err != nil {
 		return nil, errors.From(domain.ErrInternal).
 			WithIdentifier(500000).
-			WithDetail("Unexpected error while listing the content.").
+			WithDetail("unexpected error while listing the content").
 			WithProperty("location", location).
 			CausedBy(err).
 			Throw()

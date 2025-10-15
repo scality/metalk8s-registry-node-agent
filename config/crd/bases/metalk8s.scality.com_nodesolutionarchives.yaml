@@ -173,6 +173,10 @@ spec:
                   - type
                   type: object
                 type: array
+              url:
+                description: URL of the SolutionArchive (used internally to replicate
+                  archive between nodes)
+                type: string
             type: object
         type: object
     served: true

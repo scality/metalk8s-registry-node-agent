@@ -1,3 +1,4 @@
+// nolint: dupl // normal to have the usecases very similar
 package usecase
 
 import (

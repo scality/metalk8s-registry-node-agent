@@ -32,7 +32,7 @@ func parseContentRange(
 	if contentRange == "" {
 		err = errors.From(domain.ErrHandlerMissingRequestHeader).
 			WithIdentifier(400002).
-			WithDetail("Content-Range header is missing.").
+			WithDetail("header Content-Range is missing").
 			Throw()
 
 		return start, end, total, err
@@ -43,7 +43,7 @@ func parseContentRange(
 	if len(matched) != expectedContentRangeSubmatches {
 		err = errors.From(domain.ErrHandlerInvalidRequestHeaderFormat).
 			WithIdentifier(400006).
-			WithDetail("Content-Range header is not in the expected format.").
+			WithDetail("header Content-Range is not in the expected format").
 			WithProperty("received_content_range", contentRange).
 			WithProperty("expected_content_range_format", "bytes <start>-<end>/<total>").
 			WithProperty("example_content_range", "bytes 0-19/20").
@@ -86,7 +86,7 @@ func parseContentRange(
 	if len(problems) > 0 {
 		err = errors.From(domain.ErrHandlerInvalidRequestHeaderFormat).
 			WithIdentifier(400006).
-			WithDetail("Content-Range header is not in the expected format.").
+			WithDetail("header Content-Range is not in the expected format").
 			WithProperties(problems).
 			WithProperty("received_content_range", contentRange).
 			WithProperty("expected_content_range_format", "bytes <start>-<end>/<total>").

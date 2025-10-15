@@ -1,3 +1,4 @@
+// nolint: dupl // normal to have the internal and external handlers very similar
 package handler
 
 import (
@@ -66,28 +67,28 @@ func fillPartFromUploadChunkRequestObject(
 	if src.Body == nil {
 		return errors.From(domain.ErrHandlerBadRequest).
 			WithIdentifier(400000).
-			WithDetail("Body is missing.").
+			WithDetail("body is missing").
 			Throw()
 	}
 
 	if src.SolutionArchive == "" {
 		return errors.From(domain.ErrHandlerMissingRequestParameter).
 			WithIdentifier(400003).
-			WithDetail("Parameter 'solution-archive' is missing.").
+			WithDetail("parameter 'solution-archive' is missing").
 			Throw()
 	}
 
 	if src.Params.XSha256Checksum == "" {
 		return errors.From(domain.ErrHandlerMissingRequestHeader).
 			WithIdentifier(400002).
-			WithDetail("Header 'X-Sha256-checksum' is missing.").
+			WithDetail("header 'X-Sha256-checksum' is missing").
 			Throw()
 	}
 
 	if src.Params.XTargetVersion == "" {
 		return errors.From(domain.ErrHandlerMissingRequestHeader).
 			WithIdentifier(400002).
-			WithDetail("Header 'X-Target-Version' is missing.").
+			WithDetail("header 'X-Target-Version' is missing").
 			Throw()
 	}
 

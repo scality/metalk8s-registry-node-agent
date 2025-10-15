@@ -18,6 +18,7 @@ package controller
 
 import (
 	"context"
+	"net/url"
 	"time"
 
 	"k8s.io/apimachinery/pkg/runtime"
@@ -33,9 +34,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
-	"github.com/rs/zerolog"
 	metalk8sv1alpha1 "github.com/scality/metalk8s-registry-node-agent/api/v1alpha1"
 	"github.com/scality/metalk8s-registry-node-agent/pkg/domain"
+	"github.com/scality/metalk8s-registry-node-agent/pkg/library"
 )
 
 const (
@@ -45,10 +46,11 @@ const (
 // NodeSolutionArchiveReconciler reconciles a NodeSolutionArchive object
 type NodeSolutionArchiveReconciler struct {
 	client.Client
-	Scheme    *runtime.Scheme
-	NodeName  string
-	Container containerInterface
-	EventChan chan event.GenericEvent
+	Scheme          *runtime.Scheme
+	NodeName        string
+	DownloadBaseURL string
+	Container       containerInterface
+	EventChan       chan event.GenericEvent
 }
 
 // +kubebuilder:rbac:groups=metalk8s.scality.com,resources=nodesolutionarchives,verbs=get;list;watch;create;update;patch;delete
@@ -66,7 +68,7 @@ type NodeSolutionArchiveReconciler struct {
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.21.0/pkg/reconcile
 func (r *NodeSolutionArchiveReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	log := logf.FromContext(ctx)
-	log.Info("Reconcile NodeSolutionArchive", "NODE_NAME", r.NodeName)
+	log.Info("Reconcile NodeSolutionArchive")
 
 	// 1. Load the NodeSolutionArchive by name
 	nodeSolutionArchive := &metalk8sv1alpha1.NodeSolutionArchive{}
@@ -74,6 +76,7 @@ func (r *NodeSolutionArchiveReconciler) Reconcile(ctx context.Context, req ctrl.
 		// we'll ignore not-found errors, since they can't be fixed by an immediate
 		// requeue (we'll need to wait for a new notification), and we can get them
 		// on deleted requests.
+		log.Error(err, "error getting NodeSolutionArchive")
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
@@ -81,10 +84,12 @@ func (r *NodeSolutionArchiveReconciler) Reconcile(ctx context.Context, req ctrl.
 	//
 	// examine DeletionTimestamp to determine if object is under deletion
 	if nodeSolutionArchive.DeletionTimestamp.IsZero() {
+		log.V(1).Info("instance is not being deleted")
 		// The object is not being deleted, so if it does not have our finalizer,
 		// then lets add the finalizer and update the object. This is equivalent
 		// to registering our finalizer.
 		if !controllerutil.ContainsFinalizer(nodeSolutionArchive, FINALIZER_NAME) {
+			log.V(1).Info("Adding finalizer to NodeSolutionArchive")
 			controllerutil.AddFinalizer(nodeSolutionArchive, FINALIZER_NAME)
 			if err := r.Update(ctx, nodeSolutionArchive); err != nil {
 				log.Error(err, "error adding finalizer")
@@ -93,8 +98,10 @@ func (r *NodeSolutionArchiveReconciler) Reconcile(ctx context.Context, req ctrl.
 		}
 	} else {
 		// The object is being deleted
+		log.V(1).Info("NodeSolutionArchive is being deleted")
 		if controllerutil.ContainsFinalizer(nodeSolutionArchive, FINALIZER_NAME) {
 			// our finalizer is present, so lets handle any external dependency
+			log.V(1).Info("Deleting external resources")
 			if err := r.deleteSolutionArchiveResources(nodeSolutionArchive); err != nil {
 				// if fail to delete the external dependency here, return with error
 				// so that it can be retried.
@@ -103,6 +110,7 @@ func (r *NodeSolutionArchiveReconciler) Reconcile(ctx context.Context, req ctrl.
 			}
 
 			// remove our finalizer from the list and update it.
+			log.V(1).Info("Removing finalizer from NodeSolutionArchive")
 			controllerutil.RemoveFinalizer(nodeSolutionArchive, FINALIZER_NAME)
 			if err := r.Update(ctx, nodeSolutionArchive); err != nil {
 				log.Error(err, "error removing finalizer")
@@ -114,19 +122,62 @@ func (r *NodeSolutionArchiveReconciler) Reconcile(ctx context.Context, req ctrl.
 		return ctrl.Result{}, nil
 	}
 
+	// Retrieve the Status of the NodeSolutionArchive
+	isAvailable := nodeSolutionArchive.Status.Available != nil && *nodeSolutionArchive.Status.Available
+
 	// 3. Initialize the session
 	solutionArchive := &domain.SolutionArchive{
 		Name:    nodeSolutionArchive.Spec.Name,
 		Version: nodeSolutionArchive.Spec.Version,
 		Hash:    nodeSolutionArchive.Spec.Validation.Checksum.Value,
 	}
+	log.V(1).Info("Initializing session, if needed")
 	_, err := r.Container.GetInitializeSessionUseCase().Execute(solutionArchive)
 	if err != nil {
 		log.Error(err, "error initializing session")
 		return ctrl.Result{}, err
 	}
 
-	// 4. Checksum validation of the Solution Archive
+	// 4. Check if an existing solution archive is already available on another node
+	//    in order to download it
+	if !isAvailable {
+		log.V(1).Info("Checking if an existing solution archive is already available on another node")
+		otherSolutionArchiveAvailable := false
+		var urlToDownload string
+		solutionArchiveNameVersion := library.GetSolutionArchiveNameVersion(
+			nodeSolutionArchive.Spec.Name,
+			nodeSolutionArchive.Spec.Version,
+		)
+		nodeSolutionArchiveList := &metalk8sv1alpha1.NodeSolutionArchiveList{}
+		if err := r.List(ctx, nodeSolutionArchiveList, client.MatchingFields{"SolutionArchiveNameVersion": solutionArchiveNameVersion}); err != nil {
+			log.Error(err, "error listing node solution archives")
+		}
+		for _, item := range nodeSolutionArchiveList.Items {
+			if item.Spec.NodeName != nodeSolutionArchive.Spec.NodeName && item.Status.Available != nil && *item.Status.Available {
+				otherSolutionArchiveAvailable = true
+				urlToDownload = item.Status.URL
+				break
+			}
+		}
+		if otherSolutionArchiveAvailable {
+			log.V(1).Info("Getting external solution archive from another node")
+			err := r.Container.GetGetExternalSolutionArchiveUseCase().Execute(&domain.SolutionArchive{
+				Name:    nodeSolutionArchive.Spec.Name,
+				Version: nodeSolutionArchive.Spec.Version,
+			}, urlToDownload)
+			if err != nil {
+				// In some edge case, even if the solution archive is available on another node,
+				// it may not be possible to get it.
+				// Example: the watcher has not yet fully indexed the archive.
+				// In this case, we will retry later.
+				log.Error(err, "error getting external solution archive")
+				return ctrl.Result{RequeueAfter: 30 * time.Second}, nil
+			}
+		}
+	}
+
+	// 5. Checksum validation of the solution archive
+	log.V(1).Info("Checking if the solution archive is valid")
 	isValid, err := r.isValidSolutionArchive(nodeSolutionArchive)
 	if err != nil {
 		log.Error(err, "error validating solution archive")
@@ -134,6 +185,13 @@ func (r *NodeSolutionArchiveReconciler) Reconcile(ctx context.Context, req ctrl.
 	}
 	original := nodeSolutionArchive.DeepCopy()
 	if isValid {
+		log.V(1).Info("solution archive is valid")
+		downloadURL, err := url.JoinPath(r.DownloadBaseURL, nodeSolutionArchive.Spec.Name, nodeSolutionArchive.Spec.Version)
+		if err != nil {
+			log.Error(err, "error building the download URL")
+			return ctrl.Result{}, err
+		}
+		nodeSolutionArchive.Status.URL = downloadURL
 		nodeSolutionArchive.SetAvailable()
 		// Session may persist in case of manual upload of solution archive
 		err = r.Container.GetRemoveSessionUseCase().Execute(solutionArchive)
@@ -142,9 +200,12 @@ func (r *NodeSolutionArchiveReconciler) Reconcile(ctx context.Context, req ctrl.
 			return ctrl.Result{RequeueAfter: 30 * time.Second}, nil
 		}
 	} else {
+		log.V(1).Info("solution archive is not valid")
 		nodeSolutionArchive.SetUnavailable()
+		nodeSolutionArchive.Status.URL = ""
 	}
-	// 5. Update the status of the NodeSolutionArchive
+	// 6. Update the status of the NodeSolutionArchive
+	log.V(1).Info("Updating the status of the NodeSolutionArchive")
 	if err := r.Status().Patch(ctx, nodeSolutionArchive, client.MergeFrom(original)); err != nil {
 		log.Error(err, "unable to patch NodeSolutionArchive status")
 		return ctrl.Result{}, err
@@ -184,10 +245,39 @@ func (r *NodeSolutionArchiveReconciler) isValidSolutionArchive(nodeSolutionArchi
 	return r.Container.GetValidateSolutionArchiveUseCase().Execute(solutionArchive)
 }
 
+// mapNodeSolutionArchiveToAvailableNodeSolutionArchive generate a []reconcile.Request based on a NodeSolutionArchive entry
+// that is not associated to the current Node and that its status is "Available"
+func mapNodeSolutionArchiveToAvailableNodeSolutionArchive(c client.Client) func(ctx context.Context, obj client.Object) []reconcile.Request {
+	return func(ctx context.Context, obj client.Object) []reconcile.Request {
+		var result []reconcile.Request
+
+		nodeSolutionArchive := obj.(*metalk8sv1alpha1.NodeSolutionArchive)
+		if nodeSolutionArchive.Status.Available != nil && *nodeSolutionArchive.Status.Available {
+			solutionArchiveNameVersion := library.GetSolutionArchiveNameVersion(nodeSolutionArchive.Spec.Name, nodeSolutionArchive.Spec.Version)
+			nodeSolutionArchiveList := &metalk8sv1alpha1.NodeSolutionArchiveList{}
+			if err := c.List(ctx, nodeSolutionArchiveList, client.MatchingFields{"LocalSolutionArchiveNameVersion": solutionArchiveNameVersion}); err != nil {
+				return result
+			}
+			if len(nodeSolutionArchiveList.Items) > 0 {
+				item := nodeSolutionArchiveList.Items[0]
+				itemAvailable := item.Status.Available != nil && *item.Status.Available
+				if !itemAvailable {
+					result = append(result, reconcile.Request{
+						NamespacedName: types.NamespacedName{
+							Name: item.Name,
+						},
+					})
+				}
+			}
+		}
+		return result
+	}
+}
+
 // SetupWithManager sets up the controller with the Manager.
 func (r *NodeSolutionArchiveReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	// Predicate will ensure that NodeSolutionArchive from event is related to the current Node
-	p := predicate.Funcs{
+	ensureSameNode := predicate.Funcs{
 		CreateFunc: func(e event.CreateEvent) bool {
 			return getNodeName(e.Object) == r.NodeName
 		},
@@ -202,8 +292,26 @@ func (r *NodeSolutionArchiveReconciler) SetupWithManager(mgr ctrl.Manager) error
 		},
 	}
 
+	ensureOtherNode := predicate.Funcs{
+		CreateFunc: func(e event.CreateEvent) bool {
+			return getNodeName(e.Object) != r.NodeName
+		},
+		UpdateFunc: func(e event.UpdateEvent) bool {
+			return getNodeName(e.ObjectOld) != r.NodeName
+		},
+		GenericFunc: func(e event.GenericEvent) bool {
+			return getNodeName(e.Object) != r.NodeName
+		},
+		DeleteFunc: func(e event.DeleteEvent) bool {
+			return getNodeName(e.Object) != r.NodeName
+		},
+	}
+
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&metalk8sv1alpha1.NodeSolutionArchive{}, builder.WithPredicates(p)).
+		For(&metalk8sv1alpha1.NodeSolutionArchive{}, builder.WithPredicates(ensureSameNode)).
+		Watches(&metalk8sv1alpha1.NodeSolutionArchive{},
+			handler.EnqueueRequestsFromMapFunc(mapNodeSolutionArchiveToAvailableNodeSolutionArchive(r.Client)),
+			builder.WithPredicates(ensureOtherNode)).
 		Named("nodesolutionarchive").
 		WatchesRawSource(
 			source.Channel(
@@ -224,31 +332,4 @@ func (r *NodeSolutionArchiveReconciler) SetupWithManager(mgr ctrl.Manager) error
 			),
 		).
 		Complete(r)
-}
-
-// ListenForFileEvents runs in a goroutine, processing filenames from a channel
-func ListenForFileEvents(ctx context.Context, logger *zerolog.Logger, c client.Client, filenameChan <-chan string, eventChan chan event.GenericEvent) {
-	// Loop forever, reading from the channel
-	for filename := range filenameChan {
-
-		// Find the Custom Resource that matches the parsed data
-		naList := &metalk8sv1alpha1.NodeSolutionArchiveList{}
-		if err := c.List(ctx, naList, client.MatchingFields{"SolutionArchiveNameVersion": filename[:len(filename)-4]}); err != nil {
-			logger.Error().Err(err).Msg("Failed to list custom resources")
-			continue
-		}
-
-		var foundCR *metalk8sv1alpha1.NodeSolutionArchive
-		for _, item := range naList.Items {
-			foundCR = &item
-			break
-		}
-
-		if foundCR != nil {
-			logger.Info().Msgf("Found matching Custom Resource: %s, queueing for reconcile", foundCR.Name)
-			eventChan <- event.GenericEvent{
-				Object: foundCR,
-			}
-		}
-	}
 }

@@ -33,7 +33,7 @@ func EnforceNamingConventions(
 	if !namingRegexp.MatchString(objectName) {
 		return errors.From(domain.ErrBusinessRuleViolation).
 			WithIdentifier(422001).
-			WithDetail("Object name does not match the naming regex.").
+			WithDetail("object name does not match the naming regex").
 			WithProperty("object_name", objectName).
 			WithProperty("naming_regex", namingRegexp.String()).
 			Throw()
@@ -45,7 +45,7 @@ func EnforceNamingConventions(
 		if strings.Contains(objectName, forbidden) {
 			return errors.From(domain.ErrBusinessRuleViolation).
 				WithIdentifier(422001).
-				WithDetail("Object name contains a forbidden particle.").
+				WithDetail("object name contains a forbidden particle").
 				WithProperty("object_name", objectName).
 				WithProperty("forbidden_particle", forbidden).
 				Throw()
@@ -61,7 +61,7 @@ func EnforceNamingConventions(
 		if strings.Contains(objectName, reserved) {
 			return errors.From(domain.ErrBusinessRuleViolation).
 				WithIdentifier(422001).
-				WithDetail("Object name contains a reserved word.").
+				WithDetail("object name contains a reserved word").
 				WithProperty("object_name", objectName).
 				WithProperty("reserved_word", reserved).
 				Throw()
@@ -86,7 +86,7 @@ func CheckDir(
 	if os.IsNotExist(err) {
 		return errors.From(domain.ErrNotFound).
 			WithIdentifier(404000).
-			WithDetail("Directory not found.").
+			WithDetail("directory not found").
 			WithProperty("dir_path", dirPath).
 			Throw()
 	}
@@ -94,7 +94,7 @@ func CheckDir(
 	if err != nil {
 		return errors.From(domain.ErrInternal).
 			WithIdentifier(500000).
-			WithDetail("Unexpected error while checking the directory.").
+			WithDetail("unexpected error while checking the directory").
 			WithProperty("dir_path", dirPath).
 			CausedBy(err).
 			Throw()
@@ -103,7 +103,7 @@ func CheckDir(
 	if !stat.IsDir() {
 		return errors.From(domain.ErrConflict).
 			WithIdentifier(409000).
-			WithDetail("The directory is a file").
+			WithDetail("the directory is a file").
 			WithProperty("dir_path", dirPath).
 			Throw()
 	}
@@ -120,7 +120,7 @@ func CheckFile(
 	if os.IsNotExist(err) {
 		return errors.From(domain.ErrNotFound).
 			WithIdentifier(404000).
-			WithDetail("FileSystem not found.").
+			WithDetail("file system not found").
 			WithProperty("file_path", filePath).
 			Throw()
 	}
@@ -128,7 +128,7 @@ func CheckFile(
 	if err != nil {
 		return errors.From(domain.ErrInternal).
 			WithIdentifier(500000).
-			WithDetail("Unexpected error while checking the file.").
+			WithDetail("unexpected error while checking the file").
 			WithProperty("file_path", filePath).
 			CausedBy(err).
 			Throw()
@@ -137,7 +137,7 @@ func CheckFile(
 	if stat.IsDir() {
 		return errors.From(domain.ErrConflict).
 			WithIdentifier(409000).
-			WithDetail("The file is a directory.").
+			WithDetail("the file is a directory").
 			WithProperty("file_path", filePath).
 			Throw()
 	}
@@ -155,7 +155,7 @@ func SaveFile(
 	if err != nil {
 		return errors.From(domain.ErrInternal).
 			WithIdentifier(500000).
-			WithDetail("Unable to save file.").
+			WithDetail("unable to save file").
 			WithProperty("file_path", filePath).
 			WithProperty("while", "opening the file").
 			CausedBy(err).
@@ -168,7 +168,7 @@ func SaveFile(
 	if err != nil {
 		return errors.From(domain.ErrInternal).
 			WithIdentifier(500000).
-			WithDetail("Unable to save file.").
+			WithDetail("unable to save file").
 			WithProperty("file_path", filePath).
 			WithProperty("while", "writing the file").
 			CausedBy(err).
@@ -192,7 +192,7 @@ func CreateEmptyFile(
 	if err != nil {
 		return errors.From(domain.ErrInternal).
 			WithIdentifier(500000).
-			WithDetail("Unable to save file.").
+			WithDetail("unable to save file").
 			WithProperty("file_path", filePath).
 			WithProperty("while", "opening the file").
 			CausedBy(err).
@@ -204,7 +204,7 @@ func CreateEmptyFile(
 	if err := file.Truncate(size); err != nil {
 		return errors.From(domain.ErrInternal).
 			WithIdentifier(500000).
-			WithDetail("Unable to truncate file.").
+			WithDetail("unable to truncate file").
 			WithProperty("file_path", filePath).
 			WithProperty("size", size).
 			WithProperty("while", "truncating the file").
@@ -223,7 +223,7 @@ func GetFile(
 	if err != nil {
 		return nil, errors.From(domain.ErrNotFound).
 			WithIdentifier(404000).
-			WithDetail("File not found.").
+			WithDetail("file not found").
 			WithProperty("file_path", filePath).
 			CausedBy(err).
 			Throw()
@@ -233,7 +233,7 @@ func GetFile(
 	if err != nil {
 		return nil, errors.From(domain.ErrInternal).
 			WithIdentifier(500000).
-			WithDetail("Unexpected error while opening the file.").
+			WithDetail("unexpected error while opening the file").
 			WithProperty("file_path", filePath).
 			CausedBy(err).
 			Throw()
@@ -250,7 +250,7 @@ func DeleteFile(
 	if err != nil {
 		return errors.From(domain.ErrInternal).
 			WithIdentifier(500000).
-			WithDetail("Unexpected error while deleting the file.").
+			WithDetail("unexpected error while deleting the file").
 			WithProperty("file_path", filePath).
 			CausedBy(err).
 			Throw()
@@ -282,7 +282,7 @@ func HashReader(
 	if _, err := io.Copy(hasher, reader); err != nil {
 		return "", errors.From(domain.ErrInternal).
 			WithIdentifier(500000).
-			WithDetail("Unexpected error while hashing the reader.").
+			WithDetail("unexpected error while hashing the reader").
 			CausedBy(err).
 			Throw()
 	}
@@ -334,16 +334,20 @@ func ExtractSessionBucket(buckets []string, solutionArchive *domain.SolutionArch
 	if len(sessionBuckets) < 1 {
 		return "", errors.From(domain.ErrNotFound).
 			WithIdentifier(404000).
-			WithDetail("No session bucket found.").
+			WithDetail("no session bucket found").
 			Throw()
 	} else if len(sessionBuckets) > 1 {
 		return "", errors.From(domain.ErrInternal).
 			WithIdentifier(500000).
-			WithDetail("Multiple session buckets found.").
+			WithDetail("multiple session buckets found").
 			Throw()
 	}
 
 	return sessionBuckets[0], nil
+}
+
+func GetSolutionArchiveNameVersion(name, version string) string {
+	return fmt.Sprintf("%s-%s", name, version)
 }
 
 /*
@@ -382,7 +386,7 @@ func CompareSolutionArchiveMetas(
 	if len(problems) > 0 {
 		return errors.From(domain.ErrConflict).
 			WithIdentifier(409000).
-			WithDetail("Solution Archive metas do not match.").
+			WithDetail("solution archive metas do not match").
 			WithProperty("problems", problems).
 			Throw()
 	}

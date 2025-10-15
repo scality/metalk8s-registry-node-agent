@@ -21,6 +21,7 @@ import (
 	"crypto/tls"
 	"errors"
 	"flag"
+	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -33,6 +34,7 @@ import (
 	// to ensure that exec-entrypoint and run can make use of them.
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 
+	"go.uber.org/zap/zapcore"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
@@ -51,6 +53,7 @@ import (
 	"github.com/scality/metalk8s-registry-node-agent/internal/controller"
 	webhookv1alpha1 "github.com/scality/metalk8s-registry-node-agent/internal/webhook/v1alpha1"
 	"github.com/scality/metalk8s-registry-node-agent/pkg/infrastructure/di"
+	"github.com/scality/metalk8s-registry-node-agent/pkg/library"
 	// +kubebuilder:scaffold:imports
 )
 
@@ -61,6 +64,7 @@ var (
 
 const (
 	timeoutDurationInSecond = 5
+	downloadBaseURLFormat   = "http://%s:%s%s/downloads/"
 )
 
 func init() {
@@ -75,6 +79,10 @@ func main() {
 	// Get the node name from the environment variable
 	// to ensure the controller is aware of its node context
 	nodeName := os.Getenv("NODE_NAME")
+
+	// Get the node IP from the environment variable
+	// to expose the download API URL
+	nodeIP := os.Getenv("NODE_IP")
 
 	var metricsAddr string
 	var metricsCertPath, metricsCertName, metricsCertKey string
@@ -107,7 +115,10 @@ func main() {
 	opts.BindFlags(flag.CommandLine)
 	flag.Parse()
 
-	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opts)))
+	ctrl.SetLogger(zap.New(
+		zap.UseFlagOptions(&opts),
+		zap.StacktraceLevel(zapcore.PanicLevel),
+	))
 
 	// Initialize channels between Controller Manager and the HTTP server
 	filenameCh := make(chan string)
@@ -127,7 +138,7 @@ func main() {
 		log.Fatalf("failed to load config: %v", err)
 	}
 	// Initialize the dependency container.
-	container := di.NewContainer(ctx, cfg, filenameCh, config.RootExternAPIPath)
+	container := di.NewContainer(ctx, cfg, filenameCh)
 
 	logger := container.GetLogger()
 
@@ -244,12 +255,14 @@ func main() {
 		os.Exit(1)
 	}
 
+	downloadBaseURL := fmt.Sprintf(downloadBaseURLFormat, nodeIP, cfg.Intern.Addr[1:], cfg.RootInternAPIPath)
 	if err := (&controller.NodeSolutionArchiveReconciler{
-		Client:    mgr.GetClient(),
-		Scheme:    mgr.GetScheme(),
-		NodeName:  nodeName,
-		Container: container,
-		EventChan: eventCh,
+		Client:          mgr.GetClient(),
+		Scheme:          mgr.GetScheme(),
+		NodeName:        nodeName,
+		DownloadBaseURL: downloadBaseURL,
+		Container:       container,
+		EventChan:       eventCh,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "NodeSolutionArchive")
 		os.Exit(1)
@@ -266,8 +279,10 @@ func main() {
 	// Create a field index for the NodeSolutionArchive object
 	// This will allow us to quickly find the NodeSolutionArchive object by its Name and Version
 	f := func(rawObj client.Object) []string {
-		versionedNamed := rawObj.(*metalk8sv1alpha1.NodeSolutionArchive).Spec.Name + "-" +
-			rawObj.(*metalk8sv1alpha1.NodeSolutionArchive).Spec.Version
+		versionedNamed := library.GetSolutionArchiveNameVersion(
+			rawObj.(*metalk8sv1alpha1.NodeSolutionArchive).Spec.Name,
+			rawObj.(*metalk8sv1alpha1.NodeSolutionArchive).Spec.Version,
+		)
 		return []string{versionedNamed}
 	}
 	err = mgr.GetFieldIndexer().IndexField(
@@ -281,15 +296,39 @@ func main() {
 		os.Exit(1)
 	}
 
+	// Create a field index for the NodeSolutionArchive object that match only the local node
+	fLocal := func(rawObj client.Object) []string {
+		versionedNamed := ""
+		if rawObj.(*metalk8sv1alpha1.NodeSolutionArchive).Spec.NodeName == nodeName {
+			versionedNamed = library.GetSolutionArchiveNameVersion(
+				rawObj.(*metalk8sv1alpha1.NodeSolutionArchive).Spec.Name,
+				rawObj.(*metalk8sv1alpha1.NodeSolutionArchive).Spec.Version,
+			)
+		}
+		return []string{versionedNamed}
+	}
+	err = mgr.GetFieldIndexer().IndexField(
+		context.Background(),
+		&metalk8sv1alpha1.NodeSolutionArchive{},
+		"LocalSolutionArchiveNameVersion",
+		fLocal,
+	)
+	if err != nil {
+		setupLog.Error(err, "Failed to create field index for LocalNodeSolutionArchive")
+		os.Exit(1)
+	}
+
 	// Start the goroutine that listens on the channel
 	// This will listen for file events and trigger a reconcile of the NodeSolutionArchive object
-	go controller.ListenForFileEvents(
+	fileEventsListener := controller.NewFileEvents(
 		ctx,
 		logger,
 		mgr.GetClient(),
 		filenameCh,
 		eventCh,
+		nodeName,
 	)
+	go fileEventsListener.Listen()
 
 	if metricsCertWatcher != nil {
 		setupLog.Info("Adding metrics certificate watcher to manager")
@@ -325,7 +364,7 @@ func main() {
 	httpExternServer := container.GetHTTPExternServer()
 
 	go func() {
-		logger.Info().Msg("http server starting")
+		logger.Info().Msg("http external server starting")
 
 		// Start the HTTP server.
 		serveErr := httpExternServer.ListenAndServe()
@@ -338,11 +377,31 @@ func main() {
 			}
 		}
 
-		logger.Info().Msg("http server stopped")
+		logger.Info().Msg("http external server stopped")
+	}()
+
+	httpInternalServer := container.GetHTTPInternServer()
+	go func() {
+		logger.Info().Msg("http internal server starting")
+
+		// Start the HTTP server.
+		serveErr := httpInternalServer.ListenAndServe()
+		if serveErr != nil {
+			sigCh <- syscall.SIGTERM // Triggers graceful shutdown
+
+			if !errors.Is(serveErr, http.ErrServerClosed) {
+				// Do not fatal here as it would break the shutdown process
+				logger.Error().Err(serveErr).Msg("http server failure during startup")
+			}
+		}
+
+		logger.Info().Msg("http internal server stopped")
 	}()
 
 	go func() {
-		setupLog.Info("starting manager", "NODE_NAME", nodeName)
+		setupLog.Info("starting manager",
+			"NODE_NAME", nodeName, "DOWNLOAD_BASE_URL", downloadBaseURL,
+		)
 		if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {
 			setupLog.Error(err, "problem running manager")
 			os.Exit(1)

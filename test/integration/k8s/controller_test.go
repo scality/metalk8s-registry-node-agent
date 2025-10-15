@@ -100,7 +100,7 @@ var _ = BeforeSuite(func() {
 	// and start a Mock Reconciler for the NodeSolutionArchive resource
 	filenameCh := make(chan string)
 	eventChan := make(chan event.GenericEvent)
-	container := di.NewContainer(ctx, &config.Environment{}, filenameCh, config.RootExternAPIPath)
+	container := di.NewContainer(ctx, &config.Environment{}, filenameCh)
 	container.GetMockFSSolutionArchiveStorage()
 
 	err = (&controller.NodeSolutionArchiveReconciler{

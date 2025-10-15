@@ -1,6 +1,7 @@
 package storageprovider
 
 import (
+	"io"
 	"os"
 	"regexp"
 	"sync"
@@ -52,7 +53,7 @@ func (f *MockFileSystem) Init() error {
 		return errors.From(domain.ErrStorageProviderInternal).
 			WithIdentifier(500000).
 			CausedBy(err).
-			WithDetail("Failed to create watcher.").
+			WithDetail("failed to create watcher").
 			Throw()
 	}
 
@@ -72,9 +73,23 @@ func (f *MockFileSystem) Stop() error {
 	return f.stopWatchFiles()
 }
 
+func (f *MockFileSystem) SaveFile(
+	fileName string,
+	content io.Reader,
+	perm os.FileMode,
+) error {
+	return nil
+}
+
 // ListFiles lists all the flat files in the root location of the storage
 func (f *MockFileSystem) ListFiles() ([]string, error) {
 	return f.listFiles()
+}
+
+func (f *MockFileSystem) GetFile(
+	fileName string,
+) (io.ReadCloser, error) {
+	return io.ReadCloser(nil), nil
 }
 
 func (f *MockFileSystem) DeleteFile(
@@ -209,9 +224,13 @@ func (f *MockFileSystem) GetHashFromFileInfos(filename string) (string, error) {
 
 	return "", errors.From(domain.ErrStorageProviderNotFound).
 		WithIdentifier(404000).
-		WithDetail("File not found.").
+		WithDetail("file not found").
 		WithProperty("file_name", filename).
 		Throw()
+}
+
+func (f *MockFileSystem) GetSizeFromFileInfos(filename string) (int64, error) {
+	return 0, nil
 }
 
 // Bucket handling methods

@@ -18,12 +18,14 @@ func NewStorage(
 	store service.StorageProvider,
 	logger *zerolog.Logger,
 ) *Storage {
-	l := logger.With().Str("infrastructure", "archivevalidator").Logger()
+	l := logger.With().Str("infrastructure", "archive_validator").Logger()
 	return &Storage{
 		store:  store,
 		logger: &l,
 	}
 }
+
+var _ service.SolutionArchiveValidator = &Storage{}
 
 func (s *Storage) ValidateSolutionArchive(solutionArchive *domain.SolutionArchive) (bool, error) {
 	s.store.Lock()

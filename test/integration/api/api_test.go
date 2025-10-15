@@ -60,7 +60,7 @@ var _ = BeforeSuite(func() {
 		log.Fatal(err) //nolint:revive // This is basically the main function, shut up revive
 	}
 	filenameCh := make(chan string)
-	container := di.NewContainer(ctx, cfg, filenameCh, config.RootExternAPIPath)
+	container := di.NewContainer(ctx, cfg, filenameCh)
 
 	rootPath, err := os.MkdirTemp("/tmp", "test-integration-api_v1_uploads-*")
 	if err != nil {
@@ -69,7 +69,7 @@ var _ = BeforeSuite(func() {
 
 	// External HTTP Client creation
 	externHTTPClient := utils.GetHTTPExternClient()
-	externClientWithResponse, err := utils.GetGeneratedHTTPExternClient(cfg.Extern.Addr, config.RootExternAPIPath, externHTTPClient)
+	externClientWithResponse, err := utils.GetGeneratedHTTPExternClient(cfg.Extern.Addr, cfg.RootExternAPIPath, externHTTPClient)
 	if err != nil {
 		container.GetLogger().Fatal().Err(err).Msg("failed to create generated http client")
 	}

@@ -7,13 +7,17 @@ import (
 	"github.com/rs/zerolog"
 
 	"github.com/scality/metalk8s-registry-node-agent/cmd/config"
+	"github.com/scality/metalk8s-registry-node-agent/pkg/infrastructure/archivedownloader"
 	"github.com/scality/metalk8s-registry-node-agent/pkg/infrastructure/archiveremover"
 	"github.com/scality/metalk8s-registry-node-agent/pkg/infrastructure/archivevalidator"
+	"github.com/scality/metalk8s-registry-node-agent/pkg/infrastructure/externaldownloader"
+	"github.com/scality/metalk8s-registry-node-agent/pkg/infrastructure/externalsolutionarchivegetter"
 	"github.com/scality/metalk8s-registry-node-agent/pkg/infrastructure/partuploader"
 	"github.com/scality/metalk8s-registry-node-agent/pkg/infrastructure/sessioninitializer"
 	"github.com/scality/metalk8s-registry-node-agent/pkg/infrastructure/sessionremover"
 	"github.com/scality/metalk8s-registry-node-agent/pkg/presentation/http/extern"
 	"github.com/scality/metalk8s-registry-node-agent/pkg/presentation/http/handler"
+	"github.com/scality/metalk8s-registry-node-agent/pkg/presentation/http/intern"
 	"github.com/scality/metalk8s-registry-node-agent/pkg/service"
 	"github.com/scality/metalk8s-registry-node-agent/pkg/usecase"
 )
@@ -28,35 +32,46 @@ type Container struct {
 
 	logger *zerolog.Logger
 
-	filenameCh        chan string
-	httpExternServer  *http.Server
-	rootExternAPIPath string
+	filenameCh                chan string
+	httpExternServer          *http.Server
+	httpInternServer          *http.Server
+	httpInternClient          *http.Client
+	generatedHTTPInternClient *intern.ClientWithResponses
+	rootExternAPIPath         string
+	rootInternAPIPath         string
 
 	solutionArchiveStorage service.StorageProvider
 
-	uploadPartHandler *handler.UploadPart
+	uploadPartHandler              *handler.UploadPart
+	downloadSolutionArchiveHandler *handler.DownloadSolutionArchive
 
 	externResolver extern.StrictServerInterface
+	internResolver intern.StrictServerInterface
 
-	storagePartUploader             *partuploader.Storage
-	storageSessionInitializer       *sessioninitializer.Storage
-	storageSolutionArchiveRemover   *archiveremover.Storage
-	storageSessionRemover           *sessionremover.Storage
-	storageSolutionArchiveValidator *archivevalidator.Storage
+	httpExternalDownloader               *externaldownloader.HTTP
+	storagePartUploader                  *partuploader.Storage
+	storageSessionInitializer            *sessioninitializer.Storage
+	storageSolutionArchiveRemover        *archiveremover.Storage
+	storageSessionRemover                *sessionremover.Storage
+	storageSolutionArchiveValidator      *archivevalidator.Storage
+	storageSolutionArchiveDownloader     *archivedownloader.Storage
+	storageExternalSolutionArchiveGetter *externalsolutionarchivegetter.Storage
 
-	uploadPartUseCase              *usecase.UploadPart
-	initializeSessionUseCase       *usecase.InitializeSession
-	removeSolutionArchiveUseCase   *usecase.RemoveSolutionArchive
-	removeSessionUseCase           *usecase.RemoveSession
-	validateSolutionArchiveUseCase *usecase.ValidateSolutionArchive
+	uploadPartUseCase                 *usecase.UploadPart
+	initializeSessionUseCase          *usecase.InitializeSession
+	removeSolutionArchiveUseCase      *usecase.RemoveSolutionArchive
+	removeSessionUseCase              *usecase.RemoveSession
+	validateSolutionArchiveUseCase    *usecase.ValidateSolutionArchive
+	downloadSolutionArchiveUseCase    *usecase.DownloadSolutionArchive
+	getExternalSolutionArchiveUseCase *usecase.GetExternalSolutionArchive
 }
 
-func NewContainer(ctx context.Context, cfg *config.Environment, filenameCh chan string,
-	rootExternAPIPath string) *Container {
+func NewContainer(ctx context.Context, cfg *config.Environment, filenameCh chan string) *Container {
 	return &Container{
 		baseCtx:           ctx,
 		config:            cfg,
 		filenameCh:        filenameCh,
-		rootExternAPIPath: rootExternAPIPath,
+		rootExternAPIPath: cfg.RootExternAPIPath,
+		rootInternAPIPath: cfg.RootInternAPIPath,
 	}
 }
