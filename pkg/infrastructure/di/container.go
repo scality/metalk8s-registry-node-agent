@@ -28,9 +28,11 @@ type Container struct {
 
 	logger *zerolog.Logger
 
-	filenameCh  chan string
-	httpServer  *http.Server
-	rootAPIPath string
+	filenameCh          chan string
+	httpServer          *http.Server
+	httpClient          *http.Client
+	generatedHTTPClient *generated.ClientWithResponses
+	rootAPIPath         string
 
 	artifactStorage service.StorageProvider
 
