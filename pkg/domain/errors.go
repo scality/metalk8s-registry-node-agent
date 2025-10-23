@@ -1,4 +1,4 @@
-package apierrors
+package domain
 
 import (
 	"bytes"
@@ -10,6 +10,108 @@ import (
 	"runtime"
 	"strings"
 	"time"
+)
+
+var (
+	ErrUnknownError error = &Error{
+		Title:    "Unknown Error",
+		Status:   000,
+		Subclass: 000,
+	}
+	ErrNotFoundError error = &Error{
+		Title:    "Not Found Error",
+		Status:   404,
+		Subclass: 404000,
+	}
+	ErrInternalError error = &Error{
+		Title:    "Internal Error",
+		Status:   500,
+		Subclass: 500000,
+	}
+	ErrConflictError error = &Error{
+		Title:    "Conflict Error",
+		Status:   409,
+		Subclass: 409000,
+	}
+	ErrBusinessRuleViolationError error = &Error{
+		Title:    "Business Rule Violation Error",
+		Status:   422,
+		Subclass: 422001,
+	}
+)
+
+var (
+	ErrStorageProviderInitError error = &Error{
+		Title:    "Init Error",
+		Status:   500,
+		Subclass: 500000,
+	}
+	ErrStorageProviderNotFoundError error = &Error{
+		Title:    "Not Found Error",
+		Status:   404,
+		Subclass: 404000,
+	}
+	ErrStorageProviderInternalError error = &Error{
+		Title:    "Internal Error",
+		Status:   500,
+		Subclass: 500000,
+	}
+	ErrStorageProviderBusinessRuleViolation error = &Error{
+		Title:    "Business Rule Violation Error",
+		Status:   422,
+		Subclass: 422001,
+	}
+)
+
+var (
+	ErrSessionInitializerInternalError error = &Error{
+		Title:    "Internal Error",
+		Status:   500,
+		Subclass: 500000,
+	}
+	ErrSessionInitializerNotFoundError error = &Error{
+		Title:    "Not Found Error",
+		Status:   404,
+		Subclass: 404000,
+	}
+)
+
+var (
+	ErrPartUploaderNotFoundError error = &Error{
+		Title:    "Not Found Error",
+		Status:   404,
+		Subclass: 404000,
+	}
+)
+
+var (
+	ErrSessionRemoverNotFoundError error = &Error{
+		Title:    "Not Found Error",
+		Status:   404,
+		Subclass: 404000,
+	}
+)
+var (
+	ErrHandlerBadRequestError error = &Error{
+		Title:    "Bad Request Error",
+		Status:   400,
+		Subclass: 400000,
+	}
+	ErrHandlerMissingRequestParameterError error = &Error{
+		Title:    "Missing Request Parameter Error",
+		Status:   400,
+		Subclass: 400003,
+	}
+	ErrHandlerMissingRequestHeaderError error = &Error{
+		Title:    "Missing Request Header Error",
+		Status:   400,
+		Subclass: 400002,
+	}
+	ErrHandlerInvalidRequestHeaderFormatError error = &Error{
+		Title:    "Invalid Request Header Format Error",
+		Status:   400,
+		Subclass: 400006,
+	}
 )
 
 // Trace is a type that represents a trace of the error.
@@ -146,8 +248,7 @@ func FromTemplate(err error) *Error {
 
 	ok := errors.As(err, &t)
 	if !ok {
-		// nolint: errcheck,errorlint // Err500000InternalServerError is a know error reference.
-		t, _ = Err500000InternalServerError.(*Error)
+		t, _ = ErrUnknownError.(*Error)
 	}
 
 	e := &Error{

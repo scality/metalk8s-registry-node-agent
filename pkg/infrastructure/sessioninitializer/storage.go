@@ -8,7 +8,6 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/scality/metalk8s-registry-node-agent/pkg/domain"
 	"github.com/scality/metalk8s-registry-node-agent/pkg/library"
-	"github.com/scality/metalk8s-registry-node-agent/pkg/library/apierrors"
 	"github.com/scality/metalk8s-registry-node-agent/pkg/service"
 )
 
@@ -36,7 +35,7 @@ func (s *Storage) InitializeSession(artifact *domain.Artifact) (*domain.SessionS
 	// matching artifactStorageNamePattern
 	fileNames, err := s.store.ListFiles()
 	if err != nil {
-		return nil, apierrors.Stamp(err)
+		return nil, domain.Stamp(err)
 	}
 
 	// Check if the artifact already exists in the storage
@@ -57,7 +56,7 @@ func (s *Storage) InitializeSession(artifact *domain.Artifact) (*domain.SessionS
 	if exist {
 		artifactStatus, err := s.store.GetMultipartFileStatus(bucketName, artifact)
 		if err != nil {
-			return nil, apierrors.Stamp(err)
+			return nil, domain.Stamp(err)
 		}
 		return &domain.SessionStatus{
 			Version:            artifact.Version,
@@ -78,14 +77,14 @@ func (s *Storage) InitializeSession(artifact *domain.Artifact) (*domain.SessionS
 	err = s.store.CreateBucket(bucketName)
 	if err != nil {
 		cleanup()
-		return nil, apierrors.Stamp(err)
+		return nil, domain.Stamp(err)
 	}
 
 	storageProvider := s.store
 	artifactStatus, err := storageProvider.CreateMultipartFiles(bucketName, artifact)
 	if err != nil {
 		cleanup()
-		return nil, apierrors.Stamp(err)
+		return nil, domain.Stamp(err)
 	}
 
 	return &domain.SessionStatus{
@@ -99,8 +98,8 @@ func (s *Storage) InitializeSession(artifact *domain.Artifact) (*domain.SessionS
 // or an error when multiple session buckets are found.
 func (s *Storage) sessionBucketAlreadyExists(name string) (bool, error) {
 	buckets, err := s.store.ListBuckets()
-	if err != nil && !errors.Is(err, apierrors.Err404000NotFound) {
-		return false, apierrors.Stamp(err)
+	if err != nil && !errors.Is(err, domain.ErrSessionInitializerNotFoundError) {
+		return false, domain.Stamp(err)
 	}
 
 	return slices.Contains(buckets, name), nil

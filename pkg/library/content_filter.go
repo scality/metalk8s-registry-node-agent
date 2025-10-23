@@ -6,7 +6,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/scality/metalk8s-registry-node-agent/pkg/library/apierrors"
+	"github.com/scality/metalk8s-registry-node-agent/pkg/domain"
 )
 
 // contentFilter represents a filter for the content listing.
@@ -55,7 +55,7 @@ func ListDirContentNames(
 ) ([]string, error) {
 	entries, err := ListDirContent(location, filter)
 	if err != nil {
-		return nil, apierrors.Stamp(err)
+		return nil, domain.Stamp(err)
 	}
 
 	return ExtractNames(entries), nil
@@ -121,7 +121,7 @@ func ListDirContent(
 ) ([]fs.DirEntry, error) {
 	entries, err := os.ReadDir(location)
 	if err != nil {
-		return nil, apierrors.FromTemplate(apierrors.Err500000InternalServerError).
+		return nil, domain.FromTemplate(domain.ErrInternalError).
 			WithDetail("Unexpected error while listing the content.").
 			AddProperty("location", location).
 			CausedBy(err).

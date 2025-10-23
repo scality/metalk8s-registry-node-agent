@@ -9,7 +9,6 @@ import (
 	"strings"
 
 	"github.com/scality/metalk8s-registry-node-agent/pkg/domain"
-	"github.com/scality/metalk8s-registry-node-agent/pkg/library/apierrors"
 )
 
 const (
@@ -31,7 +30,7 @@ func EnforceNamingConventions(
 	objectName string,
 ) error {
 	if !namingRegexp.MatchString(objectName) {
-		return apierrors.FromTemplate(apierrors.Err422001BusinessRuleViolation).
+		return domain.FromTemplate(domain.ErrBusinessRuleViolationError).
 			WithDetail("Object name does not match the naming regex.").
 			AddProperty("object_name", objectName).
 			AddProperty("naming_regex", namingRegexp.String()).
@@ -42,7 +41,7 @@ func EnforceNamingConventions(
 		"__", "--", "..",
 	} {
 		if strings.Contains(objectName, forbidden) {
-			return apierrors.FromTemplate(apierrors.Err422001BusinessRuleViolation).
+			return domain.FromTemplate(domain.ErrBusinessRuleViolationError).
 				WithDetail("Object name contains a forbidden particle.").
 				AddProperty("object_name", objectName).
 				AddProperty("forbidden_particle", forbidden).
@@ -57,7 +56,7 @@ func EnforceNamingConventions(
 		FileSystemMultipartRecipientSuffix,
 	} {
 		if strings.Contains(objectName, reserved) {
-			return apierrors.FromTemplate(apierrors.Err422001BusinessRuleViolation).
+			return domain.FromTemplate(domain.ErrBusinessRuleViolationError).
 				WithDetail("Object name contains a reserved word.").
 				AddProperty("object_name", objectName).
 				AddProperty("reserved_word", reserved).
@@ -81,14 +80,14 @@ func CheckDir(
 ) error {
 	stat, err := os.Stat(dirPath)
 	if os.IsNotExist(err) {
-		return apierrors.FromTemplate(apierrors.Err404000NotFound).
+		return domain.FromTemplate(domain.ErrNotFoundError).
 			WithDetail("Directory not found.").
 			AddProperty("dir_path", dirPath).
 			Throw()
 	}
 
 	if err != nil {
-		return apierrors.FromTemplate(apierrors.Err500000InternalServerError).
+		return domain.FromTemplate(domain.ErrInternalError).
 			WithDetail("Unexpected error while checking the directory.").
 			AddProperty("dir_path", dirPath).
 			CausedBy(err).
@@ -96,7 +95,7 @@ func CheckDir(
 	}
 
 	if !stat.IsDir() {
-		return apierrors.FromTemplate(apierrors.Err409000Conflict).
+		return domain.FromTemplate(domain.ErrConflictError).
 			WithDetail("The directory is a file").
 			AddProperty("dir_path", dirPath).
 			Throw()
@@ -112,14 +111,14 @@ func CheckFile(
 ) error {
 	stat, err := os.Stat(filePath)
 	if os.IsNotExist(err) {
-		return apierrors.FromTemplate(apierrors.Err404000NotFound).
+		return domain.FromTemplate(domain.ErrNotFoundError).
 			WithDetail("FileSystem not found.").
 			AddProperty("file_path", filePath).
 			Throw()
 	}
 
 	if err != nil {
-		return apierrors.FromTemplate(apierrors.Err500000InternalServerError).
+		return domain.FromTemplate(domain.ErrInternalError).
 			WithDetail("Unexpected error while checking the file.").
 			AddProperty("file_path", filePath).
 			CausedBy(err).
@@ -127,7 +126,7 @@ func CheckFile(
 	}
 
 	if stat.IsDir() {
-		return apierrors.FromTemplate(apierrors.Err409000Conflict).
+		return domain.FromTemplate(domain.ErrConflictError).
 			WithDetail("The file is a directory.").
 			AddProperty("file_path", filePath).
 			Throw()
@@ -144,7 +143,7 @@ func SaveFile(
 ) error {
 	file, err := os.OpenFile(filePath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, perm)
 	if err != nil {
-		return apierrors.FromTemplate(apierrors.Err500000InternalServerError).
+		return domain.FromTemplate(domain.ErrInternalError).
 			WithDetail("Unable to save file.").
 			AddProperty("file_path", filePath).
 			AddProperty("while", "opening the file").
@@ -156,7 +155,7 @@ func SaveFile(
 
 	_, err = io.Copy(file, content)
 	if err != nil {
-		return apierrors.FromTemplate(apierrors.Err500000InternalServerError).
+		return domain.FromTemplate(domain.ErrInternalError).
 			WithDetail("Unable to save file.").
 			AddProperty("file_path", filePath).
 			AddProperty("while", "writing the file").
@@ -179,7 +178,7 @@ func CreateEmptyFile(
 ) error {
 	file, err := os.OpenFile(filePath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, perm)
 	if err != nil {
-		return apierrors.FromTemplate(apierrors.Err500000InternalServerError).
+		return domain.FromTemplate(domain.ErrInternalError).
 			WithDetail("Unable to save file.").
 			AddProperty("file_path", filePath).
 			AddProperty("while", "opening the file").
@@ -190,7 +189,7 @@ func CreateEmptyFile(
 	defer file.Close() // nolint: errcheck // No error check on defer.
 
 	if err := file.Truncate(size); err != nil {
-		return apierrors.FromTemplate(apierrors.Err500000InternalServerError).
+		return domain.FromTemplate(domain.ErrInternalError).
 			WithDetail("Unable to truncate file.").
 			AddProperty("file_path", filePath).
 			AddProperty("size", size).
@@ -208,7 +207,7 @@ func GetFile(
 ) (io.ReadCloser, error) {
 	err := CheckFile(filePath)
 	if err != nil {
-		return nil, apierrors.FromTemplate(apierrors.Err404000NotFound).
+		return nil, domain.FromTemplate(domain.ErrNotFoundError).
 			WithDetail("File not found.").
 			AddProperty("file_path", filePath).
 			CausedBy(err).
@@ -217,7 +216,7 @@ func GetFile(
 
 	file, err := os.Open(filePath)
 	if err != nil {
-		return nil, apierrors.FromTemplate(apierrors.Err500000InternalServerError).
+		return nil, domain.FromTemplate(domain.ErrInternalError).
 			WithDetail("Unexpected error while opening the file.").
 			AddProperty("file_path", filePath).
 			CausedBy(err).
@@ -233,7 +232,7 @@ func DeleteFile(
 ) error {
 	err := os.Remove(filePath)
 	if err != nil {
-		return apierrors.FromTemplate(apierrors.Err500000InternalServerError).
+		return domain.FromTemplate(domain.ErrInternalError).
 			WithDetail("Unexpected error while deleting the file.").
 			AddProperty("file_path", filePath).
 			CausedBy(err).
@@ -249,7 +248,7 @@ func HashFile(
 ) (string, error) {
 	file, err := GetFile(filePath)
 	if err != nil {
-		return "", apierrors.Stamp(err)
+		return "", domain.Stamp(err)
 	}
 
 	defer file.Close() // nolint: errcheck // No error check on defer.
@@ -264,7 +263,7 @@ func HashReader(
 	hasher := crypto.SHA256.New()
 
 	if _, err := io.Copy(hasher, reader); err != nil {
-		return "", apierrors.FromTemplate(apierrors.Err500000InternalServerError).
+		return "", domain.FromTemplate(domain.ErrInternalError).
 			WithDetail("Unexpected error while hashing the reader.").
 			CausedBy(err).
 			Throw()
@@ -315,13 +314,11 @@ func ExtractSessionBucket(buckets []string, artifact *domain.Artifact) (string, 
 
 	// Check if we have the right number of session buckets
 	if len(sessionBuckets) < 1 {
-		// FIXME This implementation should not know about HTTP errors
-		return "", apierrors.FromTemplate(apierrors.Err404000NotFound).
+		return "", domain.FromTemplate(domain.ErrNotFoundError).
 			WithDetail("No session bucket found.").
 			Throw()
 	} else if len(sessionBuckets) > 1 {
-		// FIXME This implementation should not know about HTTP errors
-		return "", apierrors.FromTemplate(apierrors.Err500000InternalServerError).
+		return "", domain.FromTemplate(domain.ErrInternalError).
 			WithDetail("Multiple session buckets found.").
 			Throw()
 	}
@@ -363,7 +360,7 @@ func CompareArtifactMetas(
 	}
 
 	if len(problems) > 0 {
-		return apierrors.FromTemplate(apierrors.Err409000Conflict).
+		return domain.FromTemplate(domain.ErrConflictError).
 			WithDetail("Artifact metas do not match.").
 			AddProperty("problems", problems).
 			Throw()

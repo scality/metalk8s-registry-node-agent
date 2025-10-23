@@ -5,7 +5,6 @@ import (
 
 	"github.com/scality/metalk8s-registry-node-agent/pkg/domain"
 	"github.com/scality/metalk8s-registry-node-agent/pkg/library"
-	"github.com/scality/metalk8s-registry-node-agent/pkg/library/apierrors"
 	"github.com/scality/metalk8s-registry-node-agent/pkg/service"
 )
 
@@ -33,14 +32,14 @@ func (s *Storage) RemoveArtifact(artifact *domain.Artifact) error {
 	// matching artifactStorageNamePattern
 	fileNames, err := s.store.ListFiles()
 	if err != nil {
-		return apierrors.Stamp(err)
+		return domain.Stamp(err)
 	}
 
 	// Check if the artifact exists in the storage
 	if library.ArtifactExists(artifact, fileNames) {
 		err := s.store.DeleteFile(library.GenArtifactFileName(artifact))
 		if err != nil {
-			return apierrors.Stamp(err)
+			return domain.Stamp(err)
 		}
 	}
 

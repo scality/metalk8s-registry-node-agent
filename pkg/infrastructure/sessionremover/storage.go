@@ -6,7 +6,6 @@ import (
 
 	"github.com/scality/metalk8s-registry-node-agent/pkg/domain"
 	"github.com/scality/metalk8s-registry-node-agent/pkg/library"
-	"github.com/scality/metalk8s-registry-node-agent/pkg/library/apierrors"
 	"github.com/scality/metalk8s-registry-node-agent/pkg/service"
 )
 
@@ -33,16 +32,16 @@ func (s *Storage) RemoveSession(artifact *domain.Artifact) error {
 	// List all the buckets
 	buckets, err := s.store.ListBuckets()
 	if err != nil {
-		if errors.Is(err, apierrors.Err404000NotFound) {
+		if errors.Is(err, domain.ErrSessionRemoverNotFoundError) {
 			return nil
 		}
-		return apierrors.Stamp(err)
+		return domain.Stamp(err)
 	}
 
 	// Extract the session bucket
 	sessionBucket, err := library.ExtractSessionBucket(buckets, artifact)
 	if err != nil {
-		if errors.Is(err, apierrors.Err404000NotFound) {
+		if errors.Is(err, domain.ErrSessionRemoverNotFoundError) {
 			return nil
 		}
 		return errors.Wrap(err, "failed to extract the session bucket")
@@ -50,7 +49,7 @@ func (s *Storage) RemoveSession(artifact *domain.Artifact) error {
 
 	err = s.store.DeleteBucket(sessionBucket)
 	if err != nil {
-		return apierrors.Stamp(err)
+		return domain.Stamp(err)
 	}
 
 	return nil

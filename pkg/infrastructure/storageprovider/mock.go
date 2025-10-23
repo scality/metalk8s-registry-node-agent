@@ -10,7 +10,6 @@ import (
 
 	"github.com/scality/metalk8s-registry-node-agent/pkg/domain"
 	"github.com/scality/metalk8s-registry-node-agent/pkg/library"
-	"github.com/scality/metalk8s-registry-node-agent/pkg/library/apierrors"
 	"github.com/scality/metalk8s-registry-node-agent/pkg/service"
 )
 
@@ -49,7 +48,7 @@ func (f *MockFileSystem) Init() error {
 
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
-		return apierrors.FromTemplate(apierrors.Err500000InternalServerError).
+		return domain.FromTemplate(domain.ErrStorageProviderInternalError).
 			CausedBy(err).
 			WithDetail("Failed to create watcher.").
 			Throw()
@@ -80,7 +79,7 @@ func (f *MockFileSystem) DeleteFile(
 	fileName string,
 ) error {
 	if err := f.deleteFile(fileName); err != nil {
-		return apierrors.Stamp(err)
+		return domain.Stamp(err)
 	}
 	return nil
 }
@@ -90,7 +89,7 @@ func (f *MockFileSystem) HashFile(
 ) (string, error) {
 	hash, err := f.hashFile(fileName)
 	if err != nil {
-		return "", apierrors.Stamp(err)
+		return "", domain.Stamp(err)
 	}
 
 	return hash, nil
@@ -112,7 +111,7 @@ func (f *MockFileSystem) DeleteBucket(
 	bucketName string,
 ) error {
 	if err := f.deleteBucket(bucketName); err != nil {
-		return apierrors.Stamp(err)
+		return domain.Stamp(err)
 	}
 
 	return nil
@@ -122,7 +121,7 @@ func (f *MockFileSystem) MoveFileToRoot(
 	bucketName, fileName, newFileName string,
 ) error {
 	if err := f.moveFileToRoot(bucketName, fileName, newFileName); err != nil {
-		return apierrors.Stamp(err)
+		return domain.Stamp(err)
 	}
 
 	return nil
@@ -134,7 +133,7 @@ func (f *MockFileSystem) CreateMultipartFiles(
 ) (*domain.ArtifactStatus, error) {
 	meta, err := f.createMultipartFiles(bucketName, artifactMeta)
 	if err != nil {
-		return nil, apierrors.Stamp(err)
+		return nil, domain.Stamp(err)
 	}
 
 	return meta, nil
@@ -145,7 +144,7 @@ func (f *MockFileSystem) GetMultipartFile(
 ) (*domain.Artifact, error) {
 	meta, err := f.getMultipartFile(bucketName)
 	if err != nil {
-		return nil, apierrors.Stamp(err)
+		return nil, domain.Stamp(err)
 	}
 
 	return meta, nil
@@ -157,7 +156,7 @@ func (f *MockFileSystem) GetMultipartFileStatus(
 ) (*domain.ArtifactStatus, error) {
 	status, err := f.getArtifactStatus(bucketName, artifactMeta)
 	if err != nil {
-		return nil, apierrors.Stamp(err)
+		return nil, domain.Stamp(err)
 	}
 
 	return status, nil
@@ -168,7 +167,7 @@ func (f *MockFileSystem) DeleteMultipartFile(
 	artifactMeta *domain.Artifact,
 ) error {
 	if err := f.deleteMultipartFile(bucketName, artifactMeta); err != nil {
-		return apierrors.Stamp(err)
+		return domain.Stamp(err)
 	}
 
 	return nil
@@ -179,7 +178,7 @@ func (f *MockFileSystem) WritePartToMultipartFile(bucketName string,
 ) (*domain.ArtifactStatus, error) {
 	status, err := f.writePartToMultipartFile(bucketName, part)
 	if err != nil {
-		return nil, apierrors.Stamp(err)
+		return nil, domain.Stamp(err)
 	}
 
 	return status, nil
@@ -191,7 +190,7 @@ func (f *MockFileSystem) ConsolidateMultipartFile(
 	perm os.FileMode,
 ) error {
 	if err := f.consolidateMultipartFile(bucketName, artifactMeta, perm); err != nil {
-		return apierrors.Stamp(err)
+		return domain.Stamp(err)
 	}
 
 	return nil
@@ -206,7 +205,7 @@ func (f *MockFileSystem) GetHashFromFileInfos(filename string) (string, error) {
 		return hash, nil
 	}
 
-	return "", apierrors.FromTemplate(apierrors.Err404000NotFound).
+	return "", domain.FromTemplate(domain.ErrStorageProviderNotFoundError).
 		WithDetail("File not found.").
 		AddProperty("file_name", filename).
 		Throw()

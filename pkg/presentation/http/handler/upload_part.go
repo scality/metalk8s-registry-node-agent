@@ -9,7 +9,6 @@ import (
 	"github.com/rs/zerolog"
 
 	"github.com/scality/metalk8s-registry-node-agent/pkg/domain"
-	"github.com/scality/metalk8s-registry-node-agent/pkg/library/apierrors"
 	"github.com/scality/metalk8s-registry-node-agent/pkg/presentation/http/generated"
 	"github.com/scality/metalk8s-registry-node-agent/pkg/usecase"
 )
@@ -40,12 +39,12 @@ func (h *UploadPart) UploadChunk(
 	var part domain.Part
 
 	if err := fillPartFromUploadChunkRequestObject(&part, &request); err != nil {
-		return h.genUploadChunkResponseObjectFromError(apierrors.Stamp(err))
+		return h.genUploadChunkResponseObjectFromError(domain.Stamp(err))
 	}
 
 	artifactStatus, err := h.uc.Execute(&part)
 	if err != nil {
-		return h.genUploadChunkResponseObjectFromError(apierrors.Stamp(err))
+		return h.genUploadChunkResponseObjectFromError(domain.Stamp(err))
 	}
 
 	var response generated.UploadChunkSuccessResponse
@@ -62,7 +61,7 @@ func (h *UploadPart) UploadChunk(
 func (h *UploadPart) genUploadChunkResponseObjectFromError(
 	err error,
 ) (generated.UploadChunkResponseObject, error) {
-	var apiErr *apierrors.Error
+	var apiErr *domain.Error
 
 	var problemDetails generated.ProblemDetails
 
@@ -117,6 +116,6 @@ func (h *UploadPart) genUploadChunkResponseObjectFromError(
 		}, nil
 
 	default:
-		return nil, apierrors.Stamp(err)
+		return nil, domain.Stamp(err)
 	}
 }

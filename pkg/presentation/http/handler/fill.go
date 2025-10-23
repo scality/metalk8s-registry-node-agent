@@ -9,7 +9,6 @@ import (
 	"strings"
 
 	"github.com/scality/metalk8s-registry-node-agent/pkg/domain"
-	"github.com/scality/metalk8s-registry-node-agent/pkg/library/apierrors"
 	"github.com/scality/metalk8s-registry-node-agent/pkg/presentation/http/generated"
 )
 
@@ -68,32 +67,32 @@ func fillPartFromUploadChunkRequestObject(
 	src *generated.UploadChunkRequestObject,
 ) error {
 	if src.Body == nil {
-		return apierrors.FromTemplate(apierrors.Err400000BadRequest).
+		return domain.FromTemplate(domain.ErrHandlerBadRequestError).
 			WithDetail("Body is missing.").
 			Throw()
 	}
 
 	if src.Artifact == "" {
-		return apierrors.FromTemplate(apierrors.Err400003MissingRequestParameter).
+		return domain.FromTemplate(domain.ErrHandlerMissingRequestParameterError).
 			WithDetail("Parameter 'artifact' is missing.").
 			Throw()
 	}
 
 	if src.Params.XSha256Checksum == "" {
-		return apierrors.FromTemplate(apierrors.Err400002MissingRequestHeader).
+		return domain.FromTemplate(domain.ErrHandlerMissingRequestHeaderError).
 			WithDetail("Header 'X-Sha256-checksum' is missing.").
 			Throw()
 	}
 
 	if src.Params.XTargetVersion == "" {
-		return apierrors.FromTemplate(apierrors.Err400002MissingRequestHeader).
+		return domain.FromTemplate(domain.ErrHandlerMissingRequestHeaderError).
 			WithDetail("Header 'X-Target-Version' is missing.").
 			Throw()
 	}
 
 	start, end, total, err := parseContentRange(src.Params.ContentRange)
 	if err != nil {
-		return apierrors.Stamp(err)
+		return domain.Stamp(err)
 	}
 
 	dst.Artifact = &domain.Artifact{
@@ -131,7 +130,7 @@ func parseContentRange(
 
 	// Check if the Content-Range header is missing
 	if contentRange == "" {
-		err = apierrors.FromTemplate(apierrors.Err400002MissingRequestHeader).
+		err = domain.FromTemplate(domain.ErrHandlerMissingRequestHeaderError).
 			WithDetail("Content-Range header is missing.").
 			Throw()
 
@@ -141,7 +140,7 @@ func parseContentRange(
 	matched := contentRangeRegexp.FindStringSubmatch(contentRange)
 
 	if len(matched) != expectedContentRangeSubmatches {
-		err = apierrors.FromTemplate(apierrors.Err400006InvalidRequestHeaderFormat).
+		err = domain.FromTemplate(domain.ErrHandlerInvalidRequestHeaderFormatError).
 			WithDetail("Content-Range header is not in the expected format.").
 			AddProperty("received_content_range", contentRange).
 			AddProperty("expected_content_range_format", "bytes <start>-<end>/<total>").
@@ -183,7 +182,7 @@ func parseContentRange(
 	}
 
 	if len(problems) > 0 {
-		err = apierrors.FromTemplate(apierrors.Err400006InvalidRequestHeaderFormat).
+		err = domain.FromTemplate(domain.ErrHandlerInvalidRequestHeaderFormatError).
 			WithDetail("Content-Range header is not in the expected format.").
 			WithProperties(problems).
 			AddProperty("received_content_range", contentRange).
@@ -203,7 +202,7 @@ func parseContentRange(
 // fillProblemDetailsFromAPIErrorsError fills the ProblemDetails object from the apierrors.Error object.
 func (h *UploadPart) fillProblemDetailsFromAPIErrorsError(
 	dst *generated.ProblemDetails,
-	src *apierrors.Error,
+	src *domain.Error,
 ) {
 	h.logger.Error().Err(src).Msg("Uploads API error")
 
