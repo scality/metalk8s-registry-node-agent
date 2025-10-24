@@ -41,6 +41,7 @@ spec:
             properties:
               name:
                 description: Name of the Artifact
+                pattern: ^[a-zA-Z0-9][a-zA-Z0-9_\-\.]{1,98}[a-zA-Z0-9]$
                 type: string
                 x-kubernetes-validations:
                 - message: Value is immutable

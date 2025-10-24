@@ -18,23 +18,37 @@ package controller
 
 import (
 	"context"
+	"time"
 
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/event"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+	"sigs.k8s.io/controller-runtime/pkg/source"
 
+	"github.com/rs/zerolog"
 	metalk8sv1alpha1 "github.com/scality/metalk8s-registry-node-agent/api/v1alpha1"
+	"github.com/scality/metalk8s-registry-node-agent/pkg/domain"
+)
+
+const (
+	FINALIZER_NAME = "metalk8s.scality.com/finalizer"
 )
 
 // NodeArtifactReconciler reconciles a NodeArtifact object
 type NodeArtifactReconciler struct {
 	client.Client
-	Scheme   *runtime.Scheme
-	NodeName string
+	Scheme    *runtime.Scheme
+	NodeName  string
+	Container containerInterface
+	EventChan chan event.GenericEvent
 }
 
 // +kubebuilder:rbac:groups=metalk8s.scality.com,resources=nodeartifacts,verbs=get;list;watch;create;update;patch;delete
@@ -51,11 +65,107 @@ type NodeArtifactReconciler struct {
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.21.0/pkg/reconcile
 func (r *NodeArtifactReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	_ = logf.FromContext(ctx)
+	log := logf.FromContext(ctx)
+	log.Info("Reconcile NodeArtifact", "NODE_NAME", r.NodeName)
 
-	// TODO(user): your logic here
+	// 1. Load the NodeArtifact by name
+	nodeArtifact := &metalk8sv1alpha1.NodeArtifact{}
+	if err := r.Get(ctx, req.NamespacedName, nodeArtifact); err != nil {
+		// we'll ignore not-found errors, since they can't be fixed by an immediate
+		// requeue (we'll need to wait for a new notification), and we can get them
+		// on deleted requests.
+		return ctrl.Result{}, client.IgnoreNotFound(err)
+	}
+
+	// 2. Add finalizer to deal with artifact deletion
+	//
+	// examine DeletionTimestamp to determine if object is under deletion
+	if nodeArtifact.DeletionTimestamp.IsZero() {
+		// The object is not being deleted, so if it does not have our finalizer,
+		// then lets add the finalizer and update the object. This is equivalent
+		// to registering our finalizer.
+		if !controllerutil.ContainsFinalizer(nodeArtifact, FINALIZER_NAME) {
+			controllerutil.AddFinalizer(nodeArtifact, FINALIZER_NAME)
+			if err := r.Update(ctx, nodeArtifact); err != nil {
+				log.Error(err, "error adding finalizer")
+				return ctrl.Result{}, err
+			}
+		}
+	} else {
+		// The object is being deleted
+		if controllerutil.ContainsFinalizer(nodeArtifact, FINALIZER_NAME) {
+			// our finalizer is present, so lets handle any external dependency
+			if err := r.deleteArtifactResources(nodeArtifact); err != nil {
+				// if fail to delete the external dependency here, return with error
+				// so that it can be retried.
+				log.Error(err, "error deleting external Resources")
+				return ctrl.Result{}, err
+			}
+
+			// remove our finalizer from the list and update it.
+			controllerutil.RemoveFinalizer(nodeArtifact, FINALIZER_NAME)
+			if err := r.Update(ctx, nodeArtifact); err != nil {
+				log.Error(err, "error removing finalizer")
+				return ctrl.Result{}, err
+			}
+		}
+
+		// Stop reconciliation as the item is being deleted
+		return ctrl.Result{}, nil
+	}
+
+	// 3. Initialize the session
+	artifact := &domain.Artifact{
+		Name:    nodeArtifact.Spec.Name,
+		Version: nodeArtifact.Spec.Version,
+		Hash:    nodeArtifact.Spec.Validation.Checksum.Value,
+	}
+	_, err := r.Container.GetInitializeSessionUseCase().Execute(artifact)
+	if err != nil {
+		log.Error(err, "error initializing session")
+		return ctrl.Result{}, err
+	}
+
+	// 4. Checksum validation of the artifact
+	isValid, err := r.isValidArtifact(nodeArtifact)
+	if err != nil {
+		log.Error(err, "error validating artifact")
+		return ctrl.Result{RequeueAfter: 30 * time.Second}, nil
+	}
+	original := nodeArtifact.DeepCopy()
+	if isValid {
+		nodeArtifact.SetAvailable()
+		// Session may persist in case of manual upload of artifact
+		err = r.Container.GetRemoveSessionUseCase().Execute(artifact)
+		if err != nil {
+			log.Error(err, "error removing session")
+			return ctrl.Result{RequeueAfter: 30 * time.Second}, nil
+		}
+	} else {
+		nodeArtifact.SetUnavailable()
+	}
+	// 5. Update the status of the NodeArtifact
+	if err := r.Status().Patch(ctx, nodeArtifact, client.MergeFrom(original)); err != nil {
+		log.Error(err, "unable to patch NodeArtifact status")
+		return ctrl.Result{}, err
+	}
 
 	return ctrl.Result{}, nil
+}
+
+func (r *NodeArtifactReconciler) deleteArtifactResources(nodeArtifact *metalk8sv1alpha1.NodeArtifact) error {
+	artifact := &domain.Artifact{
+		Name:    nodeArtifact.Spec.Name,
+		Version: nodeArtifact.Spec.Version,
+		Hash:    nodeArtifact.Spec.Validation.Checksum.Value,
+	}
+
+	err := r.Container.GetRemoveArtifactUseCase().Execute(artifact)
+	if err != nil {
+		return err
+	}
+
+	return r.Container.GetRemoveSessionUseCase().Execute(artifact)
 }
 
 func getNodeName(o client.Object) string {
@@ -63,6 +173,15 @@ func getNodeName(o client.Object) string {
 		return obj.Spec.NodeName
 	}
 	return ""
+}
+
+func (r *NodeArtifactReconciler) isValidArtifact(nodeArtifact *metalk8sv1alpha1.NodeArtifact) (bool, error) {
+	artifact := &domain.Artifact{
+		Name:    nodeArtifact.Spec.Name,
+		Version: nodeArtifact.Spec.Version,
+		Hash:    nodeArtifact.Spec.Validation.Checksum.Value,
+	}
+	return r.Container.GetValidateArtifactUseCase().Execute(artifact)
 }
 
 // SetupWithManager sets up the controller with the Manager.
@@ -86,5 +205,50 @@ func (r *NodeArtifactReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&metalk8sv1alpha1.NodeArtifact{}, builder.WithPredicates(p)).
 		Named("nodeartifact").
+		WatchesRawSource(
+			source.Channel(
+				r.EventChan,
+				handler.EnqueueRequestsFromMapFunc(func(ctx context.Context, obj client.Object) []reconcile.Request {
+					na, ok := obj.(*metalk8sv1alpha1.NodeArtifact)
+					if !ok {
+						return nil
+					}
+					return []reconcile.Request{
+						{
+							NamespacedName: types.NamespacedName{
+								Name: na.Name,
+							},
+						},
+					}
+				}),
+			),
+		).
 		Complete(r)
+}
+
+// ListenForFileEvents runs in a goroutine, processing filenames from a channel
+func ListenForFileEvents(ctx context.Context, logger *zerolog.Logger, c client.Client, filenameChan <-chan string, eventChan chan event.GenericEvent) {
+	// Loop forever, reading from the channel
+	for filename := range filenameChan {
+
+		// Find the Custom Resource that matches the parsed data
+		naList := &metalk8sv1alpha1.NodeArtifactList{}
+		if err := c.List(ctx, naList, client.MatchingFields{"ArtifactNameVersion": filename[:len(filename)-4]}); err != nil {
+			logger.Error().Err(err).Msg("Failed to list custom resources")
+			continue
+		}
+
+		var foundCR *metalk8sv1alpha1.NodeArtifact
+		for _, item := range naList.Items {
+			foundCR = &item
+			break
+		}
+
+		if foundCR != nil {
+			logger.Info().Msgf("Found matching Custom Resource: %s, queueing for reconcile", foundCR.Name)
+			eventChan <- event.GenericEvent{
+				Object: foundCR,
+			}
+		}
+	}
 }

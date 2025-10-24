@@ -6,4 +6,10 @@ metadata:
     app.kubernetes.io/managed-by: kustomize
   name: nodeartifact-sample
 spec:
-  # TODO(user): Add fields here
+  name: metalk8s
+  version: "1.25.3"
+  nodeName: k3d-k3d-agent-1
+  validation:
+    checksum:
+      type: sha256
+      value: "ce775a33b30ae640d521df1fad60868fa701707ffdc4d8b4ca7ab60edfd05c26"
