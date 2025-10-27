@@ -9,7 +9,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Clone the code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
       - name: Setup Private Go Environment
         uses: ./.github/actions/setup-go
         with:
