@@ -1,8 +1,8 @@
 package usecase
 
 import (
-	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
+	"github.com/scality/go-errors"
 
 	"github.com/scality/metalk8s-registry-node-agent/pkg/domain"
 	"github.com/scality/metalk8s-registry-node-agent/pkg/service"
@@ -33,7 +33,9 @@ func (uc *ValidateArtifact) Execute(artifact *domain.Artifact) (bool, error) {
 
 	isValid, err := uc.artifactValidator.ValidateArtifact(artifact)
 	if err != nil {
-		return false, errors.Wrap(err, "failed to validate artifact")
+		return false, errors.Intercept(err).
+			WithDetail("failed to validate artifact").
+			Throw()
 	}
 
 	uc.logger.Debug().Any("artifact", artifact).Msg("Artifact validated")

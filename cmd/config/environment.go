@@ -3,7 +3,8 @@ package config
 import (
 	"context"
 
-	"github.com/pkg/errors"
+	"github.com/scality/go-errors"
+	"github.com/scality/metalk8s-registry-node-agent/pkg/domain"
 	logger "github.com/scality/platform-library/pkg/infrastructure/logger/zerolog"
 	"github.com/sethvargo/go-envconfig"
 )
@@ -35,7 +36,7 @@ func NewEnvironment(ctx context.Context) (*Environment, error) {
 
 	err := cfg.Load(ctx)
 	if err != nil {
-		return nil, errors.Wrap(err, "environment loading failed")
+		return nil, errors.Stamp(err)
 	}
 
 	return cfg, nil
@@ -44,7 +45,11 @@ func NewEnvironment(ctx context.Context) (*Environment, error) {
 func (cfg *Environment) Load(ctx context.Context) error {
 	err := envconfig.Process(ctx, cfg)
 	if err != nil {
-		return errors.Wrap(err, "failed to load config")
+		return errors.From(domain.ErrInternal).
+			WithIdentifier(500000).
+			WithDetail("failed to process environment variables.").
+			CausedBy(err).
+			Throw()
 	}
 
 	return nil

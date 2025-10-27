@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/scality/go-errors"
 	"github.com/scality/metalk8s-registry-node-agent/pkg/domain"
 	"github.com/scality/metalk8s-registry-node-agent/pkg/presentation/http/generated"
 )
@@ -67,32 +68,36 @@ func fillPartFromUploadChunkRequestObject(
 	src *generated.UploadChunkRequestObject,
 ) error {
 	if src.Body == nil {
-		return domain.FromTemplate(domain.ErrHandlerBadRequestError).
+		return errors.From(domain.ErrHandlerBadRequest).
+			WithIdentifier(400000).
 			WithDetail("Body is missing.").
 			Throw()
 	}
 
 	if src.Artifact == "" {
-		return domain.FromTemplate(domain.ErrHandlerMissingRequestParameterError).
+		return errors.From(domain.ErrHandlerMissingRequestParameter).
+			WithIdentifier(400003).
 			WithDetail("Parameter 'artifact' is missing.").
 			Throw()
 	}
 
 	if src.Params.XSha256Checksum == "" {
-		return domain.FromTemplate(domain.ErrHandlerMissingRequestHeaderError).
+		return errors.From(domain.ErrHandlerMissingRequestHeader).
+			WithIdentifier(400002).
 			WithDetail("Header 'X-Sha256-checksum' is missing.").
 			Throw()
 	}
 
 	if src.Params.XTargetVersion == "" {
-		return domain.FromTemplate(domain.ErrHandlerMissingRequestHeaderError).
+		return errors.From(domain.ErrHandlerMissingRequestHeader).
+			WithIdentifier(400002).
 			WithDetail("Header 'X-Target-Version' is missing.").
 			Throw()
 	}
 
 	start, end, total, err := parseContentRange(src.Params.ContentRange)
 	if err != nil {
-		return domain.Stamp(err)
+		return errors.Stamp(err)
 	}
 
 	dst.Artifact = &domain.Artifact{
@@ -130,7 +135,8 @@ func parseContentRange(
 
 	// Check if the Content-Range header is missing
 	if contentRange == "" {
-		err = domain.FromTemplate(domain.ErrHandlerMissingRequestHeaderError).
+		err = errors.From(domain.ErrHandlerMissingRequestHeader).
+			WithIdentifier(400002).
 			WithDetail("Content-Range header is missing.").
 			Throw()
 
@@ -140,12 +146,13 @@ func parseContentRange(
 	matched := contentRangeRegexp.FindStringSubmatch(contentRange)
 
 	if len(matched) != expectedContentRangeSubmatches {
-		err = domain.FromTemplate(domain.ErrHandlerInvalidRequestHeaderFormatError).
+		err = errors.From(domain.ErrHandlerInvalidRequestHeaderFormat).
+			WithIdentifier(400006).
 			WithDetail("Content-Range header is not in the expected format.").
-			AddProperty("received_content_range", contentRange).
-			AddProperty("expected_content_range_format", "bytes <start>-<end>/<total>").
-			AddProperty("example_content_range", "bytes 0-19/20").
-			AddProperty("validation_regex", contentRangeRegexp.String()).
+			WithProperty("received_content_range", contentRange).
+			WithProperty("expected_content_range_format", "bytes <start>-<end>/<total>").
+			WithProperty("example_content_range", "bytes 0-19/20").
+			WithProperty("validation_regex", contentRangeRegexp.String()).
 			Throw()
 
 		return start, end, total, err
@@ -182,13 +189,14 @@ func parseContentRange(
 	}
 
 	if len(problems) > 0 {
-		err = domain.FromTemplate(domain.ErrHandlerInvalidRequestHeaderFormatError).
+		err = errors.From(domain.ErrHandlerInvalidRequestHeaderFormat).
+			WithIdentifier(400006).
 			WithDetail("Content-Range header is not in the expected format.").
 			WithProperties(problems).
-			AddProperty("received_content_range", contentRange).
-			AddProperty("expected_content_range_format", "bytes <start>-<end>/<total>").
-			AddProperty("example_content_range", "bytes 0-19/20").
-			AddProperty("validation_regex", contentRangeRegexp.String()).
+			WithProperty("received_content_range", contentRange).
+			WithProperty("expected_content_range_format", "bytes <start>-<end>/<total>").
+			WithProperty("example_content_range", "bytes 0-19/20").
+			WithProperty("validation_regex", contentRangeRegexp.String()).
 			Throw()
 
 		start, end, total = 0, 0, 0
@@ -202,27 +210,27 @@ func parseContentRange(
 // fillProblemDetailsFromAPIErrorsError fills the ProblemDetails object from the apierrors.Error object.
 func (h *UploadPart) fillProblemDetailsFromAPIErrorsError(
 	dst *generated.ProblemDetails,
-	src *domain.Error,
+	src *errors.Error,
 ) {
 	h.logger.Error().Err(src).Msg("Uploads API error")
 
-	status := int32(src.Status) // nolint: gosec // TODO: Refactor this in the "polishing" sprint.
-	code := fmt.Sprintf("%d", src.Subclass)
-	typeURL := src.Type
+	status := src.Identifier / 1000 // nolint: gosec // TODO: Refactor this in the "polishing" sprint.
+	code := fmt.Sprintf("%d", src.Identifier)
 
 	dst.Title = src.Title
 	dst.Status = &status
 	dst.Code = &code
-	dst.Type = &typeURL
 
-	if src.Detail != "" {
-		detail := src.Detail
+	if len(src.Details) > 0 {
+		detail := strings.Join(src.Details, ": ")
 		dst.Detail = &detail
 	}
 
-	if src.Instance != "" {
-		instance := src.Instance
-		dst.Instance = &instance
+	if instance, ok := src.Properties["instance"]; ok {
+		instanceStr, ok := instance.(string)
+		if ok {
+			dst.Instance = &(instanceStr)
+		}
 	}
 
 	if len(src.Properties) > 0 {

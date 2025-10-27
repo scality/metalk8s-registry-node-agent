@@ -6,6 +6,7 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/scality/go-errors"
 	"github.com/scality/metalk8s-registry-node-agent/pkg/domain"
 )
 
@@ -55,7 +56,7 @@ func ListDirContentNames(
 ) ([]string, error) {
 	entries, err := ListDirContent(location, filter)
 	if err != nil {
-		return nil, domain.Stamp(err)
+		return nil, errors.Stamp(err)
 	}
 
 	return ExtractNames(entries), nil
@@ -121,9 +122,10 @@ func ListDirContent(
 ) ([]fs.DirEntry, error) {
 	entries, err := os.ReadDir(location)
 	if err != nil {
-		return nil, domain.FromTemplate(domain.ErrInternalError).
+		return nil, errors.From(domain.ErrInternal).
+			WithIdentifier(500000).
 			WithDetail("Unexpected error while listing the content.").
-			AddProperty("location", location).
+			WithProperty("location", location).
 			CausedBy(err).
 			Throw()
 	}

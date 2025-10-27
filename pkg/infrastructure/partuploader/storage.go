@@ -3,9 +3,9 @@ package partuploader
 import (
 	"fmt"
 
-	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
 
+	"github.com/scality/go-errors"
 	"github.com/scality/metalk8s-registry-node-agent/pkg/domain"
 	"github.com/scality/metalk8s-registry-node-agent/pkg/library"
 	"github.com/scality/metalk8s-registry-node-agent/pkg/service"
@@ -37,20 +37,22 @@ func (s *Storage) UploadPart(part *domain.Part) (*domain.ArtifactStatus, error) 
 	// List all the buckets
 	buckets, err := s.store.ListBuckets()
 	if err != nil {
-		return nil, domain.Stamp(err)
+		return nil, errors.Stamp(err)
 	}
 
 	// Extract the session bucket
 	sessionBucket, err := library.ExtractSessionBucket(buckets, part.Artifact)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to extract the session bucket")
+		return nil, errors.Intercept(err).
+			WithDetail("failed to extract the session bucket").
+			Throw()
 	}
 
 	// Load the manifest from metadata file
 	artifactFromManifest, err := s.loadManifest(sessionBucket)
 	if err != nil {
-		return nil, domain.Intercept(err).
-			AtInstance(fmt.Sprintf("%s/uploads/%s", s.rootAPIPath, part.Artifact.Name)).
+		return nil, errors.Intercept(err).
+			WithProperty("instance", fmt.Sprintf("%s/uploads/%s", s.rootAPIPath, part.Artifact.Name)).
 			Throw()
 	}
 
@@ -58,12 +60,13 @@ func (s *Storage) UploadPart(part *domain.Part) (*domain.ArtifactStatus, error) 
 	if artifactFromManifest.Name != part.Artifact.Name ||
 		artifactFromManifest.Version != part.Artifact.Version ||
 		artifactFromManifest.Hash != part.Artifact.Hash {
-		return nil, domain.FromTemplate(domain.ErrPartUploaderNotFoundError).
+		return nil, errors.From(domain.ErrPartUploaderNotFound).
+			WithIdentifier(404000).
 			WithDetail("Artifact not found in the current session manifest.").
-			AtInstance(fmt.Sprintf("%s/uploads/%s", s.rootAPIPath, part.Artifact.Name)).
-			AddProperty("component", part.Artifact.Name).
-			AddProperty("version", part.Artifact.Version).
-			AddProperty("hash", part.Artifact.Hash).
+			WithProperty("instance", fmt.Sprintf("%s/uploads/%s", s.rootAPIPath, part.Artifact.Name)).
+			WithProperty("component", part.Artifact.Name).
+			WithProperty("version", part.Artifact.Version).
+			WithProperty("hash", part.Artifact.Hash).
 			Throw()
 	}
 
@@ -74,15 +77,15 @@ func (s *Storage) UploadPart(part *domain.Part) (*domain.ArtifactStatus, error) 
 
 		err = s.store.DeleteMultipartFile(sessionBucket, artifactFromManifest)
 		if err != nil {
-			return nil, domain.Intercept(err).
-				AtInstance(fmt.Sprintf("%s/uploads/%s", s.rootAPIPath, part.Artifact.Name)).
+			return nil, errors.Intercept(err).
+				WithProperty("instance", fmt.Sprintf("%s/uploads/%s", s.rootAPIPath, part.Artifact.Name)).
 				Throw()
 		}
 
 		_, err = s.store.CreateMultipartFiles(sessionBucket, artifactFromManifest)
 		if err != nil {
-			return nil, domain.Intercept(err).
-				AtInstance(fmt.Sprintf("%s/uploads/%s", s.rootAPIPath, part.Artifact.Name)).
+			return nil, errors.Intercept(err).
+				WithProperty("instance", fmt.Sprintf("%s/uploads/%s", s.rootAPIPath, part.Artifact.Name)).
 				Throw()
 		}
 	}
@@ -91,8 +94,8 @@ func (s *Storage) UploadPart(part *domain.Part) (*domain.ArtifactStatus, error) 
 
 	artifactStatus, err := s.store.WritePartToMultipartFile(sessionBucket, part)
 	if err != nil {
-		return nil, domain.Intercept(err).
-			AtInstance(fmt.Sprintf("%s/uploads/%s", s.rootAPIPath, part.Artifact.Name)).
+		return nil, errors.Intercept(err).
+			WithProperty("instance", fmt.Sprintf("%s/uploads/%s", s.rootAPIPath, part.Artifact.Name)).
 			Throw()
 	}
 
@@ -117,8 +120,8 @@ func (s *Storage) UploadPart(part *domain.Part) (*domain.ArtifactStatus, error) 
 	if err != nil {
 		cleanUpCorrupted()
 
-		return nil, domain.Intercept(err).
-			AtInstance(fmt.Sprintf("%s/uploads/%s", s.rootAPIPath, part.Artifact.Name)).
+		return nil, errors.Intercept(err).
+			WithProperty("instance", fmt.Sprintf("%s/uploads/%s", s.rootAPIPath, part.Artifact.Name)).
 			Throw()
 	}
 
@@ -127,14 +130,14 @@ func (s *Storage) UploadPart(part *domain.Part) (*domain.ArtifactStatus, error) 
 	if err != nil {
 		cleanUpCorrupted()
 
-		return nil, domain.Intercept(err).
-			AtInstance(fmt.Sprintf("%s/uploads/%s", s.rootAPIPath, part.Artifact.Name)).
+		return nil, errors.Intercept(err).
+			WithProperty("instance", fmt.Sprintf("%s/uploads/%s", s.rootAPIPath, part.Artifact.Name)).
 			Throw()
 	}
 	err = s.store.DeleteBucket(sessionBucket)
 	if err != nil {
-		return nil, domain.Intercept(err).
-			AtInstance(fmt.Sprintf("%s/uploads/%s", s.rootAPIPath, part.Artifact.Name)).
+		return nil, errors.Intercept(err).
+			WithProperty("instance", fmt.Sprintf("%s/uploads/%s", s.rootAPIPath, part.Artifact.Name)).
 			Throw()
 	}
 
@@ -145,7 +148,7 @@ func (s *Storage) UploadPart(part *domain.Part) (*domain.ArtifactStatus, error) 
 func (s *Storage) loadManifest(sessionBucket string) (*domain.Artifact, error) {
 	artifact, err := s.store.GetMultipartFile(sessionBucket)
 	if err != nil {
-		return nil, domain.Stamp(err)
+		return nil, errors.Stamp(err)
 	}
 
 	return artifact, nil

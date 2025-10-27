@@ -1,8 +1,8 @@
 package usecase
 
 import (
-	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
+	"github.com/scality/go-errors"
 
 	"github.com/scality/metalk8s-registry-node-agent/pkg/domain"
 	"github.com/scality/metalk8s-registry-node-agent/pkg/service"
@@ -33,7 +33,9 @@ func (uc *RemoveArtifact) Execute(artifact *domain.Artifact) error {
 
 	err := uc.artifactRemover.RemoveArtifact(artifact)
 	if err != nil {
-		return errors.Wrap(err, "failed to remove artifact")
+		return errors.Intercept(err).
+			WithDetail("failed to remove artifact").
+			Throw()
 	}
 
 	uc.logger.Debug().Any("artifact", artifact).Msg("Artifact removed")

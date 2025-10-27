@@ -8,6 +8,7 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/scality/go-errors"
 	"github.com/scality/metalk8s-registry-node-agent/pkg/domain"
 )
 
@@ -30,10 +31,11 @@ func EnforceNamingConventions(
 	objectName string,
 ) error {
 	if !namingRegexp.MatchString(objectName) {
-		return domain.FromTemplate(domain.ErrBusinessRuleViolationError).
+		return errors.From(domain.ErrBusinessRuleViolation).
+			WithIdentifier(422001).
 			WithDetail("Object name does not match the naming regex.").
-			AddProperty("object_name", objectName).
-			AddProperty("naming_regex", namingRegexp.String()).
+			WithProperty("object_name", objectName).
+			WithProperty("naming_regex", namingRegexp.String()).
 			Throw()
 	}
 
@@ -41,10 +43,11 @@ func EnforceNamingConventions(
 		"__", "--", "..",
 	} {
 		if strings.Contains(objectName, forbidden) {
-			return domain.FromTemplate(domain.ErrBusinessRuleViolationError).
+			return errors.From(domain.ErrBusinessRuleViolation).
+				WithIdentifier(422001).
 				WithDetail("Object name contains a forbidden particle.").
-				AddProperty("object_name", objectName).
-				AddProperty("forbidden_particle", forbidden).
+				WithProperty("object_name", objectName).
+				WithProperty("forbidden_particle", forbidden).
 				Throw()
 		}
 	}
@@ -56,10 +59,11 @@ func EnforceNamingConventions(
 		FileSystemMultipartRecipientSuffix,
 	} {
 		if strings.Contains(objectName, reserved) {
-			return domain.FromTemplate(domain.ErrBusinessRuleViolationError).
+			return errors.From(domain.ErrBusinessRuleViolation).
+				WithIdentifier(422001).
 				WithDetail("Object name contains a reserved word.").
-				AddProperty("object_name", objectName).
-				AddProperty("reserved_word", reserved).
+				WithProperty("object_name", objectName).
+				WithProperty("reserved_word", reserved).
 				Throw()
 		}
 	}
@@ -80,24 +84,27 @@ func CheckDir(
 ) error {
 	stat, err := os.Stat(dirPath)
 	if os.IsNotExist(err) {
-		return domain.FromTemplate(domain.ErrNotFoundError).
+		return errors.From(domain.ErrNotFound).
+			WithIdentifier(404000).
 			WithDetail("Directory not found.").
-			AddProperty("dir_path", dirPath).
+			WithProperty("dir_path", dirPath).
 			Throw()
 	}
 
 	if err != nil {
-		return domain.FromTemplate(domain.ErrInternalError).
+		return errors.From(domain.ErrInternal).
+			WithIdentifier(500000).
 			WithDetail("Unexpected error while checking the directory.").
-			AddProperty("dir_path", dirPath).
+			WithProperty("dir_path", dirPath).
 			CausedBy(err).
 			Throw()
 	}
 
 	if !stat.IsDir() {
-		return domain.FromTemplate(domain.ErrConflictError).
+		return errors.From(domain.ErrConflict).
+			WithIdentifier(409000).
 			WithDetail("The directory is a file").
-			AddProperty("dir_path", dirPath).
+			WithProperty("dir_path", dirPath).
 			Throw()
 	}
 
@@ -111,24 +118,27 @@ func CheckFile(
 ) error {
 	stat, err := os.Stat(filePath)
 	if os.IsNotExist(err) {
-		return domain.FromTemplate(domain.ErrNotFoundError).
+		return errors.From(domain.ErrNotFound).
+			WithIdentifier(404000).
 			WithDetail("FileSystem not found.").
-			AddProperty("file_path", filePath).
+			WithProperty("file_path", filePath).
 			Throw()
 	}
 
 	if err != nil {
-		return domain.FromTemplate(domain.ErrInternalError).
+		return errors.From(domain.ErrInternal).
+			WithIdentifier(500000).
 			WithDetail("Unexpected error while checking the file.").
-			AddProperty("file_path", filePath).
+			WithProperty("file_path", filePath).
 			CausedBy(err).
 			Throw()
 	}
 
 	if stat.IsDir() {
-		return domain.FromTemplate(domain.ErrConflictError).
+		return errors.From(domain.ErrConflict).
+			WithIdentifier(409000).
 			WithDetail("The file is a directory.").
-			AddProperty("file_path", filePath).
+			WithProperty("file_path", filePath).
 			Throw()
 	}
 
@@ -143,10 +153,11 @@ func SaveFile(
 ) error {
 	file, err := os.OpenFile(filePath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, perm)
 	if err != nil {
-		return domain.FromTemplate(domain.ErrInternalError).
+		return errors.From(domain.ErrInternal).
+			WithIdentifier(500000).
 			WithDetail("Unable to save file.").
-			AddProperty("file_path", filePath).
-			AddProperty("while", "opening the file").
+			WithProperty("file_path", filePath).
+			WithProperty("while", "opening the file").
 			CausedBy(err).
 			Throw()
 	}
@@ -155,10 +166,11 @@ func SaveFile(
 
 	_, err = io.Copy(file, content)
 	if err != nil {
-		return domain.FromTemplate(domain.ErrInternalError).
+		return errors.From(domain.ErrInternal).
+			WithIdentifier(500000).
 			WithDetail("Unable to save file.").
-			AddProperty("file_path", filePath).
-			AddProperty("while", "writing the file").
+			WithProperty("file_path", filePath).
+			WithProperty("while", "writing the file").
 			CausedBy(err).
 			Throw()
 	}
@@ -178,10 +190,11 @@ func CreateEmptyFile(
 ) error {
 	file, err := os.OpenFile(filePath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, perm)
 	if err != nil {
-		return domain.FromTemplate(domain.ErrInternalError).
+		return errors.From(domain.ErrInternal).
+			WithIdentifier(500000).
 			WithDetail("Unable to save file.").
-			AddProperty("file_path", filePath).
-			AddProperty("while", "opening the file").
+			WithProperty("file_path", filePath).
+			WithProperty("while", "opening the file").
 			CausedBy(err).
 			Throw()
 	}
@@ -189,11 +202,12 @@ func CreateEmptyFile(
 	defer file.Close() // nolint: errcheck // No error check on defer.
 
 	if err := file.Truncate(size); err != nil {
-		return domain.FromTemplate(domain.ErrInternalError).
+		return errors.From(domain.ErrInternal).
+			WithIdentifier(500000).
 			WithDetail("Unable to truncate file.").
-			AddProperty("file_path", filePath).
-			AddProperty("size", size).
-			AddProperty("while", "truncating the file").
+			WithProperty("file_path", filePath).
+			WithProperty("size", size).
+			WithProperty("while", "truncating the file").
 			CausedBy(err).
 			Throw()
 	}
@@ -207,18 +221,20 @@ func GetFile(
 ) (io.ReadCloser, error) {
 	err := CheckFile(filePath)
 	if err != nil {
-		return nil, domain.FromTemplate(domain.ErrNotFoundError).
+		return nil, errors.From(domain.ErrNotFound).
+			WithIdentifier(404000).
 			WithDetail("File not found.").
-			AddProperty("file_path", filePath).
+			WithProperty("file_path", filePath).
 			CausedBy(err).
 			Throw()
 	}
 
 	file, err := os.Open(filePath)
 	if err != nil {
-		return nil, domain.FromTemplate(domain.ErrInternalError).
+		return nil, errors.From(domain.ErrInternal).
+			WithIdentifier(500000).
 			WithDetail("Unexpected error while opening the file.").
-			AddProperty("file_path", filePath).
+			WithProperty("file_path", filePath).
 			CausedBy(err).
 			Throw()
 	}
@@ -232,9 +248,10 @@ func DeleteFile(
 ) error {
 	err := os.Remove(filePath)
 	if err != nil {
-		return domain.FromTemplate(domain.ErrInternalError).
+		return errors.From(domain.ErrInternal).
+			WithIdentifier(500000).
 			WithDetail("Unexpected error while deleting the file.").
-			AddProperty("file_path", filePath).
+			WithProperty("file_path", filePath).
 			CausedBy(err).
 			Throw()
 	}
@@ -248,7 +265,7 @@ func HashFile(
 ) (string, error) {
 	file, err := GetFile(filePath)
 	if err != nil {
-		return "", domain.Stamp(err)
+		return "", errors.Stamp(err)
 	}
 
 	defer file.Close() // nolint: errcheck // No error check on defer.
@@ -263,7 +280,8 @@ func HashReader(
 	hasher := crypto.SHA256.New()
 
 	if _, err := io.Copy(hasher, reader); err != nil {
-		return "", domain.FromTemplate(domain.ErrInternalError).
+		return "", errors.From(domain.ErrInternal).
+			WithIdentifier(500000).
 			WithDetail("Unexpected error while hashing the reader.").
 			CausedBy(err).
 			Throw()
@@ -314,11 +332,13 @@ func ExtractSessionBucket(buckets []string, artifact *domain.Artifact) (string, 
 
 	// Check if we have the right number of session buckets
 	if len(sessionBuckets) < 1 {
-		return "", domain.FromTemplate(domain.ErrNotFoundError).
+		return "", errors.From(domain.ErrNotFound).
+			WithIdentifier(404000).
 			WithDetail("No session bucket found.").
 			Throw()
 	} else if len(sessionBuckets) > 1 {
-		return "", domain.FromTemplate(domain.ErrInternalError).
+		return "", errors.From(domain.ErrInternal).
+			WithIdentifier(500000).
 			WithDetail("Multiple session buckets found.").
 			Throw()
 	}
@@ -360,9 +380,10 @@ func CompareArtifactMetas(
 	}
 
 	if len(problems) > 0 {
-		return domain.FromTemplate(domain.ErrConflictError).
+		return errors.From(domain.ErrConflict).
+			WithIdentifier(409000).
 			WithDetail("Artifact metas do not match.").
-			AddProperty("problems", problems).
+			WithProperty("problems", problems).
 			Throw()
 	}
 

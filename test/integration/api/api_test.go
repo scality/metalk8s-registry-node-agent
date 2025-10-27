@@ -34,8 +34,6 @@ type TestingSuite struct {
 
 const (
 	httpServerStartupTimeInSeconds = 10
-	testWriteStringData            = "install-0\ninstall-1\ninstall-2\ninstall-3\n"
-	testManifestFilePath           = "./data/version_manifest.json"
 )
 
 var (
