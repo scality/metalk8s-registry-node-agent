@@ -14,16 +14,24 @@ jobs:
         uses: ./.github/actions/setup-go
         with:
           token: ${{ secrets.GIT_ACCESS_TOKEN }}
+
       - name: Install the latest version of kind
+        env:
+          KIND_VERSION: v0.30.0
         run: |
-          curl -Lo ./kind https://kind.sigs.k8s.io/dl/latest/kind-linux-amd64
+          curl -Lo ./kind https://kind.sigs.k8s.io/dl/${KIND_VERSION}/kind-linux-amd64
           chmod +x ./kind
           sudo mv ./kind /usr/local/bin/kind
 
       - name: Verify kind installation
         run: kind version
 
+      - name: Install genisoimage for ISO creation
+        run: sudo apt update && sudo apt install -y genisoimage
+
       - name: Running Test e2e
+        env:
+          GIT_AUTH_TOKEN: ${{ secrets.GIT_ACCESS_TOKEN }}
         run: |
           go mod tidy
-          #make test-e2e
+          make test-e2e

@@ -1,0 +1,29 @@
+resources:
+- ../../config/default
+patches:
+- patch: |-
+    - op: add
+      path: /spec/template/spec/containers/0/ports/1/hostPort
+      value: 5002
+    - op: remove
+      path: /spec/template/spec/nodeSelector/node-role.kubernetes.io~1registry
+    - op: add
+      path: /spec/template/spec/nodeSelector/role
+      value: "worker"
+  target:
+    kind: StatefulSet
+- path: tls_volumes_patch.yaml
+  target:
+    kind: StatefulSet
+- path: emptydir_volumes_patch.yaml
+  target:
+    kind: StatefulSet
+- path: security_context_patch.yaml
+  target:
+    kind: StatefulSet
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+images:
+- name: controller
+  newName: example.com/metalk8s-registry-node-agent
+  newTag: v0.0.1
