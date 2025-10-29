@@ -25,6 +25,7 @@ type (
 		solutionArchiveLocation string
 		interestContentFilter   library.ContentFilter
 		watcher                 *fsnotify.Watcher
+		files                   []string
 	}
 
 	MockFileOpts struct {
@@ -41,12 +42,16 @@ func NewMockFileSystem(opts *MockFileOpts) *MockFileSystem {
 		logger:                  opts.Logger,
 		solutionArchiveLocation: opts.SolutionArchiveLocation,
 		interestContentFilter:   library.NewRegexNormalFileFilter(opts.InterestContentFilterRegex),
+		files:                   []string{},
 	}
 }
 
 func (f *MockFileSystem) Init() error {
 	f.Lock()
 	defer f.Unlock()
+
+	// For testing purposes, consider existing following ISO files
+	f.files = append(f.files, "solution-2-4.2.1.iso")
 
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
@@ -78,6 +83,7 @@ func (f *MockFileSystem) SaveFile(
 	content io.Reader,
 	perm os.FileMode,
 ) error {
+	f.files = append(f.files, fileName)
 	return nil
 }
 
@@ -216,6 +222,7 @@ func (f *MockFileSystem) ConsolidateMultipartFile(
 func (f *MockFileSystem) GetHashFromFileInfos(filename string) (string, error) {
 	hashMap := map[string]string{
 		"solution-2-4.2.1.iso": "ce775a33b30ae640d521df1fad60868fa701707ffdc4d8b4ca7ab60edfd05c26",
+		"solution-3-4.2.1.iso": "95162a9fe88f9d11c7f7ef7dc20c2426814e188fd858b27adb5274d3689675af",
 	}
 
 	if hash, ok := hashMap[filename]; ok {
@@ -252,11 +259,7 @@ func (f *MockFileSystem) deleteBucket(
 }
 
 func (f *MockFileSystem) listFiles() ([]string, error) {
-	// For testing purposes, consider existing following ISO files
-	isoFiles := []string{
-		"solution-2-4.2.1.iso",
-	}
-	return isoFiles, nil
+	return f.files, nil
 }
 
 func (f *MockFileSystem) deleteFile(

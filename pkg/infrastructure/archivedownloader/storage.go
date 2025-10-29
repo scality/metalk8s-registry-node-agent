@@ -48,7 +48,7 @@ func (s *Storage) DownloadSolutionArchive(
 	// Check if the solution archive exists in the storage
 	if !library.SolutionArchiveExists(solutionArchive, fileNames) {
 		return nil, errors.From(domain.ErrNotFound).
-			WithDetail("solution archive not found.").
+			WithDetail("solution archive not found").
 			WithProperty("instance", fmt.Sprintf("%s/downloads/%s", s.rootAPIPath, solutionArchive.Name)).
 			WithProperty("solution_archive_name", solutionArchive.Name).
 			WithProperty("solution_archive_version", solutionArchive.Version).

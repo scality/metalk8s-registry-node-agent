@@ -2,7 +2,9 @@
 package di
 
 import (
+	"bytes"
 	"crypto/tls"
+	"io"
 	"net/http"
 
 	"github.com/scality/metalk8s-registry-node-agent/pkg/presentation/http/intern"
@@ -37,4 +39,42 @@ func (c *Container) GetGeneratedHTTPInternClient() *intern.ClientWithResponses {
 	}
 
 	return c.generatedHTTPInternClient
+}
+
+// mockExternRoundTripper is a custom type that implements the http.RoundTripper interface.
+// We can set the `fn` field to any function we want for different test cases.
+type mockInternRoundTripper struct {
+	fn func(req *http.Request) (*http.Response, error)
+}
+
+// RoundTrip executes the mock function.
+func (m *mockInternRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
+	return m.fn(req)
+}
+
+func (c *Container) GetMockHTTPInternClient() *http.Client {
+	if c.httpInternClient == nil {
+		c.httpInternClient = &http.Client{
+			Transport: &mockInternRoundTripper{
+				fn: func(req *http.Request) (*http.Response, error) {
+					/*
+						// 2. Check the request URL if you want
+						expectedURL := "https://api.example.com/users/1"
+						if req.URL.String() != expectedURL {
+							t.Fatalf("Expected URL %s, got %s", expectedURL, req.URL.String())
+						}
+					*/
+					// 3. Create and return a mock response
+					jsonResponse := `{"id": 1, "name": "Test User"}`
+					return &http.Response{
+						StatusCode: http.StatusOK,
+						Body:       io.NopCloser(bytes.NewBufferString(jsonResponse)),
+						// Header:     make(http.Header), // Add headers if needed
+					}, nil
+				},
+			},
+		}
+	}
+
+	return c.httpInternClient
 }

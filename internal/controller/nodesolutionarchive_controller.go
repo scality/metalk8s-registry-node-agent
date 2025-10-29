@@ -160,7 +160,7 @@ func (r *NodeSolutionArchiveReconciler) Reconcile(ctx context.Context, req ctrl.
 			}
 		}
 		if otherSolutionArchiveAvailable {
-			log.V(1).Info("Getting external solution archive from another node")
+			log.V(1).Info("Getting external solution archive from another node", "url", urlToDownload)
 			err := r.Container.GetGetExternalSolutionArchiveUseCase().Execute(&domain.SolutionArchive{
 				Name:    nodeSolutionArchive.Spec.Name,
 				Version: nodeSolutionArchive.Spec.Version,
