@@ -59,7 +59,7 @@ type StorageProvider interface {
 	// When supported by the storage backend, the perm parameter is used to set
 	// the file permissions.
 	//
-	// The caller should close the content reader as earlier as possible after
+	// The caller should close the content reader as soon as possible after
 	// this method returns.
 	SaveFile(fileName string, content io.Reader, perm os.FileMode) error
 

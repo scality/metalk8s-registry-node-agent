@@ -109,7 +109,7 @@ func fillInstanceFromPropertiesMap(
 ) {
 	b := bytes.NewBuffer(nil)
 
-	if dst != nil {
+	if dst != nil && *dst != nil {
 		b.WriteString(**dst)
 		b.WriteString(":")
 	}
