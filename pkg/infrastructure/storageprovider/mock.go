@@ -20,14 +20,14 @@ type (
 
 		logger *zerolog.Logger
 
-		rootLocation          string
+		artifactLocation      string
 		interestContentFilter library.ContentFilter
 		watcher               *fsnotify.Watcher
 	}
 
 	MockFileOpts struct {
 		Logger                     *zerolog.Logger
-		RootLocation               string
+		ArtifactLocation           string
 		InterestContentFilterRegex *regexp.Regexp
 	}
 )
@@ -37,7 +37,7 @@ var _ service.StorageProvider = &MockFileSystem{}
 func NewMockFileSystem(opts *MockFileOpts) *MockFileSystem {
 	return &MockFileSystem{
 		logger:                opts.Logger,
-		rootLocation:          opts.RootLocation,
+		artifactLocation:      opts.ArtifactLocation,
 		interestContentFilter: library.NewRegexNormalFileFilter(opts.InterestContentFilterRegex),
 	}
 }
