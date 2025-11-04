@@ -27,6 +27,9 @@ spec:
     - jsonPath: .status.available
       name: Available
       type: boolean
+    - jsonPath: .status.served
+      name: Served
+      type: boolean
     name: v1alpha1
     schema:
       openAPIV3Schema:
@@ -173,6 +176,9 @@ spec:
                   - type
                   type: object
                 type: array
+              served:
+                description: The SolutionArchive is mounted on the Node
+                type: boolean
               url:
                 description: URL of the SolutionArchive (used internally to replicate
                   archive between nodes)

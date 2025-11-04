@@ -26,7 +26,7 @@ var _ = Describe("Init Session API", func() {
 			By("creating the directory structure")
 			// Verify directory/files creation
 			solutionArchiveNameVersion := library.GenBucketName(solutionArchive)
-			solutionArchiveRootDir := path.Join(testingSuite.RootPath, library.FileSystemBucketPrefix+solutionArchiveNameVersion)
+			solutionArchiveRootDir := path.Join(testingSuite.SolutionArchiveStorageDirectory, library.FileSystemBucketPrefix+solutionArchiveNameVersion)
 			_, err = os.Stat(solutionArchiveRootDir)
 			Expect(err).NotTo(HaveOccurred())
 
@@ -75,7 +75,7 @@ var _ = Describe("Init Session API", func() {
 
 			solutionArchiveNameVersion := library.GenBucketName(solutionArchive)
 			solutionArchiveContent := []byte("hello\ngo\n")
-			err := os.WriteFile(path.Join(testingSuite.RootPath, solutionArchiveNameVersion+".iso"), solutionArchiveContent, 0644)
+			err := os.WriteFile(path.Join(testingSuite.SolutionArchiveStorageDirectory, solutionArchiveNameVersion+".iso"), solutionArchiveContent, 0644)
 			Expect(err).NotTo(HaveOccurred())
 
 			By("accepting the session request, but not creating a new one")
@@ -84,7 +84,7 @@ var _ = Describe("Init Session API", func() {
 
 			By("not creating a new directory structure")
 			// Verify directory/files creation
-			solutionArchiveRootDir := path.Join(testingSuite.RootPath, library.FileSystemBucketPrefix+solutionArchiveNameVersion)
+			solutionArchiveRootDir := path.Join(testingSuite.SolutionArchiveStorageDirectory, library.FileSystemBucketPrefix+solutionArchiveNameVersion)
 			_, err = os.Stat(solutionArchiveRootDir)
 			Expect(err).To(HaveOccurred())
 

@@ -152,4 +152,10 @@ type StorageProvider interface {
 	// GetSizeFromFileInfos retrieves the size of a file from the storage
 	// backend.
 	GetSizeFromFileInfos(fileName string) (int64, error)
+
+	// MountFile mounts a file into the storage.
+	MountFile(fileName string, mountPoint string) error
+
+	// UnmountFile unmounts a file from the storage.
+	UnmountFile(mountPoint string) error
 }

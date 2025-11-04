@@ -107,7 +107,7 @@ var _ = Describe("Upload Part API", func() {
 			solutionArchiveNameVersion := library.GenBucketName(solutionArchive)
 			solutionArchiveFile, err := os.Open(
 				path.Join(
-					testingSuite.RootPath,
+					testingSuite.SolutionArchiveStorageDirectory,
 					solutionArchiveNameVersion+".iso",
 				),
 			)
@@ -122,7 +122,7 @@ var _ = Describe("Upload Part API", func() {
 
 			By("removing the session")
 			// Verify directory/files creation
-			solutionArchiveRootDir := path.Join(testingSuite.RootPath, library.FileSystemBucketPrefix+solutionArchiveNameVersion)
+			solutionArchiveRootDir := path.Join(testingSuite.SolutionArchiveStorageDirectory, library.FileSystemBucketPrefix+solutionArchiveNameVersion)
 			_, err = os.Stat(solutionArchiveRootDir)
 			Expect(err).To(HaveOccurred())
 
@@ -206,7 +206,7 @@ var _ = Describe("Upload Part API", func() {
 			solutionArchiveNameVersion := library.GenBucketName(solutionArchive)
 			_, err = os.Open(
 				path.Join(
-					testingSuite.RootPath,
+					testingSuite.SolutionArchiveStorageDirectory,
 					solutionArchiveNameVersion+".iso",
 				),
 			)
@@ -214,7 +214,7 @@ var _ = Describe("Upload Part API", func() {
 
 			By("generating a new session")
 			// Verify directory/files creation
-			solutionArchiveRootDir := path.Join(testingSuite.RootPath, library.FileSystemBucketPrefix+solutionArchiveNameVersion)
+			solutionArchiveRootDir := path.Join(testingSuite.SolutionArchiveStorageDirectory, library.FileSystemBucketPrefix+solutionArchiveNameVersion)
 			_, err = os.Stat(solutionArchiveRootDir)
 			Expect(err).NotTo(HaveOccurred())
 
@@ -339,7 +339,7 @@ var _ = Describe("Upload Part API", func() {
 			solutionArchiveNameVersion := library.GenBucketName(solutionArchive)
 			solutionArchiveFile, err := os.Open(
 				path.Join(
-					testingSuite.RootPath,
+					testingSuite.SolutionArchiveStorageDirectory,
 					solutionArchiveNameVersion+".iso",
 				),
 			)
@@ -354,7 +354,7 @@ var _ = Describe("Upload Part API", func() {
 
 			By("removing the session")
 			// Verify directory/files creation
-			solutionArchiveRootDir := path.Join(testingSuite.RootPath, library.FileSystemBucketPrefix+solutionArchiveNameVersion)
+			solutionArchiveRootDir := path.Join(testingSuite.SolutionArchiveStorageDirectory, library.FileSystemBucketPrefix+solutionArchiveNameVersion)
 			_, err = os.Stat(solutionArchiveRootDir)
 			Expect(err).To(HaveOccurred())
 

@@ -81,6 +81,7 @@ var _ = Describe("NodeSolutionArchive Controller", func() {
 
 			Expect(createdResource.Spec).To(Equal(resource.Spec))
 			Expect(*createdResource.Status.Available).To(BeFalse())
+			Expect(*createdResource.Status.Served).To(BeFalse())
 		})
 	})
 
@@ -127,6 +128,7 @@ var _ = Describe("NodeSolutionArchive Controller", func() {
 
 			Expect(createdResource.Spec).To(Equal(resource.Spec))
 			Expect(*createdResource.Status.Available).To(BeTrue())
+			Expect(*createdResource.Status.Served).To(BeTrue())
 		})
 	})
 
@@ -173,6 +175,7 @@ var _ = Describe("NodeSolutionArchive Controller", func() {
 
 			Expect(createdResource.Spec).To(Equal(resource.Spec))
 			Expect(*createdResource.Status.Available).To(BeFalse())
+			Expect(*createdResource.Status.Served).To(BeFalse())
 		})
 	})
 
@@ -254,6 +257,7 @@ var _ = Describe("NodeSolutionArchive Controller", func() {
 
 			Expect(createdResource.Spec).To(Equal(resource.Spec))
 			Expect(*createdResource.Status.Available).To(BeTrue())
+			Expect(*createdResource.Status.Served).To(BeTrue())
 		})
 	})
 

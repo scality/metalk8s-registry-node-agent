@@ -6,8 +6,11 @@ import (
 	"encoding/binary"
 	"encoding/hex"
 	"encoding/json"
+	"strings"
+
 	"io"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"regexp"
 	"slices"
@@ -30,15 +33,17 @@ type (
 
 		logger *zerolog.Logger
 
-		solutionArchiveLocation string
-		interestContentFilter   library.ContentFilter
-		watchedFileInfos        watchedFilesMap
-		watcher                 *fsnotify.Watcher
+		solutionArchivesLocation string
+		solutionsLocation        string
+		interestContentFilter    library.ContentFilter
+		watchedFileInfos         watchedFilesMap
+		watcher                  *fsnotify.Watcher
 	}
 
 	FileOpts struct {
 		Logger                     *zerolog.Logger
-		SolutionArchiveLocation    string
+		SolutionArchivesLocation   string
+		SolutionsLocation          string
 		InterestContentFilterRegex *regexp.Regexp
 	}
 )
@@ -50,10 +55,15 @@ const (
 var _ service.StorageProvider = &FileSystem{}
 
 func NewFileSystem(opts *FileOpts) *FileSystem {
+	l := opts.Logger.With().
+		Str("infrastructure", "storage_provider").
+		Str("implementation", "filesystem").
+		Logger()
 	return &FileSystem{
-		logger:                  opts.Logger,
-		solutionArchiveLocation: opts.SolutionArchiveLocation,
-		interestContentFilter:   library.NewRegexNormalFileFilter(opts.InterestContentFilterRegex),
+		logger:                   &l,
+		solutionArchivesLocation: opts.SolutionArchivesLocation,
+		solutionsLocation:        opts.SolutionsLocation,
+		interestContentFilter:    library.NewRegexNormalFileFilter(opts.InterestContentFilterRegex),
 	}
 }
 
@@ -62,16 +72,25 @@ func (f *FileSystem) Init() error {
 	f.Lock()
 	defer f.Unlock()
 
-	if err := os.MkdirAll(f.solutionArchiveLocation, library.FileSystemDefaultDirMode); err != nil {
+	if err := os.MkdirAll(f.solutionArchivesLocation, library.FileSystemDefaultDirMode); err != nil {
 		return errors.From(domain.ErrStorageProviderInit).
 			WithIdentifier(500000).
 			CausedBy(err).
 			WithDetail("failed to create solution archive location").
-			WithProperty("solution_archive_location", f.solutionArchiveLocation).
+			WithProperty("solution_archive_location", f.solutionArchivesLocation).
 			Throw()
 	}
 
-	controlDirectoryPath := filepath.Join(f.solutionArchiveLocation, controlDir)
+	if err := os.MkdirAll(f.solutionsLocation, library.FileSystemDefaultDirMode); err != nil {
+		return errors.From(domain.ErrStorageProviderInit).
+			WithIdentifier(500000).
+			CausedBy(err).
+			WithDetail("failed to create solution location").
+			WithProperty("solution_location", f.solutionsLocation).
+			Throw()
+	}
+
+	controlDirectoryPath := filepath.Join(f.solutionArchivesLocation, controlDir)
 
 	if err := os.MkdirAll(controlDirectoryPath, library.FileSystemDefaultDirMode); err != nil {
 		return errors.From(domain.ErrStorageProviderInit).
@@ -333,12 +352,133 @@ func (f *FileSystem) GetSizeFromFileInfos(filename string) (int64, error) {
 	return f.watchedFileInfos[filename].Size, nil
 }
 
+// MountFile mounts the solution archive, identifed by its filename,
+// into the solution location.
+func (f *FileSystem) MountFile(
+	fileName string,
+	mountPoint string,
+) error {
+	if err := library.EnforceNamingConventions(fileName); err != nil {
+		return errors.Stamp(err)
+	}
+
+	filePath := filepath.Join(f.solutionArchivesLocation, fileName)
+	if err := library.CheckFile(filePath); err != nil {
+		return errors.Stamp(err)
+	}
+
+	mountPath := filepath.Join(f.solutionsLocation, mountPoint)
+	if err := library.CheckDir(mountPath); err != nil {
+		if !errors.Is(err, errors.Intercept(domain.ErrNotFound).WithIdentifier(404000).Throw()) {
+			return errors.Stamp(err)
+		}
+		if err := os.MkdirAll(mountPath, library.FileSystemDefaultDirMode); err != nil {
+			return errors.Stamp(err)
+		}
+	}
+
+	// Add a watcher for the mount path
+	err := f.watcher.Add(mountPath)
+	if err != nil {
+		return errors.From(domain.ErrStorageProviderInternal).
+			WithIdentifier(500000).
+			CausedBy(err).
+			WithDetail("failed to add mount path to watcher").
+			WithProperty("mount_path", mountPath).
+			Throw()
+	}
+
+	// Check if the mount point is correct
+	// * No mount point found => False / No error
+	// * Correct mount point => True / No error
+	// * Other => False / Error
+	isMounted, err := library.IsMounted(filePath, mountPath)
+	if err != nil {
+		if errors.Is(err, domain.ErrMountSolutionArchiveIncorrectMount) {
+			// Unmount before mount again
+			err := f.UnmountFile(mountPoint)
+			if err != nil {
+				return errors.Stamp(err)
+			}
+		} else if errors.Is(err, domain.ErrMountSolutionArchiveNotEmptyDir) {
+			// Clean directory and create it again
+			if err := os.RemoveAll(mountPath); err != nil {
+				return errors.Stamp(err)
+			}
+			if err := os.MkdirAll(mountPath, library.FileSystemDefaultDirMode); err != nil {
+				return errors.Stamp(err)
+			}
+		} else {
+			return errors.Stamp(err)
+		}
+	}
+
+	if !isMounted {
+		cmd := exec.Command("sudo", "mount", "-o", "loop", filePath, mountPath)
+		output, err := cmd.CombinedOutput()
+		if err != nil {
+			return errors.From(domain.ErrMountSolutionArchiveInternal).
+				WithIdentifier(500000).
+				WithDetail("unexpected error while mounting the file").
+				WithProperty("file_path", filePath).
+				WithProperty("mount_path", mountPath).
+				WithDetail(string(output)).
+				CausedBy(err).
+				Throw()
+		}
+	}
+
+	return nil
+}
+
+// UnmountFile unmounts a file from the storage.
+func (f *FileSystem) UnmountFile(mountPoint string) error {
+	mountPath := filepath.Join(f.solutionsLocation, mountPoint)
+	if err := library.CheckDir(mountPath); err != nil {
+		if !errors.Is(err, errors.Intercept(domain.ErrNotFound).WithIdentifier(404000).Throw()) {
+			return errors.Stamp(err)
+		}
+		return nil
+	}
+
+	_, err := library.GetLoopDeviceForMount(mountPath)
+	// In case of NotFound error, we want to delete the mount path.
+	if err != nil && !errors.Is(err, domain.ErrNotFound) {
+		return errors.Stamp(err)
+	}
+	if err == nil {
+		cmd := exec.Command("sudo", "umount", mountPath)
+		output, err := cmd.CombinedOutput()
+		if err != nil {
+			return errors.From(domain.ErrMountSolutionArchiveInternal).
+				WithIdentifier(500000).
+				WithDetail("unexpected error while unmounting the file").
+				WithProperty("mount_path", mountPath).
+				WithDetail(string(output)).
+				CausedBy(err).
+				Throw()
+		}
+	}
+
+	err = os.RemoveAll(mountPath)
+	if err != nil {
+		return errors.From(domain.ErrStorageProviderInternal).
+			WithIdentifier(500000).
+			CausedBy(err).
+			WithDetail("failed to remove the mount path").
+			WithProperty("mount_path", mountPath).
+			Throw()
+	}
+
+	return nil
+}
+
 // Bucket handling methods
 
 func (f *FileSystem) genBucketPath(
 	bucketName string,
 ) string {
-	return filepath.Join(f.solutionArchiveLocation, library.FileSystemBucketPrefix+bucketName)
+	return filepath.Join(f.solutionArchivesLocation, library.FileSystemBucketPrefix+bucketName)
 }
 
 func (f *FileSystem) createBucket(
@@ -366,7 +506,7 @@ func (f *FileSystem) createBucket(
 }
 
 func (f *FileSystem) listBuckets() ([]string, error) {
-	buckets, err := library.ListDirContentNames(f.solutionArchiveLocation, library.BucketFilter)
+	buckets, err := library.ListDirContentNames(f.solutionArchivesLocation, library.BucketFilter)
 	if err != nil {
 		return nil, errors.Stamp(err)
 	}
@@ -410,7 +550,7 @@ func (f *FileSystem) saveFile(
 	content io.Reader,
 	perm os.FileMode,
 ) error {
-	filePath := filepath.Join(f.solutionArchiveLocation, fileName)
+	filePath := filepath.Join(f.solutionArchivesLocation, fileName)
 	if err := library.CheckFile(filePath); err != nil && !errors.Is(err,
 		errors.Intercept(domain.ErrNotFound).WithIdentifier(404000).Throw()) {
 		return errors.Stamp(err)
@@ -424,7 +564,7 @@ func (f *FileSystem) saveFile(
 }
 
 func (f *FileSystem) listFiles() ([]string, error) {
-	files, err := library.ListDirContentNames(f.solutionArchiveLocation, f.interestContentFilter)
+	files, err := library.ListDirContentNames(f.solutionArchivesLocation, f.interestContentFilter)
 	if err != nil {
 		return nil, errors.Stamp(err)
 	}
@@ -435,7 +575,7 @@ func (f *FileSystem) listFiles() ([]string, error) {
 func (f *FileSystem) getFile(
 	fileName string,
 ) (io.ReadCloser, error) {
-	filePath := filepath.Join(f.solutionArchiveLocation, fileName)
+	filePath := filepath.Join(f.solutionArchivesLocation, fileName)
 	if err := library.CheckFile(filePath); err != nil {
 		return nil, errors.Stamp(err)
 	}
@@ -451,7 +591,7 @@ func (f *FileSystem) getFile(
 func (f *FileSystem) deleteFile(
 	fileName string,
 ) error {
-	filePath := filepath.Join(f.solutionArchiveLocation, fileName)
+	filePath := filepath.Join(f.solutionArchivesLocation, fileName)
 	if err := library.CheckFile(filePath); err != nil {
 		return errors.Stamp(err)
 	}
@@ -470,7 +610,7 @@ func (f *FileSystem) hashFile(
 		return f.watchedFileInfos[fileName].Hash, nil
 	}
 
-	filePath := filepath.Join(f.solutionArchiveLocation, fileName)
+	filePath := filepath.Join(f.solutionArchivesLocation, fileName)
 	if err := library.CheckFile(filePath); err != nil {
 		return "", errors.Stamp(err)
 	}
@@ -493,7 +633,7 @@ func (f *FileSystem) isFileInfoUpToDate(filename string) bool {
 		return false
 	}
 
-	filePath := filepath.Join(f.solutionArchiveLocation, filename)
+	filePath := filepath.Join(f.solutionArchivesLocation, filename)
 
 	physicalFileInfo, err := os.Stat(filePath)
 	if err != nil {
@@ -533,7 +673,7 @@ func (f *FileSystem) moveFileToRoot(
 		return errors.Stamp(err)
 	}
 
-	newFilePath := filepath.Join(f.solutionArchiveLocation, newFileName)
+	newFilePath := filepath.Join(f.solutionArchivesLocation, newFileName)
 	if err := os.Remove(newFilePath); err != nil && !os.IsNotExist(err) {
 		return errors.From(domain.ErrStorageProviderInternal).
 			WithIdentifier(500000).
@@ -1148,7 +1288,7 @@ type (
 const watchedFilesInfoName = "watched_files_info.json"
 
 func (f *FileSystem) genControlDirPath() string {
-	return filepath.Join(f.solutionArchiveLocation, controlDir)
+	return filepath.Join(f.solutionArchivesLocation, controlDir)
 }
 
 func (f *FileSystem) genWatchedFilesPath() string {
@@ -1156,7 +1296,7 @@ func (f *FileSystem) genWatchedFilesPath() string {
 }
 
 func (f *FileSystem) genWatchedFileInfo(fileEntry os.DirEntry) (*watchedFileInfo, error) {
-	filePath := filepath.Join(f.solutionArchiveLocation, fileEntry.Name())
+	filePath := filepath.Join(f.solutionArchivesLocation, fileEntry.Name())
 
 	hash, err := library.HashFile(filePath)
 	if err != nil {
@@ -1288,7 +1428,7 @@ func (f *FileSystem) updateWatchedFileInfos(saveFunc func(watchedFilesMap) error
 	}
 
 	// List actual interest content.
-	fileEntries, err := library.ListDirContent(f.solutionArchiveLocation, f.interestContentFilter)
+	fileEntries, err := library.ListDirContent(f.solutionArchivesLocation, f.interestContentFilter)
 	if err != nil {
 		return errors.Stamp(err)
 	}
@@ -1357,10 +1497,20 @@ func (f *FileSystem) watchFiles(filenameCh chan string) {
 			}
 
 			// Create an event to trigger a reconcile
-			f.logger.Debug().Msgf("Creating event to trigger a reconcile for %s", filepath.Base(e.Name))
-			filenameCh <- filepath.Base(e.Name)
-			f.logger.Debug().Msgf("Event created to trigger a reconcile for %s", filepath.Base(e.Name))
+			var fileName string
+			if strings.HasPrefix(e.Name, f.solutionArchivesLocation) {
+				fileName = filepath.Base(e.Name)
+			} else if strings.HasPrefix(e.Name, f.solutionsLocation) {
+				mountPoint, err := filepath.Rel(f.solutionsLocation, e.Name)
+				if err != nil {
+					continue
+				}
+				fileName = strings.Split(mountPoint, "/")[0] + "-" + strings.Split(mountPoint, "/")[1] + ".iso"
+			}
 
+			f.logger.Debug().Msgf("Creating event to trigger a reconcile for %s", fileName)
+			filenameCh <- fileName
+			f.logger.Debug().Msgf("Event created to trigger a reconcile for %s", fileName)
 		case err, ok := <-f.watcher.Errors:
 			if !ok {
 				f.logger.Warn().Msg("Watcher errors channel closed.")
@@ -1382,12 +1532,12 @@ func (f *FileSystem) startWatchFiles(filenameCh chan string) error {
 
 	go f.watchFiles(filenameCh)
 
-	if err := f.watcher.Add(f.solutionArchiveLocation); err != nil {
+	if err := f.watcher.Add(f.solutionArchivesLocation); err != nil {
 		return errors.From(domain.ErrStorageProviderInternal).
 			WithIdentifier(500000).
 			CausedBy(err).
 			WithDetail("failed to add solution archive location to watcher").
-			WithProperty("solution_archive_location", f.solutionArchiveLocation).
+			WithProperty("solution_archive_location", f.solutionArchivesLocation).
 			Throw()
 	}
 

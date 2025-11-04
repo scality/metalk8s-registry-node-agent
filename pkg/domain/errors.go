@@ -43,6 +43,12 @@ var (
 )
 
 var (
+	ErrMountSolutionArchiveInternal       error = errors.New("Internal Error")
+	ErrMountSolutionArchiveIncorrectMount error = errors.New("Incorrect Mount Point")
+	ErrMountSolutionArchiveNotEmptyDir    error = errors.New("Not Empty Directory")
+)
+
+var (
 	ErrHandlerBadRequest                 error = errors.New("Bad Request Error")
 	ErrHandlerMissingRequestParameter    error = errors.New("Missing Request Parameter Error")
 	ErrHandlerMissingRequestHeader       error = errors.New("Missing Request Header Error")
