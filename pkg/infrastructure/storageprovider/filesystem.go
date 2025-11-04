@@ -30,7 +30,7 @@ type (
 
 		logger *zerolog.Logger
 
-		rootLocation          string
+		artifactLocation      string
 		interestContentFilter library.ContentFilter
 		watchedFileInfos      watchedFilesMap
 		watcher               *fsnotify.Watcher
@@ -38,7 +38,7 @@ type (
 
 	FileOpts struct {
 		Logger                     *zerolog.Logger
-		RootLocation               string
+		ArtifactLocation           string
 		InterestContentFilterRegex *regexp.Regexp
 	}
 )
@@ -52,14 +52,9 @@ var _ service.StorageProvider = &FileSystem{}
 func NewFileSystem(opts *FileOpts) *FileSystem {
 	return &FileSystem{
 		logger:                opts.Logger,
-		rootLocation:          opts.RootLocation,
+		artifactLocation:      opts.ArtifactLocation,
 		interestContentFilter: library.NewRegexNormalFileFilter(opts.InterestContentFilterRegex),
 	}
-}
-
-// SetRootLocation sets the root location of the storage.
-func (f *FileSystem) SetRootLocation(rootLocation string) {
-	f.rootLocation = rootLocation
 }
 
 // Init initializes the storage provider.
@@ -67,15 +62,15 @@ func (f *FileSystem) Init() error {
 	f.Lock()
 	defer f.Unlock()
 
-	if err := os.MkdirAll(f.rootLocation, library.FileSystemDefaultDirMode); err != nil {
+	if err := os.MkdirAll(f.artifactLocation, library.FileSystemDefaultDirMode); err != nil {
 		return domain.FromTemplate(domain.ErrStorageProviderInitError).
 			CausedBy(err).
-			WithDetail("Failed to create root location.").
-			AddProperty("root_location", f.rootLocation).
+			WithDetail("Failed to create artifact location.").
+			AddProperty("artifact_location", f.artifactLocation).
 			Throw()
 	}
 
-	controlDirectoryPath := filepath.Join(f.rootLocation, controlDir)
+	controlDirectoryPath := filepath.Join(f.artifactLocation, controlDir)
 
 	if err := os.MkdirAll(controlDirectoryPath, library.FileSystemDefaultDirMode); err != nil {
 		return domain.FromTemplate(domain.ErrStorageProviderInitError).
@@ -295,7 +290,7 @@ func (f *FileSystem) GetHashFromFileInfos(filename string) (string, error) {
 func (f *FileSystem) genBucketPath(
 	bucketName string,
 ) string {
-	return filepath.Join(f.rootLocation, library.FileSystemBucketPrefix+bucketName)
+	return filepath.Join(f.artifactLocation, library.FileSystemBucketPrefix+bucketName)
 }
 
 func (f *FileSystem) createBucket(
@@ -319,7 +314,7 @@ func (f *FileSystem) createBucket(
 }
 
 func (f *FileSystem) listBuckets() ([]string, error) {
-	buckets, err := library.ListDirContentNames(f.rootLocation, library.BucketFilter)
+	buckets, err := library.ListDirContentNames(f.artifactLocation, library.BucketFilter)
 	if err != nil {
 		return nil, domain.Stamp(err)
 	}
@@ -357,7 +352,7 @@ func (f *FileSystem) deleteBucket(
 }
 
 func (f *FileSystem) listFiles() ([]string, error) {
-	files, err := library.ListDirContentNames(f.rootLocation, f.interestContentFilter)
+	files, err := library.ListDirContentNames(f.artifactLocation, f.interestContentFilter)
 	if err != nil {
 		return nil, domain.Stamp(err)
 	}
@@ -368,7 +363,7 @@ func (f *FileSystem) listFiles() ([]string, error) {
 func (f *FileSystem) deleteFile(
 	fileName string,
 ) error {
-	filePath := filepath.Join(f.rootLocation, fileName)
+	filePath := filepath.Join(f.artifactLocation, fileName)
 	if err := library.CheckFile(filePath); err != nil {
 		return domain.Stamp(err)
 	}
@@ -387,7 +382,7 @@ func (f *FileSystem) hashFile(
 		return f.watchedFileInfos[fileName].Hash, nil
 	}
 
-	filePath := filepath.Join(f.rootLocation, fileName)
+	filePath := filepath.Join(f.artifactLocation, fileName)
 	if err := library.CheckFile(filePath); err != nil {
 		return "", domain.Stamp(err)
 	}
@@ -410,7 +405,7 @@ func (f *FileSystem) isFileInfoUpToDate(filename string) bool {
 		return false
 	}
 
-	filePath := filepath.Join(f.rootLocation, filename)
+	filePath := filepath.Join(f.artifactLocation, filename)
 
 	physicalFileInfo, err := os.Stat(filePath)
 	if err != nil {
@@ -450,7 +445,7 @@ func (f *FileSystem) moveFileToRoot(
 		return domain.Stamp(err)
 	}
 
-	newFilePath := filepath.Join(f.rootLocation, newFileName)
+	newFilePath := filepath.Join(f.artifactLocation, newFileName)
 	if err := os.Remove(newFilePath); err != nil && !os.IsNotExist(err) {
 		return domain.FromTemplate(domain.ErrStorageProviderInternalError).
 			WithDetail("Unexpected error while moving the file to the root location.").
@@ -1040,7 +1035,7 @@ type (
 const watchedFilesInfoName = "watched_files_info.json"
 
 func (f *FileSystem) genControlDirPath() string {
-	return filepath.Join(f.rootLocation, controlDir)
+	return filepath.Join(f.artifactLocation, controlDir)
 }
 
 func (f *FileSystem) genWatchedFilesPath() string {
@@ -1048,7 +1043,7 @@ func (f *FileSystem) genWatchedFilesPath() string {
 }
 
 func (f *FileSystem) genWatchedFileInfo(fileEntry os.DirEntry) (*watchedFileInfo, error) {
-	filePath := filepath.Join(f.rootLocation, fileEntry.Name())
+	filePath := filepath.Join(f.artifactLocation, fileEntry.Name())
 
 	hash, err := library.HashFile(filePath)
 	if err != nil {
@@ -1173,7 +1168,7 @@ func (f *FileSystem) updateWatchedFileInfos(saveFunc func(watchedFilesMap) error
 	}
 
 	// List actual interest content.
-	fileEntries, err := library.ListDirContent(f.rootLocation, f.interestContentFilter)
+	fileEntries, err := library.ListDirContent(f.artifactLocation, f.interestContentFilter)
 	if err != nil {
 		return domain.Stamp(err)
 	}
@@ -1265,11 +1260,11 @@ func (f *FileSystem) startWatchFiles(filenameCh chan string) error {
 
 	go f.watchFiles(filenameCh)
 
-	if err := f.watcher.Add(f.rootLocation); err != nil {
+	if err := f.watcher.Add(f.artifactLocation); err != nil {
 		return domain.FromTemplate(domain.ErrStorageProviderInternalError).
 			CausedBy(err).
 			WithDetail("Failed to add root location to watcher.").
-			AddProperty("root_location", f.rootLocation).
+			AddProperty("root_location", f.artifactLocation).
 			Throw()
 	}
 
