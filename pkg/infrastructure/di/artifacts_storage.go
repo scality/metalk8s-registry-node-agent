@@ -15,7 +15,7 @@ func (c *Container) GetFileSystemArtifactStorage() service.StorageProvider {
 	if c.artifactStorage == nil {
 		c.artifactStorage = storageprovider.NewFileSystem(
 			&storageprovider.FileOpts{
-				RootLocation:               c.config.ArtifactStorageRootLocation,
+				ArtifactLocation:           c.config.ArtifactStorageRootLocation,
 				InterestContentFilterRegex: artifactStorageNameRegexp,
 				Logger:                     c.GetLogger(),
 			},
