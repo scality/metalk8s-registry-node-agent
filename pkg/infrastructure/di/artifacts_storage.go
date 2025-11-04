@@ -36,7 +36,7 @@ func (c *Container) GetMockFileSystemArtifactStorage() service.StorageProvider {
 	if c.artifactStorage == nil {
 		c.artifactStorage = storageprovider.NewMockFileSystem(
 			&storageprovider.MockFileOpts{
-				RootLocation:               c.config.ArtifactStorageRootLocation,
+				ArtifactLocation:           c.config.ArtifactStorageRootLocation,
 				InterestContentFilterRegex: artifactStorageNameRegexp,
 				Logger:                     c.GetLogger(),
 			},
