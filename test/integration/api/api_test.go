@@ -79,8 +79,11 @@ var _ = BeforeSuite(func() {
 	}
 
 	By("Starting an http Server")
+	// Get the server before starting goroutine to avoid race condition
+	// during lazy initialization
+	httpServer := testingSuite.container.GetHTTPServer()
 	go func() {
-		serveErr := testingSuite.container.GetHTTPServer().ListenAndServe()
+		serveErr := httpServer.ListenAndServe()
 		if serveErr != nil {
 			if !errors.Is(serveErr, http.ErrServerClosed) {
 				testingSuite.container.GetLogger().Error().Err(serveErr).Msg("http server failure during startup")
@@ -92,7 +95,7 @@ var _ = BeforeSuite(func() {
 
 	for range httpServerStartupTimeInSeconds {
 		res, err := testingSuite.container.GetHTTPClient().Get(
-			fmt.Sprintf("http://localhost%s", testingSuite.container.GetHTTPServer().Addr) + "/healthz",
+			fmt.Sprintf("http://localhost%s", httpServer.Addr) + "/healthz",
 		)
 		if err == nil && res.StatusCode == http.StatusOK {
 			testingSuite.container.GetLogger().Info().Msg("http server is ready")
