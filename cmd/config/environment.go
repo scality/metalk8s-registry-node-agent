@@ -27,6 +27,7 @@ type (
 
 		SolutionArchivesLocation string `env:"SOLUTION_ARCHIVES_LOCATION, default=/archives"`
 		SolutionsLocation        string `env:"SOLUTIONS_LOCATION, default=/solutions"`
+		GarbageIntervalMinutes   int    `env:"GARBAGE_INTERVAL_MINUTES, default=15"` // in minutes
 
 		Extern Extern `env:",prefix=EXTERN_"`
 		Intern Intern `env:",prefix=INTERN_"`

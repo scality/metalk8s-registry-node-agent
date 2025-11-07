@@ -292,7 +292,7 @@ func main() {
 		f,
 	)
 	if err != nil {
-		setupLog.Error(err, "Failed to create field index for NodeSolutionArchive")
+		setupLog.Error(err, "failed to create field index for NodeSolutionArchive")
 		os.Exit(1)
 	}
 
@@ -314,7 +314,23 @@ func main() {
 		fLocal,
 	)
 	if err != nil {
-		setupLog.Error(err, "Failed to create field index for LocalNodeSolutionArchive")
+		setupLog.Error(err, "failed to create field index for LocalNodeSolutionArchive")
+		os.Exit(1)
+	}
+
+	// Create a field index for all NodeSolutionArchive objects matching the node name
+	indexNodeName := func(rawObj client.Object) []string {
+		return []string{rawObj.(*metalk8sv1alpha1.NodeSolutionArchive).Spec.NodeName}
+	}
+
+	err = mgr.GetFieldIndexer().IndexField(
+		context.Background(),
+		&metalk8sv1alpha1.NodeSolutionArchive{},
+		"Spec.NodeName",
+		indexNodeName,
+	)
+	if err != nil {
+		setupLog.Error(err, "failed to create field index for NodeSolutionArchive")
 		os.Exit(1)
 	}
 
@@ -329,6 +345,17 @@ func main() {
 		nodeName,
 	)
 	go fileEventsListener.Listen()
+
+	// Start a garbage collector
+	// It will periodically check for unused solutions archives to garbage collect
+	gc := controller.NewGarbageCollector(
+		ctx,
+		logger,
+		mgr.GetClient(),
+		container,
+		time.Duration(cfg.GarbageIntervalMinutes)*time.Minute,
+		nodeName)
+	go gc.Run()
 
 	if metricsCertWatcher != nil {
 		setupLog.Info("Adding metrics certificate watcher to manager")
@@ -422,6 +449,9 @@ func main() {
 		setupLog.Error(err, "problem stopping file system solution archive storage")
 		os.Exit(1)
 	}
+
+	// Stop the garbage collector
+	gc.Stop()
 
 	logger.Info().Msg("service stopped")
 }
