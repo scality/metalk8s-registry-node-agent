@@ -104,3 +104,13 @@ func (c *Container) GetCleanUnusedSolutionArchivesUseCase() *usecase.CleanUnused
 	}
 	return c.cleanUnusedSolutionArchivesUseCase
 }
+
+func (c *Container) GetCleanUnusedSolutionsUseCase() *usecase.CleanUnusedSolutions {
+	if c.cleanUnusedSolutionsUseCase == nil {
+		c.cleanUnusedSolutionsUseCase = usecase.NewCleanUnusedSolutions(
+			c.GetLogger(),
+			c.getStorageSolutionCleaner(),
+		)
+	}
+	return c.cleanUnusedSolutionsUseCase
+}

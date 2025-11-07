@@ -18,6 +18,7 @@ import (
 	"github.com/scality/metalk8s-registry-node-agent/pkg/infrastructure/partuploader"
 	"github.com/scality/metalk8s-registry-node-agent/pkg/infrastructure/sessioninitializer"
 	"github.com/scality/metalk8s-registry-node-agent/pkg/infrastructure/sessionremover"
+	"github.com/scality/metalk8s-registry-node-agent/pkg/infrastructure/solutioncleaner"
 	"github.com/scality/metalk8s-registry-node-agent/pkg/presentation/http/extern"
 	"github.com/scality/metalk8s-registry-node-agent/pkg/presentation/http/handler"
 	"github.com/scality/metalk8s-registry-node-agent/pkg/presentation/http/intern"
@@ -62,6 +63,7 @@ type Container struct {
 	storageSolutionArchiveMounter        *archivemounter.Storage
 	storageSolutionArchiveUnmounter      *archiveunmounter.Storage
 	storageSolutionArchiveCleaner        *archivecleaner.Storage
+	storageSolutionCleaner               *solutioncleaner.Storage
 
 	uploadPartUseCase                  *usecase.UploadPart
 	initializeSessionUseCase           *usecase.InitializeSession
@@ -73,6 +75,7 @@ type Container struct {
 	downloadSolutionArchiveUseCase     *usecase.DownloadSolutionArchive
 	getExternalSolutionArchiveUseCase  *usecase.GetExternalSolutionArchive
 	cleanUnusedSolutionArchivesUseCase *usecase.CleanUnusedSolutionArchives
+	cleanUnusedSolutionsUseCase        *usecase.CleanUnusedSolutions
 }
 
 func NewContainer(ctx context.Context, cfg *config.Environment, filenameCh chan string) *Container {
