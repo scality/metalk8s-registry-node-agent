@@ -4,8 +4,7 @@ package resolver
 import (
 	"context"
 
-	"github.com/pkg/errors"
-
+	"github.com/scality/go-errors"
 	"github.com/scality/metalk8s-registry-node-agent/pkg/presentation/http/generated"
 )
 
@@ -38,7 +37,9 @@ func (r *Root) UploadChunk(
 ) (generated.UploadChunkResponseObject, error) {
 	response, err := r.UploadPart.UploadChunk(ctx, request)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to resolve upload chunk request")
+		return nil, errors.Intercept(err).
+			WithDetail("failed to resolve upload chunk request").
+			Throw()
 	}
 
 	return response, nil

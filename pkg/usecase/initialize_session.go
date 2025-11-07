@@ -1,8 +1,8 @@
 package usecase
 
 import (
-	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
+	"github.com/scality/go-errors"
 
 	"github.com/scality/metalk8s-registry-node-agent/pkg/domain"
 	"github.com/scality/metalk8s-registry-node-agent/pkg/service"
@@ -33,7 +33,9 @@ func (uc *InitializeSession) Execute(artifact *domain.Artifact) (*domain.Session
 
 	sessionStatus, err := uc.sessionInitializer.InitializeSession(artifact)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to initialize session")
+		return nil, errors.Intercept(err).
+			WithDetail("failed to initialize session").
+			Throw()
 	}
 
 	uc.logger.Debug().Any("session_status", sessionStatus).Msg("Session initialized")

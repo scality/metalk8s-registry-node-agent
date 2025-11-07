@@ -1,8 +1,8 @@
 package sessionremover
 
 import (
-	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
+	"github.com/scality/go-errors"
 
 	"github.com/scality/metalk8s-registry-node-agent/pkg/domain"
 	"github.com/scality/metalk8s-registry-node-agent/pkg/library"
@@ -32,24 +32,32 @@ func (s *Storage) RemoveSession(artifact *domain.Artifact) error {
 	// List all the buckets
 	buckets, err := s.store.ListBuckets()
 	if err != nil {
-		if errors.Is(err, domain.ErrSessionRemoverNotFoundError) {
+		if errors.Is(err,
+			errors.Intercept(domain.ErrSessionRemoverNotFound).
+				WithIdentifier(404000).
+				Throw()) {
 			return nil
 		}
-		return domain.Stamp(err)
+		return errors.Stamp(err)
 	}
 
 	// Extract the session bucket
 	sessionBucket, err := library.ExtractSessionBucket(buckets, artifact)
 	if err != nil {
-		if errors.Is(err, domain.ErrSessionRemoverNotFoundError) {
+		if errors.Is(err,
+			errors.Intercept(domain.ErrSessionRemoverNotFound).
+				WithIdentifier(404000).
+				Throw()) {
 			return nil
 		}
-		return errors.Wrap(err, "failed to extract the session bucket")
+		return errors.Intercept(err).
+			WithDetail("failed to extract the session bucket").
+			Throw()
 	}
 
 	err = s.store.DeleteBucket(sessionBucket)
 	if err != nil {
-		return domain.Stamp(err)
+		return errors.Stamp(err)
 	}
 
 	return nil

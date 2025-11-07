@@ -1,11 +1,11 @@
 package sessioninitializer
 
 import (
-	"errors"
 	"log"
 	"slices"
 
 	"github.com/rs/zerolog"
+	"github.com/scality/go-errors"
 	"github.com/scality/metalk8s-registry-node-agent/pkg/domain"
 	"github.com/scality/metalk8s-registry-node-agent/pkg/library"
 	"github.com/scality/metalk8s-registry-node-agent/pkg/service"
@@ -35,7 +35,7 @@ func (s *Storage) InitializeSession(artifact *domain.Artifact) (*domain.SessionS
 	// matching artifactStorageNamePattern
 	fileNames, err := s.store.ListFiles()
 	if err != nil {
-		return nil, domain.Stamp(err)
+		return nil, errors.Stamp(err)
 	}
 
 	// Check if the artifact already exists in the storage
@@ -56,7 +56,7 @@ func (s *Storage) InitializeSession(artifact *domain.Artifact) (*domain.SessionS
 	if exist {
 		artifactStatus, err := s.store.GetMultipartFileStatus(bucketName, artifact)
 		if err != nil {
-			return nil, domain.Stamp(err)
+			return nil, errors.Stamp(err)
 		}
 		return &domain.SessionStatus{
 			Version:            artifact.Version,
@@ -77,14 +77,14 @@ func (s *Storage) InitializeSession(artifact *domain.Artifact) (*domain.SessionS
 	err = s.store.CreateBucket(bucketName)
 	if err != nil {
 		cleanup()
-		return nil, domain.Stamp(err)
+		return nil, errors.Stamp(err)
 	}
 
 	storageProvider := s.store
 	artifactStatus, err := storageProvider.CreateMultipartFiles(bucketName, artifact)
 	if err != nil {
 		cleanup()
-		return nil, domain.Stamp(err)
+		return nil, errors.Stamp(err)
 	}
 
 	return &domain.SessionStatus{
@@ -98,8 +98,11 @@ func (s *Storage) InitializeSession(artifact *domain.Artifact) (*domain.SessionS
 // or an error when multiple session buckets are found.
 func (s *Storage) sessionBucketAlreadyExists(name string) (bool, error) {
 	buckets, err := s.store.ListBuckets()
-	if err != nil && !errors.Is(err, domain.ErrSessionInitializerNotFoundError) {
-		return false, domain.Stamp(err)
+	if err != nil && !errors.Is(err,
+		errors.Intercept(domain.ErrStorageProviderNotFound).
+			WithIdentifier(404000).
+			Throw()) {
+		return false, errors.Stamp(err)
 	}
 
 	return slices.Contains(buckets, name), nil

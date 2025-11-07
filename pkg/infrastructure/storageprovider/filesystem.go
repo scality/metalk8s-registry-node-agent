@@ -15,8 +15,8 @@ import (
 	"time"
 
 	"github.com/fsnotify/fsnotify"
-	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
+	"github.com/scality/go-errors"
 
 	"github.com/scality/metalk8s-registry-node-agent/pkg/domain"
 	"github.com/scality/metalk8s-registry-node-agent/pkg/library"
@@ -63,26 +63,29 @@ func (f *FileSystem) Init() error {
 	defer f.Unlock()
 
 	if err := os.MkdirAll(f.artifactLocation, library.FileSystemDefaultDirMode); err != nil {
-		return domain.FromTemplate(domain.ErrStorageProviderInitError).
+		return errors.From(domain.ErrStorageProviderInit).
+			WithIdentifier(500000).
 			CausedBy(err).
 			WithDetail("Failed to create artifact location.").
-			AddProperty("artifact_location", f.artifactLocation).
+			WithProperty("artifact_location", f.artifactLocation).
 			Throw()
 	}
 
 	controlDirectoryPath := filepath.Join(f.artifactLocation, controlDir)
 
 	if err := os.MkdirAll(controlDirectoryPath, library.FileSystemDefaultDirMode); err != nil {
-		return domain.FromTemplate(domain.ErrStorageProviderInitError).
+		return errors.From(domain.ErrStorageProviderInit).
+			WithIdentifier(500000).
 			CausedBy(err).
 			WithDetail("Failed to create control directory.").
-			AddProperty("control_directory", controlDirectoryPath).
+			WithProperty("control_directory", controlDirectoryPath).
 			Throw()
 	}
 
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
-		return domain.FromTemplate(domain.ErrStorageProviderInitError).
+		return errors.From(domain.ErrStorageProviderInit).
+			WithIdentifier(500000).
 			CausedBy(err).
 			WithDetail("Failed to create watcher.").
 			Throw()
@@ -116,11 +119,11 @@ func (f *FileSystem) DeleteFile(
 	fileName string,
 ) error {
 	if err := library.EnforceNamingConventions(fileName); err != nil {
-		return domain.Stamp(err)
+		return errors.Stamp(err)
 	}
 
 	if err := f.deleteFile(fileName); err != nil {
-		return domain.Stamp(err)
+		return errors.Stamp(err)
 	}
 
 	return nil
@@ -131,12 +134,12 @@ func (f *FileSystem) HashFile(
 	fileName string,
 ) (string, error) {
 	if err := library.EnforceNamingConventions(fileName); err != nil {
-		return "", domain.Stamp(err)
+		return "", errors.Stamp(err)
 	}
 
 	hash, err := f.hashFile(fileName)
 	if err != nil {
-		return "", domain.Stamp(err)
+		return "", errors.Stamp(err)
 	}
 
 	return hash, nil
@@ -147,11 +150,11 @@ func (f *FileSystem) CreateBucket(
 	bucketName string,
 ) error {
 	if err := library.EnforceNamingConventions(bucketName); err != nil {
-		return domain.Stamp(err)
+		return errors.Stamp(err)
 	}
 
 	if err := f.createBucket(bucketName); err != nil {
-		return domain.Stamp(err)
+		return errors.Stamp(err)
 	}
 
 	return nil
@@ -167,11 +170,11 @@ func (f *FileSystem) DeleteBucket(
 	bucketName string,
 ) error {
 	if err := library.EnforceNamingConventions(bucketName); err != nil {
-		return domain.Stamp(err)
+		return errors.Stamp(err)
 	}
 
 	if err := f.deleteBucket(bucketName); err != nil {
-		return domain.Stamp(err)
+		return errors.Stamp(err)
 	}
 
 	return nil
@@ -182,11 +185,11 @@ func (f *FileSystem) MoveFileToRoot(
 	bucketName, fileName, newFileName string,
 ) error {
 	if err := library.EnforceNamingConventions(newFileName); err != nil {
-		return domain.Stamp(err)
+		return errors.Stamp(err)
 	}
 
 	if err := f.moveFileToRoot(bucketName, fileName, newFileName); err != nil {
-		return domain.Stamp(err)
+		return errors.Stamp(err)
 	}
 
 	return nil
@@ -198,11 +201,11 @@ func (f *FileSystem) CreateMultipartFiles(
 	artifact *domain.Artifact,
 ) (*domain.ArtifactStatus, error) {
 	if err := library.EnforceNamingConventions(artifact.Name); err != nil {
-		return nil, domain.Stamp(err)
+		return nil, errors.Stamp(err)
 	}
 	meta, err := f.createMultipartFiles(bucketName, artifact)
 	if err != nil {
-		return nil, domain.Stamp(err)
+		return nil, errors.Stamp(err)
 	}
 
 	return meta, nil
@@ -214,7 +217,7 @@ func (f *FileSystem) GetMultipartFile(
 ) (*domain.Artifact, error) {
 	meta, err := f.getMultipartFile(bucketName)
 	if err != nil {
-		return nil, domain.Stamp(err)
+		return nil, errors.Stamp(err)
 	}
 
 	return meta, nil
@@ -228,7 +231,7 @@ func (f *FileSystem) GetMultipartFileStatus(
 ) (*domain.ArtifactStatus, error) {
 	status, err := f.getArtifactStatus(bucketName, artifactMeta)
 	if err != nil {
-		return nil, domain.Stamp(err)
+		return nil, errors.Stamp(err)
 	}
 
 	return status, nil
@@ -240,7 +243,7 @@ func (f *FileSystem) DeleteMultipartFile(
 	artifactMeta *domain.Artifact,
 ) error {
 	if err := f.deleteMultipartFile(bucketName, artifactMeta); err != nil {
-		return domain.Stamp(err)
+		return errors.Stamp(err)
 	}
 
 	return nil
@@ -253,7 +256,7 @@ func (f *FileSystem) WritePartToMultipartFile(bucketName string,
 ) (*domain.ArtifactStatus, error) {
 	status, err := f.writePartToMultipartFile(bucketName, part)
 	if err != nil {
-		return nil, domain.Stamp(err)
+		return nil, errors.Stamp(err)
 	}
 
 	return status, nil
@@ -267,7 +270,7 @@ func (f *FileSystem) ConsolidateMultipartFile(
 	perm os.FileMode,
 ) error {
 	if err := f.consolidateMultipartFile(bucketName, artifactMeta, perm); err != nil {
-		return domain.Stamp(err)
+		return errors.Stamp(err)
 	}
 
 	return nil
@@ -276,9 +279,10 @@ func (f *FileSystem) ConsolidateMultipartFile(
 // GetHashFromFileInfos retrieves the hash of a file from the storage backend.
 func (f *FileSystem) GetHashFromFileInfos(filename string) (string, error) {
 	if _, ok := f.watchedFileInfos[filename]; !ok {
-		return "", domain.FromTemplate(domain.ErrStorageProviderNotFoundError).
+		return "", errors.From(domain.ErrStorageProviderNotFound).
+			WithIdentifier(404000).
 			WithDetail("File not found.").
-			AddProperty("file_name", filename).
+			WithProperty("file_name", filename).
 			Throw()
 	}
 
@@ -298,14 +302,18 @@ func (f *FileSystem) createBucket(
 ) error {
 	bucketPath := f.genBucketPath(bucketName)
 	if err := library.CheckDir(bucketPath); err != nil &&
-		!errors.Is(err, domain.ErrStorageProviderNotFoundError) {
-		return domain.Stamp(err)
+		!errors.Is(err,
+			errors.Intercept(domain.ErrStorageProviderNotFound).
+				WithIdentifier(404000).
+				Throw()) {
+		return errors.Stamp(err)
 	}
 
 	if err := os.Mkdir(bucketPath, library.FileSystemDefaultDirMode); err != nil && !os.IsExist(err) {
-		return domain.FromTemplate(domain.ErrStorageProviderInternalError).
+		return errors.From(domain.ErrStorageProviderInternal).
+			WithIdentifier(500000).
 			WithDetail("Unable to create the bucket.").
-			AddProperty("bucket_path", bucketPath).
+			WithProperty("bucket_path", bucketPath).
 			CausedBy(err).
 			Throw()
 	}
@@ -316,11 +324,12 @@ func (f *FileSystem) createBucket(
 func (f *FileSystem) listBuckets() ([]string, error) {
 	buckets, err := library.ListDirContentNames(f.artifactLocation, library.BucketFilter)
 	if err != nil {
-		return nil, domain.Stamp(err)
+		return nil, errors.Stamp(err)
 	}
 
 	if len(buckets) == 0 {
-		return nil, domain.FromTemplate(domain.ErrStorageProviderNotFoundError).
+		return nil, errors.From(domain.ErrStorageProviderNotFound).
+			WithIdentifier(404000).
 			WithDetail("No buckets found.").
 			Throw()
 	}
@@ -337,13 +346,14 @@ func (f *FileSystem) deleteBucket(
 ) error {
 	bucketPath := f.genBucketPath(bucketName)
 	if err := library.CheckDir(bucketPath); err != nil {
-		return domain.Stamp(err)
+		return errors.Stamp(err)
 	}
 
 	if err := os.RemoveAll(bucketPath); err != nil {
-		return domain.FromTemplate(domain.ErrStorageProviderInternalError).
+		return errors.From(domain.ErrStorageProviderInternal).
+			WithIdentifier(500000).
 			WithDetail("Unable to delete the bucket.").
-			AddProperty("bucket_path", bucketPath).
+			WithProperty("bucket_path", bucketPath).
 			CausedBy(err).
 			Throw()
 	}
@@ -354,7 +364,7 @@ func (f *FileSystem) deleteBucket(
 func (f *FileSystem) listFiles() ([]string, error) {
 	files, err := library.ListDirContentNames(f.artifactLocation, f.interestContentFilter)
 	if err != nil {
-		return nil, domain.Stamp(err)
+		return nil, errors.Stamp(err)
 	}
 
 	return files, nil
@@ -365,11 +375,11 @@ func (f *FileSystem) deleteFile(
 ) error {
 	filePath := filepath.Join(f.artifactLocation, fileName)
 	if err := library.CheckFile(filePath); err != nil {
-		return domain.Stamp(err)
+		return errors.Stamp(err)
 	}
 
 	if err := library.DeleteFile(filePath); err != nil {
-		return domain.Stamp(err)
+		return errors.Stamp(err)
 	}
 
 	return nil
@@ -384,12 +394,12 @@ func (f *FileSystem) hashFile(
 
 	filePath := filepath.Join(f.artifactLocation, fileName)
 	if err := library.CheckFile(filePath); err != nil {
-		return "", domain.Stamp(err)
+		return "", errors.Stamp(err)
 	}
 
 	hash, err := library.HashFile(filePath)
 	if err != nil {
-		return "", domain.Stamp(err)
+		return "", errors.Stamp(err)
 	}
 
 	return hash, nil
@@ -437,31 +447,33 @@ func (f *FileSystem) moveFileToRoot(
 ) error {
 	bucketPath := f.genBucketPath(bucketName)
 	if err := library.CheckDir(bucketPath); err != nil {
-		return domain.Stamp(err)
+		return errors.Stamp(err)
 	}
 
 	filePath := f.genFileOnBucketPath(bucketName, fileName)
 	if err := library.CheckFile(filePath); err != nil {
-		return domain.Stamp(err)
+		return errors.Stamp(err)
 	}
 
 	newFilePath := filepath.Join(f.artifactLocation, newFileName)
 	if err := os.Remove(newFilePath); err != nil && !os.IsNotExist(err) {
-		return domain.FromTemplate(domain.ErrStorageProviderInternalError).
+		return errors.From(domain.ErrStorageProviderInternal).
+			WithIdentifier(500000).
 			WithDetail("Unexpected error while moving the file to the root location.").
-			AddProperty("actual_file_path", filePath).
-			AddProperty("new_file_path", newFilePath).
-			AddProperty("while", "removing existing file from the root location").
+			WithProperty("current_file_path", filePath).
+			WithProperty("new_file_path", newFilePath).
+			WithProperty("while", "removing existing file from the root location").
 			CausedBy(err).
 			Throw()
 	}
 
 	if err := os.Rename(filePath, newFilePath); err != nil {
-		return domain.FromTemplate(domain.ErrStorageProviderInternalError).
+		return errors.From(domain.ErrStorageProviderInternal).
+			WithIdentifier(500000).
 			WithDetail("Unexpected error while moving the file to the root location.").
-			AddProperty("actual_file_path", filePath).
-			AddProperty("new_file_path", newFilePath).
-			AddProperty("while", "moving the file from bucket to root location").
+			WithProperty("current_file_path", filePath).
+			WithProperty("new_file_path", newFilePath).
+			WithProperty("while", "moving the file from bucket to root location").
 			CausedBy(err).
 			Throw()
 	}
@@ -566,16 +578,17 @@ func (f *FileSystem) genMultipartFilePaths(
 func loadArtifactMeta(meta *domain.Artifact, filePath string) error {
 	metaFile, err := library.GetFile(filePath)
 	if err != nil {
-		return domain.Stamp(err)
+		return errors.Stamp(err)
 	}
 
 	defer metaFile.Close() // nolint: errcheck // No error check on defer.
 
 	if err := json.NewDecoder(metaFile).Decode(meta); err != nil {
-		return domain.FromTemplate(domain.ErrStorageProviderInternalError).
+		return errors.From(domain.ErrStorageProviderInternal).
+			WithIdentifier(500000).
 			WithDetail("Unable to load the metadata of the multipart file.").
-			AddProperty("file_path", filePath).
-			AddProperty("while", "decoding the metadata from json").
+			WithProperty("file_path", filePath).
+			WithProperty("while", "decoding the metadata from json").
 			CausedBy(err).
 			Throw()
 	}
@@ -588,7 +601,7 @@ func loadArtifactMeta(meta *domain.Artifact, filePath string) error {
 func (f *FileSystem) getArtifactMeta(bucketPath string) (*domain.Artifact, error) {
 	metaFileNames, err := library.ListDirContentNames(bucketPath, library.MultipartMetaFilter)
 	if err != nil {
-		return nil, domain.Stamp(err)
+		return nil, errors.Stamp(err)
 	}
 
 	artifactMetas := make([]*domain.Artifact, 0, len(metaFileNames))
@@ -597,7 +610,7 @@ func (f *FileSystem) getArtifactMeta(bucketPath string) (*domain.Artifact, error
 		var artifactMeta domain.Artifact
 
 		if err := loadArtifactMeta(&artifactMeta, filepath.Join(bucketPath, metaFileName)); err != nil {
-			return nil, domain.Stamp(err)
+			return nil, errors.Stamp(err)
 		}
 
 		artifactMetas = append(artifactMetas, &artifactMeta)
@@ -605,15 +618,17 @@ func (f *FileSystem) getArtifactMeta(bucketPath string) (*domain.Artifact, error
 
 	artifactMetas = f.filterOrphansMeta(bucketPath, artifactMetas)
 	if len(artifactMetas) < 1 {
-		return nil, domain.FromTemplate(domain.ErrStorageProviderNotFoundError).
+		return nil, errors.From(domain.ErrStorageProviderNotFound).
+			WithIdentifier(404000).
 			WithDetail("No multipart files found in the bucket.").
-			AddProperty("bucket_name", bucketPath).
+			WithProperty("bucket_name", bucketPath).
 			Throw()
 	}
 	if len(artifactMetas) > 1 {
-		return nil, domain.FromTemplate(domain.ErrStorageProviderInternalError).
+		return nil, errors.From(domain.ErrStorageProviderInternal).
+			WithIdentifier(500000).
 			WithDetail("Too many multipart files found in the bucket.").
-			AddProperty("bucket_name", bucketPath).
+			WithProperty("bucket_name", bucketPath).
 			Throw()
 	}
 
@@ -625,7 +640,7 @@ func (f *FileSystem) createMultipartFiles(
 	artifactMeta *domain.Artifact,
 ) (*domain.ArtifactStatus, error) {
 	if err := library.CheckDir(f.genBucketPath(bucketName)); err != nil {
-		return nil, domain.Stamp(err)
+		return nil, errors.Stamp(err)
 	}
 
 	metaFilePath, partsFilePath, recipientFilePath := f.genMultipartFilePaths(
@@ -637,23 +652,27 @@ func (f *FileSystem) createMultipartFiles(
 	if err == nil {
 		artifactStatus, err := f.getArtifactStatus(bucketName, artifactMeta)
 		if err != nil {
-			return nil, domain.Stamp(err)
+			return nil, errors.Stamp(err)
 		}
 
 		return artifactStatus, nil
 	}
 
-	if !errors.Is(err, domain.ErrStorageProviderNotFoundError) {
-		return nil, domain.Stamp(err)
+	if !errors.Is(err,
+		errors.Intercept(domain.ErrStorageProviderNotFound).
+			WithIdentifier(404000).
+			Throw()) {
+		return nil, errors.Stamp(err)
 	}
 
 	metaContentBytes, err := json.Marshal(artifactMeta)
 	if err != nil {
-		return nil, domain.FromTemplate(domain.ErrStorageProviderInternalError).
+		return nil, errors.From(domain.ErrStorageProviderInternal).
+			WithIdentifier(500000).
 			WithDetail("Unable to save the artifact metadata.").
-			AddProperty("artifact", artifactMeta.Name).
-			AddProperty("version", artifactMeta.Version).
-			AddProperty("while", "marshalling the metadata to json format").
+			WithProperty("artifact", artifactMeta.Name).
+			WithProperty("version", artifactMeta.Version).
+			WithProperty("while", "marshalling the metadata to json format").
 			Throw()
 	}
 
@@ -670,7 +689,7 @@ func (f *FileSystem) createMultipartFiles(
 	); err != nil {
 		cleanUp()
 
-		return nil, domain.Stamp(err)
+		return nil, errors.Stamp(err)
 	}
 
 	if err := library.CreateEmptyFile(
@@ -680,7 +699,7 @@ func (f *FileSystem) createMultipartFiles(
 	); err != nil {
 		cleanUp()
 
-		return nil, domain.Stamp(err)
+		return nil, errors.Stamp(err)
 	}
 
 	if err := library.CreateEmptyFile(
@@ -690,7 +709,7 @@ func (f *FileSystem) createMultipartFiles(
 	); err != nil {
 		cleanUp()
 
-		return nil, domain.Stamp(err)
+		return nil, errors.Stamp(err)
 	}
 
 	return &domain.ArtifactStatus{
@@ -702,12 +721,12 @@ func (f *FileSystem) createMultipartFiles(
 func (f *FileSystem) getMultipartFile(bucketName string) (*domain.Artifact, error) {
 	bucketPath := f.genBucketPath(bucketName)
 	if err := library.CheckDir(bucketPath); err != nil {
-		return nil, domain.Stamp(err)
+		return nil, errors.Stamp(err)
 	}
 
 	artifactMeta, err := f.getArtifactMeta(bucketPath)
 	if err != nil {
-		return nil, domain.Stamp(err)
+		return nil, errors.Stamp(err)
 	}
 
 	return artifactMeta, nil
@@ -718,7 +737,7 @@ func (f *FileSystem) getArtifactStatus(
 	artifactMeta *domain.Artifact,
 ) (*domain.ArtifactStatus, error) {
 	if err := library.CheckDir(f.genBucketPath(bucketName)); err != nil {
-		return nil, domain.Stamp(err)
+		return nil, errors.Stamp(err)
 	}
 
 	metaFilePath, partsFilePath, recipientFilePath := f.genMultipartFilePaths(
@@ -727,43 +746,44 @@ func (f *FileSystem) getArtifactStatus(
 	)
 
 	if err := library.CheckFile(metaFilePath); err != nil {
-		return nil, domain.Stamp(err)
+		return nil, errors.Stamp(err)
 	}
 
 	if err := library.CheckFile(partsFilePath); err != nil {
-		return nil, domain.Stamp(err)
+		return nil, errors.Stamp(err)
 	}
 
 	if err := library.CheckFile(recipientFilePath); err != nil {
-		return nil, domain.Stamp(err)
+		return nil, errors.Stamp(err)
 	}
 
 	metaFile, err := library.GetFile(metaFilePath)
 	if err != nil {
-		return nil, domain.Stamp(err)
+		return nil, errors.Stamp(err)
 	}
 
 	defer metaFile.Close() // nolint: errcheck // No error check on defer.
 
 	partsFile, err := library.GetFile(partsFilePath)
 	if err != nil {
-		return nil, domain.Stamp(err)
+		return nil, errors.Stamp(err)
 	}
 
 	defer partsFile.Close() // nolint: errcheck // No error check on defer.
 
 	var storedArtifactMeta domain.Artifact
 	if err := json.NewDecoder(metaFile).Decode(&storedArtifactMeta); err != nil {
-		return nil, domain.FromTemplate(domain.ErrStorageProviderInternalError).
+		return nil, errors.From(domain.ErrStorageProviderInternal).
+			WithIdentifier(500000).
 			WithDetail("Unable to load the metadata of the multipart file.").
-			AddProperty("file_path", metaFilePath).
-			AddProperty("while", "decoding the metadata from json").
+			WithProperty("file_path", metaFilePath).
+			WithProperty("while", "decoding the metadata from json").
 			CausedBy(err).
 			Throw()
 	}
 
 	if err := library.CompareArtifactMetas(artifactMeta, &storedArtifactMeta); err != nil {
-		return nil, domain.Stamp(err)
+		return nil, errors.Stamp(err)
 	}
 
 	partMetas := make(map[int64]*domain.PartMeta)
@@ -776,10 +796,11 @@ func (f *FileSystem) getArtifactStatus(
 		}
 
 		if err != nil {
-			return nil, domain.FromTemplate(domain.ErrStorageProviderInternalError).
+			return nil, errors.From(domain.ErrStorageProviderInternal).
+				WithIdentifier(500000).
 				WithDetail("Unable to load the parts metadata of the multipart file.").
-				AddProperty("file_path", partsFilePath).
-				AddProperty("while", "decoding the parts metadata from binary").
+				WithProperty("file_path", partsFilePath).
+				WithProperty("while", "decoding the parts metadata from binary").
 				CausedBy(err).
 				Throw()
 		}
@@ -798,7 +819,7 @@ func (f *FileSystem) deleteMultipartFile(
 	artifactMeta *domain.Artifact,
 ) error {
 	if err := library.CheckDir(f.genBucketPath(bucketName)); err != nil {
-		return domain.Stamp(err)
+		return errors.Stamp(err)
 	}
 
 	metaFilePath, partsFilePath, recipientFilePath := f.genMultipartFilePaths(
@@ -807,15 +828,15 @@ func (f *FileSystem) deleteMultipartFile(
 	)
 
 	if err := library.CheckFile(metaFilePath); err != nil {
-		return domain.Stamp(err)
+		return errors.Stamp(err)
 	}
 
 	if err := library.CheckFile(partsFilePath); err != nil {
-		return domain.Stamp(err)
+		return errors.Stamp(err)
 	}
 
 	if err := library.CheckFile(recipientFilePath); err != nil {
-		return domain.Stamp(err)
+		return errors.Stamp(err)
 	}
 
 	problems := make(map[string]any)
@@ -833,7 +854,8 @@ func (f *FileSystem) deleteMultipartFile(
 	}
 
 	if len(problems) > 0 {
-		return domain.FromTemplate(domain.ErrStorageProviderInternalError).
+		return errors.From(domain.ErrStorageProviderInternal).
+			WithIdentifier(500000).
 			WithDetail("Unable to delete the multipart file.").
 			WithProperties(problems).
 			Throw()
@@ -848,7 +870,7 @@ func (f *FileSystem) writePartToMultipartFile(
 ) (*domain.ArtifactStatus, error) {
 	artifactStatus, err := f.getArtifactStatus(bucketName, part.Artifact)
 	if err != nil {
-		return nil, domain.Stamp(err)
+		return nil, errors.Stamp(err)
 	}
 
 	partsFilePath := f.genMultipartPartsFilePath(bucketName, part.Artifact.Name)
@@ -856,9 +878,10 @@ func (f *FileSystem) writePartToMultipartFile(
 
 	partsFile, err := os.OpenFile(partsFilePath, os.O_WRONLY, library.FileSystemDefaultFileMode)
 	if err != nil {
-		return nil, domain.FromTemplate(domain.ErrStorageProviderInternalError).
+		return nil, errors.From(domain.ErrStorageProviderInternal).
+			WithIdentifier(500000).
 			WithDetail("Unable to open the parts file.").
-			AddProperty("file_path", partsFilePath).
+			WithProperty("file_path", partsFilePath).
 			CausedBy(err).
 			Throw()
 	}
@@ -867,9 +890,10 @@ func (f *FileSystem) writePartToMultipartFile(
 
 	recipientFile, err := os.OpenFile(recipientFilePath, os.O_RDWR, library.FileSystemDefaultFileMode)
 	if err != nil {
-		return nil, domain.FromTemplate(domain.ErrStorageProviderInternalError).
+		return nil, errors.From(domain.ErrStorageProviderInternal).
+			WithIdentifier(500000).
 			WithDetail("Unable to open the recipient file.").
-			AddProperty("file_path", recipientFilePath).
+			WithProperty("file_path", recipientFilePath).
 			CausedBy(err).
 			Throw()
 	}
@@ -878,47 +902,52 @@ func (f *FileSystem) writePartToMultipartFile(
 
 	_, err = recipientFile.Seek(part.Meta.Start, io.SeekStart)
 	if err != nil {
-		return nil, domain.FromTemplate(domain.ErrStorageProviderInternalError).
+		return nil, errors.From(domain.ErrStorageProviderInternal).
+			WithIdentifier(500000).
 			WithDetail("Unable to move to the start of the part in the recipient file.").
-			AddProperty("file_path", recipientFilePath).
-			AddProperty("part_start", part.Meta.Start).
+			WithProperty("file_path", recipientFilePath).
+			WithProperty("part_start", part.Meta.Start).
 			CausedBy(err).
 			Throw()
 	}
 
 	written, err := io.Copy(recipientFile, part.Content)
 	if err != nil {
-		return nil, domain.FromTemplate(domain.ErrStorageProviderInternalError).
+		return nil, errors.From(domain.ErrStorageProviderInternal).
+			WithIdentifier(500000).
 			WithDetail("Unable to write the part to the recipient file.").
-			AddProperty("file_path", recipientFilePath).
-			AddProperty("part_size", part.Meta.Size()).
+			WithProperty("file_path", recipientFilePath).
+			WithProperty("part_size", part.Meta.Size()).
 			CausedBy(err).
 			Throw()
 	}
 
 	if written != part.Meta.Size() {
-		return nil, domain.FromTemplate(domain.ErrStorageProviderInternalError).
+		return nil, errors.From(domain.ErrStorageProviderInternal).
+			WithIdentifier(500000).
 			WithDetail("The part was not fully written to the recipient file.").
-			AddProperty("file_path", recipientFilePath).
-			AddProperty("part_size", part.Meta.Size()).
-			AddProperty("written", written).
+			WithProperty("file_path", recipientFilePath).
+			WithProperty("part_size", part.Meta.Size()).
+			WithProperty("written", written).
 			Throw()
 	}
 
 	_, err = partsFile.Seek(0, io.SeekEnd)
 	if err != nil {
-		return nil, domain.FromTemplate(domain.ErrStorageProviderInternalError).
+		return nil, errors.From(domain.ErrStorageProviderInternal).
+			WithIdentifier(500000).
 			WithDetail("Unable to move to the end of the parts file.").
-			AddProperty("file_path", partsFilePath).
+			WithProperty("file_path", partsFilePath).
 			CausedBy(err).
 			Throw()
 	}
 
 	err = binary.Write(partsFile, binary.LittleEndian, part.Meta)
 	if err != nil {
-		return nil, domain.FromTemplate(domain.ErrStorageProviderInternalError).
+		return nil, errors.From(domain.ErrStorageProviderInternal).
+			WithIdentifier(500000).
 			WithDetail("Unable to write the part metadata to the parts file.").
-			AddProperty("file_path", partsFilePath).
+			WithProperty("file_path", partsFilePath).
 			CausedBy(err).
 			Throw()
 	}
@@ -939,10 +968,11 @@ func (f *FileSystem) consolidateMultipartFile(
 	}
 
 	if !artifactStatus.IsComplete() {
-		return domain.FromTemplate(domain.ErrStorageProviderBusinessRuleViolation).
+		return errors.From(domain.ErrStorageProviderBusinessRuleViolation).
+			WithIdentifier(422001).
 			WithDetail("Unable to consolidate multipart file because it is not complete.").
-			AddProperty("bucket_name", bucketName).
-			AddProperty("artifact_name", artifactMeta.Name).
+			WithProperty("bucket_name", bucketName).
+			WithProperty("artifact_name", artifactMeta.Name).
 			Throw()
 	}
 
@@ -955,16 +985,17 @@ func (f *FileSystem) consolidateMultipartFile(
 	// Calculate the SHA256 hash of the recipient file
 	recipientFile, err := library.GetFile(recipientFilePath)
 	if err != nil {
-		return domain.Stamp(err)
+		return errors.Stamp(err)
 	}
 
 	defer recipientFile.Close() // nolint: errcheck // No error check on defer.
 
 	hasher := sha256.New()
 	if _, err := io.Copy(hasher, recipientFile); err != nil {
-		return domain.FromTemplate(domain.ErrStorageProviderInternalError).
+		return errors.From(domain.ErrStorageProviderInternal).
+			WithIdentifier(500000).
 			WithDetail("Unable to calculate the hash of the recipient file.").
-			AddProperty("file_path", recipientFilePath).
+			WithProperty("file_path", recipientFilePath).
 			CausedBy(err).
 			Throw()
 	}
@@ -972,29 +1003,32 @@ func (f *FileSystem) consolidateMultipartFile(
 	calculedHash := hex.EncodeToString(hasher.Sum(nil))
 
 	if calculedHash != artifactMeta.Hash {
-		return domain.FromTemplate(domain.ErrStorageProviderBusinessRuleViolation).
+		return errors.From(domain.ErrStorageProviderBusinessRuleViolation).
+			WithIdentifier(422001).
 			WithDetail("The hash of the recipient file does not match the artifact metadata.").
-			AddProperty("component", artifactMeta.Name).
-			AddProperty("version", artifactMeta.Version).
-			AddProperty("expected_hash", artifactMeta.Hash).
-			AddProperty("calculed_hash", calculedHash).
+			WithProperty("component", artifactMeta.Name).
+			WithProperty("version", artifactMeta.Version).
+			WithProperty("expected_hash", artifactMeta.Hash).
+			WithProperty("calculed_hash", calculedHash).
 			Throw()
 	}
 
 	if err := os.Rename(recipientFilePath, baseFilePath); err != nil {
-		return domain.FromTemplate(domain.ErrStorageProviderInternalError).
+		return errors.From(domain.ErrStorageProviderInternal).
+			WithIdentifier(500000).
 			WithDetail("Unable to rename the recipient file.").
-			AddProperty("from", recipientFilePath).
-			AddProperty("to", baseFilePath).
+			WithProperty("from", recipientFilePath).
+			WithProperty("to", baseFilePath).
 			CausedBy(err).
 			Throw()
 	}
 
 	if err := os.Chmod(baseFilePath, perm); err != nil {
-		return domain.FromTemplate(domain.ErrStorageProviderInternalError).
+		return errors.From(domain.ErrStorageProviderInternal).
+			WithIdentifier(500000).
 			WithDetail("Unable to change the permissions of the recipient file.").
-			AddProperty("file_path", baseFilePath).
-			AddProperty("permissions", perm).
+			WithProperty("file_path", baseFilePath).
+			WithProperty("permissions", perm).
 			CausedBy(err).
 			Throw()
 	}
@@ -1011,7 +1045,8 @@ func (f *FileSystem) consolidateMultipartFile(
 	}
 
 	if len(problems) > 0 {
-		return domain.FromTemplate(domain.ErrStorageProviderInternalError).
+		return errors.From(domain.ErrStorageProviderInternal).
+			WithIdentifier(500000).
 			WithDetail("Unable to clean up multipart file bundle.").
 			WithProperties(problems).
 			Throw()
@@ -1047,15 +1082,16 @@ func (f *FileSystem) genWatchedFileInfo(fileEntry os.DirEntry) (*watchedFileInfo
 
 	hash, err := library.HashFile(filePath)
 	if err != nil {
-		return nil, domain.Stamp(err)
+		return nil, errors.Stamp(err)
 	}
 
 	fileInfo, err := fileEntry.Info()
 	if err != nil {
-		return nil, domain.FromTemplate(domain.ErrStorageProviderInternalError).
+		return nil, errors.From(domain.ErrStorageProviderInternal).
+			WithIdentifier(500000).
 			CausedBy(err).
 			WithDetail("Failed to get file info.").
-			AddProperty("file_path", filePath).
+			WithProperty("file_path", filePath).
 			Throw()
 	}
 
@@ -1112,15 +1148,19 @@ func (f *FileSystem) loadWatchedFileInfos() (watchedFilesMap, error) {
 	watchedFileMap := make(map[string]*watchedFileInfo)
 	watchedFileInfosFile, err := library.GetFile(f.genWatchedFilesPath())
 	if err != nil {
-		if errors.Is(err, domain.ErrStorageProviderNotFoundError) {
+		if errors.Is(err,
+			errors.Intercept(domain.ErrStorageProviderNotFound).
+				WithIdentifier(404000).
+				Throw()) {
 			return watchedFileMap, nil
 		}
-		return nil, domain.Stamp(err)
+		return nil, errors.Stamp(err)
 	}
 
 	jsonDecoder := json.NewDecoder(watchedFileInfosFile)
 	if err := jsonDecoder.Decode(&watchedFileMap); err != nil {
-		return nil, domain.FromTemplate(domain.ErrStorageProviderInternalError).
+		return nil, errors.From(domain.ErrStorageProviderInternal).
+			WithIdentifier(500000).
 			CausedBy(err).
 			WithDetail("Failed to decode watched file infos.").
 			Throw()
@@ -1134,7 +1174,8 @@ func (f *FileSystem) saveWatchedFileInfos(watchedFileInfos watchedFilesMap) erro
 
 	watchedFileInfosBytes, err := json.Marshal(watchedFileInfos)
 	if err != nil {
-		return domain.FromTemplate(domain.ErrStorageProviderInternalError).
+		return errors.From(domain.ErrStorageProviderInternal).
+			WithIdentifier(500000).
 			CausedBy(err).
 			WithDetail("Failed to marshal watched file infos.").
 			Throw()
@@ -1145,7 +1186,7 @@ func (f *FileSystem) saveWatchedFileInfos(watchedFileInfos watchedFilesMap) erro
 		bytes.NewBuffer(watchedFileInfosBytes),
 		library.FileSystemDefaultFileMode,
 	); err != nil {
-		return domain.Stamp(err)
+		return errors.Stamp(err)
 	}
 
 	return nil
@@ -1170,7 +1211,7 @@ func (f *FileSystem) updateWatchedFileInfos(saveFunc func(watchedFilesMap) error
 	// List actual interest content.
 	fileEntries, err := library.ListDirContent(f.artifactLocation, f.interestContentFilter)
 	if err != nil {
-		return domain.Stamp(err)
+		return errors.Stamp(err)
 	}
 
 	fileNames := library.ExtractNames(fileEntries)
@@ -1214,7 +1255,7 @@ func (f *FileSystem) updateWatchedFileInfos(saveFunc func(watchedFilesMap) error
 
 	// Save watched file infos to disk.
 	if err := saveFunc(watchedFileInfos); err != nil {
-		return domain.Stamp(err)
+		return errors.Stamp(err)
 	}
 
 	return nil
@@ -1253,7 +1294,7 @@ func (f *FileSystem) watchFiles(filenameCh chan string) {
 
 func (f *FileSystem) startWatchFiles(filenameCh chan string) error {
 	if err := f.updateWatchedFileInfos(f.saveWatchedFileInfos); err != nil {
-		return domain.Stamp(err)
+		return errors.Stamp(err)
 	}
 
 	f.Add(1)
@@ -1261,10 +1302,11 @@ func (f *FileSystem) startWatchFiles(filenameCh chan string) error {
 	go f.watchFiles(filenameCh)
 
 	if err := f.watcher.Add(f.artifactLocation); err != nil {
-		return domain.FromTemplate(domain.ErrStorageProviderInternalError).
+		return errors.From(domain.ErrStorageProviderInternal).
+			WithIdentifier(500000).
 			CausedBy(err).
-			WithDetail("Failed to add root location to watcher.").
-			AddProperty("root_location", f.artifactLocation).
+			WithDetail("Failed to add artifact location to watcher.").
+			WithProperty("artifact_location", f.artifactLocation).
 			Throw()
 	}
 
@@ -1274,7 +1316,8 @@ func (f *FileSystem) stopWatchFiles() error {
 	defer f.Wait()
 
 	if err := f.watcher.Close(); err != nil {
-		return domain.FromTemplate(domain.ErrStorageProviderInternalError).
+		return errors.From(domain.ErrStorageProviderInternal).
+			WithIdentifier(500000).
 			CausedBy(err).
 			WithDetail("Failed to close watcher.").
 			Throw()

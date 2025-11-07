@@ -1,8 +1,8 @@
 package usecase
 
 import (
-	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
+	"github.com/scality/go-errors"
 
 	"github.com/scality/metalk8s-registry-node-agent/pkg/domain"
 	"github.com/scality/metalk8s-registry-node-agent/pkg/service"
@@ -30,7 +30,9 @@ func (uc *UploadPart) Execute(part *domain.Part) (*domain.ArtifactStatus, error)
 
 	partStatus, err := uc.partUploader.UploadPart(part)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to upload part")
+		return nil, errors.Intercept(err).
+			WithDetail("failed to upload part").
+			Throw()
 	}
 
 	uc.logger.Info().Msg("Part uploaded")

@@ -5,8 +5,8 @@ import (
 	"context"
 	"net/http"
 
-	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
+	"github.com/scality/go-errors"
 
 	"github.com/scality/metalk8s-registry-node-agent/pkg/domain"
 	"github.com/scality/metalk8s-registry-node-agent/pkg/presentation/http/generated"
@@ -39,12 +39,12 @@ func (h *UploadPart) UploadChunk(
 	var part domain.Part
 
 	if err := fillPartFromUploadChunkRequestObject(&part, &request); err != nil {
-		return h.genUploadChunkResponseObjectFromError(domain.Stamp(err))
+		return h.genUploadChunkResponseObjectFromError(errors.Stamp(err))
 	}
 
 	artifactStatus, err := h.uc.Execute(&part)
 	if err != nil {
-		return h.genUploadChunkResponseObjectFromError(domain.Stamp(err))
+		return h.genUploadChunkResponseObjectFromError(errors.Stamp(err))
 	}
 
 	var response generated.UploadChunkSuccessResponse
@@ -61,7 +61,7 @@ func (h *UploadPart) UploadChunk(
 func (h *UploadPart) genUploadChunkResponseObjectFromError(
 	err error,
 ) (generated.UploadChunkResponseObject, error) {
-	var apiErr *domain.Error
+	var apiErr *errors.Error
 
 	var problemDetails generated.ProblemDetails
 
@@ -69,7 +69,7 @@ func (h *UploadPart) genUploadChunkResponseObjectFromError(
 
 	h.fillProblemDetailsFromAPIErrorsError(&problemDetails, apiErr)
 
-	switch apiErr.Status {
+	switch int(apiErr.Identifier / 1000) {
 	case http.StatusBadRequest, http.StatusUnprocessableEntity:
 		// TODO: Fix the status code on https://scality.atlassian.net/browse/ARTESCA-13615
 		// The status code should be 422, but the generated code uses 400.
@@ -116,6 +116,6 @@ func (h *UploadPart) genUploadChunkResponseObjectFromError(
 		}, nil
 
 	default:
-		return nil, domain.Stamp(err)
+		return nil, errors.Stamp(err)
 	}
 }
