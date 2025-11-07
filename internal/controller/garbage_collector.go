@@ -5,6 +5,8 @@ import (
 	"time"
 
 	"github.com/rs/zerolog"
+	metalk8sv1alpha1 "github.com/scality/metalk8s-registry-node-agent/api/v1alpha1"
+	"github.com/scality/metalk8s-registry-node-agent/pkg/domain"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -43,10 +45,10 @@ func (gc *garbageCollector) Run() {
 	for {
 		select {
 		case <-gc.done:
-			gc.logger.Info().Msg("Stopping garbage collector")
+			gc.logger.Info().Msg("stopping garbage collector")
 			return
 		case <-gc.ticker.C:
-			gc.logger.Info().Msg("Running garbage collection")
+			gc.logger.Info().Msg("running garbage collection")
 			gc.cleanUnused()
 		}
 	}
@@ -55,4 +57,29 @@ func (gc *garbageCollector) Stop() {
 	close(gc.done)
 }
 
-func (gc *garbageCollector) cleanUnused() {}
+func (gc *garbageCollector) cleanUnused() {
+	nodeSolutionArchiveList := &metalk8sv1alpha1.NodeSolutionArchiveList{}
+	if err := gc.client.List(gc.ctx, nodeSolutionArchiveList, client.MatchingFields{"Spec.NodeName": gc.nodeName}); err != nil {
+		gc.logger.Error().Err(err).Msg("failed to list custom resources")
+		return
+	}
+	usedSolutionArchives := []*domain.SolutionArchive{}
+	for _, item := range nodeSolutionArchiveList.Items {
+		gc.logger.Info().Msgf("garbage collecting solution archive: %s", item.Name)
+		usedSolutionArchives = append(usedSolutionArchives, &domain.SolutionArchive{
+			Name:    item.Spec.Name,
+			Version: item.Spec.Version,
+		})
+	}
+	err := gc.container.GetCleanUnusedSolutionArchivesUseCase().Execute(usedSolutionArchives)
+	if err != nil {
+		gc.logger.Error().Err(err).Msg("failed to clean unused solution archives")
+		return
+	}
+
+	err = gc.container.GetCleanUnusedSolutionsUseCase().Execute(usedSolutionArchives)
+	if err != nil {
+		gc.logger.Error().Err(err).Msg("failed to clean unused solutions")
+		return
+	}
+}

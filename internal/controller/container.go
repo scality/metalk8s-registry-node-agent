@@ -10,4 +10,6 @@ type containerInterface interface {
 	GetGetExternalSolutionArchiveUseCase() *usecase.GetExternalSolutionArchive
 	GetUnmountSolutionArchiveUseCase() *usecase.UnmountSolutionArchive
 	GetMountSolutionArchiveUseCase() *usecase.MountSolutionArchive
+	GetCleanUnusedSolutionArchivesUseCase() *usecase.CleanUnusedSolutionArchives
+	GetCleanUnusedSolutionsUseCase() *usecase.CleanUnusedSolutions
 }
