@@ -7,6 +7,7 @@ import (
 	"github.com/rs/zerolog"
 
 	"github.com/scality/metalk8s-registry-node-agent/cmd/config"
+	"github.com/scality/metalk8s-registry-node-agent/pkg/infrastructure/archivecleaner"
 	"github.com/scality/metalk8s-registry-node-agent/pkg/infrastructure/archivedownloader"
 	"github.com/scality/metalk8s-registry-node-agent/pkg/infrastructure/archivemounter"
 	"github.com/scality/metalk8s-registry-node-agent/pkg/infrastructure/archiveremover"
@@ -60,16 +61,18 @@ type Container struct {
 	storageExternalSolutionArchiveGetter *externalsolutionarchivegetter.Storage
 	storageSolutionArchiveMounter        *archivemounter.Storage
 	storageSolutionArchiveUnmounter      *archiveunmounter.Storage
+	storageSolutionArchiveCleaner        *archivecleaner.Storage
 
-	uploadPartUseCase                 *usecase.UploadPart
-	initializeSessionUseCase          *usecase.InitializeSession
-	removeSolutionArchiveUseCase      *usecase.RemoveSolutionArchive
-	removeSessionUseCase              *usecase.RemoveSession
-	mountSolutionArchiveUseCase       *usecase.MountSolutionArchive
-	unmountSolutionArchiveUseCase     *usecase.UnmountSolutionArchive
-	validateSolutionArchiveUseCase    *usecase.ValidateSolutionArchive
-	downloadSolutionArchiveUseCase    *usecase.DownloadSolutionArchive
-	getExternalSolutionArchiveUseCase *usecase.GetExternalSolutionArchive
+	uploadPartUseCase                  *usecase.UploadPart
+	initializeSessionUseCase           *usecase.InitializeSession
+	removeSolutionArchiveUseCase       *usecase.RemoveSolutionArchive
+	removeSessionUseCase               *usecase.RemoveSession
+	mountSolutionArchiveUseCase        *usecase.MountSolutionArchive
+	unmountSolutionArchiveUseCase      *usecase.UnmountSolutionArchive
+	validateSolutionArchiveUseCase     *usecase.ValidateSolutionArchive
+	downloadSolutionArchiveUseCase     *usecase.DownloadSolutionArchive
+	getExternalSolutionArchiveUseCase  *usecase.GetExternalSolutionArchive
+	cleanUnusedSolutionArchivesUseCase *usecase.CleanUnusedSolutionArchives
 }
 
 func NewContainer(ctx context.Context, cfg *config.Environment, filenameCh chan string) *Container {
