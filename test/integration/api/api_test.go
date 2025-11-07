@@ -17,6 +17,7 @@ import (
 
 	"github.com/rs/zerolog"
 	"github.com/scality/metalk8s-registry-node-agent/cmd/config"
+	"github.com/scality/metalk8s-registry-node-agent/pkg/domain"
 	"github.com/scality/metalk8s-registry-node-agent/pkg/infrastructure/di"
 	"github.com/scality/metalk8s-registry-node-agent/pkg/presentation/http/extern"
 	"github.com/scality/metalk8s-registry-node-agent/pkg/presentation/http/intern"
@@ -52,6 +53,8 @@ var (
 	timeout  = time.Second * 5
 	interval = time.Millisecond * 250
 )
+
+var initialSolutionArchives []*domain.SolutionArchive
 
 func TestAPI(t *testing.T) {
 	RegisterFailHandler(Fail)
@@ -154,6 +157,15 @@ var _ = BeforeSuite(func() {
 	/*
 		Initialize with some solution archives
 	*/
+	initialSolutionArchives = []*domain.SolutionArchive{
+		{
+			Name:    "artesca-base",
+			Version: "4.0.0-preview.1",
+			Hash:    "0fac9ac77b2915515aa726a1197536087e69123d49d29d0e397fa4931e7da29e",
+			Size:    30,
+		},
+	}
+
 	for fileName, content := range map[string]string{
 		"artesca-base-4.0.0-preview.1.iso": "platform2\nplatform1\nplatform0\n",
 	} {
@@ -177,10 +189,19 @@ var _ = BeforeSuite(func() {
 })
 
 var _ = AfterSuite(func() {
+	By("cleaning with empty used solution archives list")
+	err := testingSuite.container.GetCleanUnusedSolutionArchivesUseCase().Execute([]*domain.SolutionArchive{})
+	Expect(err).NotTo(HaveOccurred())
+
+	By("verifying all solution archives was deleted")
+	fileNames, err := testingSuite.SolutionArchiveStorageProvider.ListFiles()
+	Expect(err).NotTo(HaveOccurred())
+	Expect(fileNames).To(BeEmpty())
+
 	By("tearing down the test environment")
 	cancel()
 	defer os.RemoveAll(testingSuite.RootPath) // nolint: errcheck
-	err := testingSuite.container.GetHTTPExternServer().Close()
+	err = testingSuite.container.GetHTTPExternServer().Close()
 	if err != nil {
 		testingSuite.logger.Fatal().Err(err).Msg("http extern server failure during shutdown")
 	}
