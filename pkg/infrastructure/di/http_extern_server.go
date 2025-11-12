@@ -48,9 +48,14 @@ func (c *Container) GetHTTPExternServer() *http.Server {
 			),
 		)
 
+		externTLSConfig, err := c.getExternTLSConfig()
+		if err != nil {
+			c.GetLogger().Fatal().Err(err).Msg("failed to get extern TLS config")
+		}
 		c.httpExternServer = &http.Server{
-			Handler: mainRouter,
-			Addr:    c.config.Extern.Addr,
+			Handler:   mainRouter,
+			Addr:      c.config.Extern.Addr,
+			TLSConfig: externTLSConfig,
 		}
 	}
 

@@ -48,9 +48,14 @@ func (c *Container) GetHTTPInternServer() *http.Server {
 			),
 		)
 
+		internTLSConfig, err := c.getInternTLSConfig()
+		if err != nil {
+			c.GetLogger().Fatal().Err(err).Msg("failed to get intern TLS config")
+		}
 		c.httpInternServer = &http.Server{
-			Handler: mainRouter,
-			Addr:    c.config.Intern.Addr,
+			Handler:   mainRouter,
+			Addr:      c.config.Intern.Addr,
+			TLSConfig: internTLSConfig,
 		}
 	}
 
