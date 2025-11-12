@@ -15,7 +15,6 @@ func (c *Container) GetHTTPInternClient() *http.Client {
 		c.httpInternClient = &http.Client{
 			Transport: &http.Transport{
 				TLSClientConfig: &tls.Config{
-					// nolint: gosec // TODO: Certificate validation.
 					InsecureSkipVerify: true,
 				},
 			},
@@ -28,7 +27,7 @@ func (c *Container) GetHTTPInternClient() *http.Client {
 func (c *Container) GetGeneratedHTTPInternClient() *intern.ClientWithResponses {
 	if c.generatedHTTPInternClient == nil {
 		client, err := intern.NewClientWithResponses(
-			"http://localhost"+c.config.Intern.Addr+c.GetRootInternAPIPath(),
+			"https://localhost"+c.config.Intern.Addr+c.GetRootInternAPIPath(),
 			intern.WithHTTPClient(c.GetHTTPInternClient()),
 		)
 		if err != nil {

@@ -49,8 +49,9 @@ func (c *Container) GetHTTPExternServer() *http.Server {
 		)
 
 		c.httpExternServer = &http.Server{
-			Handler: mainRouter,
-			Addr:    c.config.Extern.Addr,
+			Handler:   mainRouter,
+			Addr:      c.config.Extern.Addr,
+			TLSConfig: c.getExternTLSConfig(),
 		}
 	}
 

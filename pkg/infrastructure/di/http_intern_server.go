@@ -49,8 +49,9 @@ func (c *Container) GetHTTPInternServer() *http.Server {
 		)
 
 		c.httpInternServer = &http.Server{
-			Handler: mainRouter,
-			Addr:    c.config.Intern.Addr,
+			Handler:   mainRouter,
+			Addr:      c.config.Intern.Addr,
+			TLSConfig: c.getInternTLSConfig(),
 		}
 	}
 
