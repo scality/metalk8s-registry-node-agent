@@ -74,6 +74,13 @@ var _ = BeforeSuite(func() {
 	deleteChan := make(chan domain.FileEventDetails)
 	container := di.NewContainer(ctx, cfg, filenameChan, deleteChan)
 
+	fakeTLSConfig, err := utils.GenerateFakeTLSConfig()
+	if err != nil {
+		container.GetLogger().Fatal().Err(err).Msg("failed to generate fake TLS config")
+	}
+	container.ExternTLSConfig = fakeTLSConfig
+	container.InternTLSConfig = fakeTLSConfig
+
 	rootPath, err := os.MkdirTemp("/tmp", "test-integration-api_v1_uploads-*")
 	if err != nil {
 		container.GetLogger().Fatal().Err(err).Msg("failed to create temporary directory")
@@ -104,7 +111,7 @@ var _ = BeforeSuite(func() {
 	// during lazy initialization
 	httpExternServer := testingSuite.container.GetHTTPExternServer()
 	go func() {
-		serveErr := httpExternServer.ListenAndServe()
+		serveErr := httpExternServer.ListenAndServeTLS("", "")
 		if serveErr != nil {
 			if !errors.Is(serveErr, http.ErrServerClosed) {
 				testingSuite.container.GetLogger().Error().Err(serveErr).Msg("http extern server failure during startup")
@@ -116,7 +123,7 @@ var _ = BeforeSuite(func() {
 
 	for range httpServerStartupTimeInSeconds {
 		res, err := externHTTPClient.Get(
-			fmt.Sprintf("http://localhost%s", httpExternServer.Addr) + "/healthz",
+			fmt.Sprintf("https://localhost%s", httpExternServer.Addr) + "/healthz",
 		)
 		if err == nil && res.StatusCode == http.StatusOK {
 			testingSuite.container.GetLogger().Info().Msg("http extern server is ready")
@@ -131,7 +138,7 @@ var _ = BeforeSuite(func() {
 	// during lazy initialization
 	httpInternServer := testingSuite.container.GetHTTPInternServer()
 	go func() {
-		serveErr := httpInternServer.ListenAndServe()
+		serveErr := httpInternServer.ListenAndServeTLS("", "")
 		if serveErr != nil {
 			if !errors.Is(serveErr, http.ErrServerClosed) {
 				testingSuite.container.GetLogger().Error().Err(serveErr).Msg("http intern server failure during startup")
@@ -143,7 +150,7 @@ var _ = BeforeSuite(func() {
 
 	for range httpServerStartupTimeInSeconds {
 		res, err := testingSuite.container.GetHTTPInternClient().Get(
-			fmt.Sprintf("http://localhost%s", httpInternServer.Addr) + "/healthz",
+			fmt.Sprintf("https://localhost%s", httpInternServer.Addr) + "/healthz",
 		)
 		if err == nil && res.StatusCode == http.StatusOK {
 			testingSuite.container.GetLogger().Info().Msg("http intern server is ready")
