@@ -263,18 +263,16 @@ func UncommentCode(filename, target, prefix string) error {
 	return nil
 }
 
-func GetHTTPExternClient() *http.Client {
+func GetHTTPExternClient(TLSConfig *tls.Config) *http.Client {
 	return &http.Client{
 		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{
-				InsecureSkipVerify: true,
-			},
+			TLSClientConfig: TLSConfig,
 		},
 	}
 }
 
 func GetGeneratedHTTPExternClient(
-	addr string, apiPath string, httpClient *http.Client,
+	addr, apiPath string, httpClient *http.Client,
 ) (*extern.ClientWithResponses, error) {
 	return extern.NewClientWithResponses(
 		"https://localhost"+addr+apiPath,
@@ -282,8 +280,9 @@ func GetGeneratedHTTPExternClient(
 	)
 }
 
-// generateFakeTLSConfig creates a *tls.Config with a new,
+// GenerateFakeTLSConfig creates a *tls.Config with a new,
 // self-signed certificate and private key generated in memory.
+// This returns a server TLS config suitable for mTLS.
 func GenerateFakeTLSConfig() (*tls.Config, error) {
 	// 1. Generate a new private key
 	privKey, err := rsa.GenerateKey(rand.Reader, 2048)
@@ -301,7 +300,7 @@ func GenerateFakeTLSConfig() (*tls.Config, error) {
 		NotAfter:  time.Now().Add(time.Hour * 24 * 365), // Valid for 1 year
 
 		KeyUsage:    x509.KeyUsageKeyEncipherment | x509.KeyUsageDigitalSignature,
-		ExtKeyUsage: []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth}, // Use for server auth
+		ExtKeyUsage: []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth, x509.ExtKeyUsageClientAuth},
 
 		// Add IP addresses and DNS names the certificate should be valid for.
 		// "localhost" is common for testing.
@@ -322,8 +321,32 @@ func GenerateFakeTLSConfig() (*tls.Config, error) {
 		PrivateKey:  privKey,           // The private key
 	}
 
-	// 5. Return the tls.Config
+	// 5. Create a certificate pool and add the certificate as a trusted CA
+	rawCert := tlsCert.Certificate[0]
+	cert, err := x509.ParseCertificate(rawCert)
+	if err != nil {
+		return nil, err
+	}
+
+	certPool := x509.NewCertPool()
+	certPool.AddCert(cert)
+
+	// 6. Return the tls.Config for server with mTLS
 	return &tls.Config{
 		Certificates: []tls.Certificate{tlsCert},
+		ClientAuth:   tls.RequireAndVerifyClientCert,
+		ClientCAs:    certPool,
 	}, nil
+}
+
+// GenerateFakeTLSClientConfig creates a *tls.Config for the client side
+// that matches the server config returned by GenerateFakeTLSConfig.
+// It uses the same certificate for client authentication and trusts the same CA.
+func GenerateFakeTLSClientConfig(serverConfig *tls.Config) *tls.Config {
+	// Use the same certificate from the server config for client authentication
+	// and set RootCAs to trust the server's certificate
+	return &tls.Config{
+		Certificates: serverConfig.Certificates,
+		RootCAs:      serverConfig.ClientCAs, // Trust the same CA that the server uses
+	}
 }
