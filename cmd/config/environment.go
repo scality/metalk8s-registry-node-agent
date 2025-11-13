@@ -36,14 +36,17 @@ type (
 	}
 
 	Extern struct {
-		Addr      string    `env:"ADDR, default=:5001"`
-		ServerTLS ServerTLS `env:",prefix=SERVER_TLS_"`
+		Addr        string      `env:"ADDR, default=:5001"`
+		ServerTLS   ServerTLS   `env:",prefix=SERVER_TLS_"`
+		ServerAuthN ServerAuthN `env:",prefix=SERVER_AUTHN_"`
 	}
 
 	Intern struct {
-		Addr      string    `env:"ADDR, default=:5002"`
-		ServerTLS ServerTLS `env:",prefix=SERVER_TLS_"`
-		ClientTLS ClientTLS `env:",prefix=CLIENT_TLS_"`
+		Addr        string      `env:"ADDR, default=:5002"`
+		ServerTLS   ServerTLS   `env:",prefix=SERVER_TLS_"`
+		ServerAuthN ServerAuthN `env:",prefix=SERVER_AUTHN_"`
+		ClientTLS   ClientTLS   `env:",prefix=CLIENT_TLS_"`
+		ClientAuthN ClientAuthN `env:",prefix=CLIENT_AUTHN_"`
 	}
 
 	ServerTLS struct {
@@ -51,9 +54,18 @@ type (
 		CertFilePath string `env:"CERT_FILE_PATH"`
 		KeyFilePath  string `env:"KEY_FILE_PATH"`
 	}
+	ServerAuthN struct {
+		// identical for Intern and Extern
+		CACertFilePath string `env:"CA_CERT_FILE_PATH"`
+	}
 
 	ClientTLS struct {
 		CACertFilePath string `env:"CA_CERT_FILE_PATH"`
+	}
+
+	ClientAuthN struct {
+		CertFilePath string `env:"CERT_FILE_PATH"`
+		KeyFilePath  string `env:"KEY_FILE_PATH"`
 	}
 )
 

@@ -45,6 +45,7 @@ type Container struct {
 	generatedHTTPInternClient *intern.ClientWithResponses
 	ExternTLSConfig           *tls.Config
 	InternTLSConfig           *tls.Config
+	InternTLSClientConfig     *tls.Config
 	rootExternAPIPath         string
 	rootInternAPIPath         string
 

@@ -3,7 +3,6 @@ package di
 
 import (
 	"bytes"
-	"crypto/tls"
 	"io"
 	"net/http"
 
@@ -14,9 +13,7 @@ func (c *Container) GetHTTPInternClient() *http.Client {
 	if c.httpInternClient == nil {
 		c.httpInternClient = &http.Client{
 			Transport: &http.Transport{
-				TLSClientConfig: &tls.Config{
-					InsecureSkipVerify: true,
-				},
+				TLSClientConfig: c.getInternTLSClientConfig(),
 			},
 		}
 	}
@@ -56,14 +53,7 @@ func (c *Container) GetMockHTTPInternClient() *http.Client {
 		c.httpInternClient = &http.Client{
 			Transport: &mockInternRoundTripper{
 				fn: func(req *http.Request) (*http.Response, error) {
-					/*
-						// 2. Check the request URL if you want
-						expectedURL := "https://api.example.com/users/1"
-						if req.URL.String() != expectedURL {
-							t.Fatalf("Expected URL %s, got %s", expectedURL, req.URL.String())
-						}
-					*/
-					// 3. Create and return a mock response
+					// Create and return a mock response
 					jsonResponse := `{"id": 1, "name": "Test User"}`
 					return &http.Response{
 						StatusCode: http.StatusOK,
