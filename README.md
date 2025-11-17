@@ -40,7 +40,7 @@ The agent can be configured using environment variables:
 | Variable | Description | Default |
 |----------|-------------|---------|
 | `ARTIFACT_STORAGE_ROOT_LOCATION` | Root directory for artifact storage | `/tmp/uploads/artifacts` |
-| `HTTP_ADDR` | HTTP server address | `:5001` |
+| `HTTP_EXTERN_ADDR` | HTTP server address | `:5001` |
 | `LOGGER_LOG_LEVEL` | Logging level | `info` |
 
 ### Kubernetes Configuration

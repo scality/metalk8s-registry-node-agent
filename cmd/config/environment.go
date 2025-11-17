@@ -27,7 +27,7 @@ type (
 	}
 
 	HTTP struct {
-		Addr string `env:"ADDR, default=:5001"`
+		ExternAddr string `env:"EXTERN_ADDR, default=:5001"`
 	}
 )
 
