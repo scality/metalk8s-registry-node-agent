@@ -19,7 +19,7 @@ const uploadPartTestString = "\x00\nIs there any interesting thing here\n"
 const uploadCompleteTestString = "platform0\nplatform1\nplatform2\n\x00"
 const uploadMultipleCompleteTestString = "platform0\nplatform1\nplatform2\nplatform3\n\x00"
 
-var _ = Describe("API", func() {
+var _ = Describe("Upload Part API", func() {
 	Context("When uploading a new part of an artifact", func() {
 		It("should successfully upload and store the chunk", func() {
 			artifact := &domain.Artifact{

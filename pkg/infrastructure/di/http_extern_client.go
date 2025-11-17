@@ -7,9 +7,9 @@ import (
 	"github.com/scality/metalk8s-registry-node-agent/pkg/presentation/http/extern"
 )
 
-func (c *Container) GetHTTPClient() *http.Client {
-	if c.httpClient == nil {
-		c.httpClient = &http.Client{
+func (c *Container) GetHTTPExternClient() *http.Client {
+	if c.httpExternClient == nil {
+		c.httpExternClient = &http.Client{
 			Transport: &http.Transport{
 				TLSClientConfig: &tls.Config{
 					// nolint: gosec // TODO: Certificate validation.
@@ -19,21 +19,21 @@ func (c *Container) GetHTTPClient() *http.Client {
 		}
 	}
 
-	return c.httpClient
+	return c.httpExternClient
 }
 
-func (c *Container) GetGeneratedHTTPClient() *extern.ClientWithResponses {
-	if c.generatedHTTPClient == nil {
+func (c *Container) GetGeneratedHTTPExternClient() *extern.ClientWithResponses {
+	if c.generatedHTTPExternClient == nil {
 		client, err := extern.NewClientWithResponses(
-			"http://localhost:5001"+c.GetRootAPIPath(),
-			extern.WithHTTPClient(c.GetHTTPClient()),
+			"http://localhost:5001"+c.GetRootExternAPIPath(),
+			extern.WithHTTPClient(c.GetHTTPExternClient()),
 		)
 		if err != nil {
 			c.GetLogger().Fatal().Err(err).Msg("failed to create generated http client")
 		}
 
-		c.generatedHTTPClient = client
+		c.generatedHTTPExternClient = client
 	}
 
-	return c.generatedHTTPClient
+	return c.generatedHTTPExternClient
 }

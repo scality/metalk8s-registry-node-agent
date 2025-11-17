@@ -127,7 +127,7 @@ func main() {
 		log.Fatalf("failed to load config: %v", err)
 	}
 	// Initialize the dependency container.
-	container := di.NewContainer(ctx, cfg, filenameCh, config.RootAPIPath)
+	container := di.NewContainer(ctx, cfg, filenameCh, config.RootExternAPIPath)
 
 	logger := container.GetLogger()
 
@@ -322,13 +322,13 @@ func main() {
 
 	// Initialize the HTTP server.
 	// This step will initialize all the application dependencies.
-	httpServer := container.GetHTTPServer()
+	httpExternServer := container.GetHTTPExternServer()
 
 	go func() {
 		logger.Info().Msg("http server starting")
 
 		// Start the HTTP server.
-		serveErr := httpServer.ListenAndServe()
+		serveErr := httpExternServer.ListenAndServe()
 		if serveErr != nil {
 			sigCh <- syscall.SIGTERM // Triggers graceful shutdown
 

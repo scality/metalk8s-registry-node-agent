@@ -9,7 +9,7 @@ func (c *Container) getStoragePartUploader() *partuploader.Storage {
 		c.storagePartUploader = partuploader.NewStorage(
 			c.GetFileSystemArtifactStorage(),
 			c.GetLogger(),
-			c.GetRootAPIPath(),
+			c.GetRootExternAPIPath(),
 		)
 	}
 

@@ -7,11 +7,11 @@ import (
 
 //nolint:ireturn
 func (c *Container) getHTTPResolver() extern.StrictServerInterface {
-	if c.resolver == nil {
-		c.resolver = resolver.NewRoot(
+	if c.externResolver == nil {
+		c.externResolver = resolver.NewExternRoot(
 			c.getUploadPartHandler(),
 		)
 	}
 
-	return c.resolver
+	return c.externResolver
 }

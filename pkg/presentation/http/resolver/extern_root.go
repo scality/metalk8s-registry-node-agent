@@ -16,22 +16,22 @@ type (
 		) (extern.UploadChunkResponseObject, error)
 	}
 
-	Root struct {
+	ExternRoot struct {
 		UploadPart
 	}
 )
 
-var _ extern.StrictServerInterface = (*Root)(nil)
+var _ extern.StrictServerInterface = (*ExternRoot)(nil)
 
-func NewRoot(
+func NewExternRoot(
 	uploadPart UploadPart,
-) *Root {
-	return &Root{
+) *ExternRoot {
+	return &ExternRoot{
 		UploadPart: uploadPart,
 	}
 }
 
-func (r *Root) UploadChunk(
+func (r *ExternRoot) UploadChunk(
 	ctx context.Context,
 	request extern.UploadChunkRequestObject,
 ) (extern.UploadChunkResponseObject, error) {
