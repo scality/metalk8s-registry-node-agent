@@ -12,7 +12,7 @@ import (
 	"github.com/scality/metalk8s-registry-node-agent/pkg/infrastructure/partuploader"
 	"github.com/scality/metalk8s-registry-node-agent/pkg/infrastructure/sessioninitializer"
 	"github.com/scality/metalk8s-registry-node-agent/pkg/infrastructure/sessionremover"
-	"github.com/scality/metalk8s-registry-node-agent/pkg/presentation/http/generated"
+	"github.com/scality/metalk8s-registry-node-agent/pkg/presentation/http/extern"
 	"github.com/scality/metalk8s-registry-node-agent/pkg/presentation/http/handler"
 	"github.com/scality/metalk8s-registry-node-agent/pkg/service"
 	"github.com/scality/metalk8s-registry-node-agent/pkg/usecase"
@@ -31,14 +31,14 @@ type Container struct {
 	filenameCh          chan string
 	httpServer          *http.Server
 	httpClient          *http.Client
-	generatedHTTPClient *generated.ClientWithResponses
+	generatedHTTPClient *extern.ClientWithResponses
 	rootAPIPath         string
 
 	artifactStorage service.StorageProvider
 
 	uploadPartHandler *handler.UploadPart
 
-	resolver generated.StrictServerInterface
+	resolver extern.StrictServerInterface
 
 	storagePartUploader       *partuploader.Storage
 	storageSessionInitializer *sessioninitializer.Storage

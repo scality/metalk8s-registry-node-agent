@@ -10,15 +10,15 @@ import (
 
 	"github.com/scality/go-errors"
 	"github.com/scality/metalk8s-registry-node-agent/pkg/domain"
-	"github.com/scality/metalk8s-registry-node-agent/pkg/presentation/http/generated"
+	"github.com/scality/metalk8s-registry-node-agent/pkg/presentation/http/extern"
 )
 
 // fillUploadChunkRangesFromDomainPartMetas fills the UploadChunkRange slice from the domain.Part map.
 func fillUploadChunkRangesFromDomainPartMetas(
-	dst *[]generated.UploadChunkRange,
+	dst *[]extern.UploadChunkRange,
 	src map[int64]*domain.PartMeta,
 ) {
-	*dst = make([]generated.UploadChunkRange, len(src))
+	*dst = make([]extern.UploadChunkRange, len(src))
 
 	i := 0
 	for _, part := range src {
@@ -29,7 +29,7 @@ func fillUploadChunkRangesFromDomainPartMetas(
 
 // fillUploadChunkRangeFromDomainPartMeta fills the UploadChunkRange object from the domain.Part object.
 func fillUploadChunkRangeFromDomainPartMeta(
-	dst *generated.UploadChunkRange,
+	dst *extern.UploadChunkRange,
 	src *domain.PartMeta,
 ) {
 	start := int(src.Start)
@@ -43,12 +43,12 @@ func fillUploadChunkRangeFromDomainPartMeta(
 // fillUploadChunkSuccessResponseFromArtifactStatus fills the UploadChunkSuccessResponse object
 // from the domain.ArtifactStatus object.
 func fillUploadChunkSuccessResponseFromArtifactStatus(
-	dst *generated.UploadChunkSuccessResponse,
+	dst *extern.UploadChunkSuccessResponse,
 	src *domain.ArtifactStatus,
 ) {
 	size := int(src.Artifact.Size)
 
-	var uploadChuncks []generated.UploadChunkRange
+	var uploadChuncks []extern.UploadChunkRange
 
 	fillUploadChunkRangesFromDomainPartMetas(&uploadChuncks, src.Parts)
 
@@ -65,7 +65,7 @@ func fillUploadChunkSuccessResponseFromArtifactStatus(
 // fillPartFromUploadChunkRequestObject fills the Part object from the UploadChunkRequestObject object.
 func fillPartFromUploadChunkRequestObject(
 	dst *domain.Part,
-	src *generated.UploadChunkRequestObject,
+	src *extern.UploadChunkRequestObject,
 ) error {
 	if src.Body == nil {
 		return errors.From(domain.ErrHandlerBadRequest).
@@ -209,7 +209,7 @@ func parseContentRange(
 
 // fillProblemDetailsFromAPIErrorsError fills the ProblemDetails object from the apierrors.Error object.
 func (h *UploadPart) fillProblemDetailsFromAPIErrorsError(
-	dst *generated.ProblemDetails,
+	dst *extern.ProblemDetails,
 	src *errors.Error,
 ) {
 	h.logger.Error().Err(src).Msg("Uploads API error")
@@ -236,7 +236,7 @@ func (h *UploadPart) fillProblemDetailsFromAPIErrorsError(
 	if len(src.Properties) > 0 {
 		fillInstanceFromPropertiesMap(&dst.Instance, src.Properties)
 
-		errs := make(generated.Errors, 0, len(src.Properties))
+		errs := make(extern.Errors, 0, len(src.Properties))
 		fillErrorDetailsFromPropertiesMap(&errs, src.Properties)
 
 		dst.Errors = &errs
@@ -269,14 +269,14 @@ func fillInstanceFromPropertiesMap(
 
 // fillErrorDetailsFromPropertiesMap fills the ErrorDetail alice from a map[string]any.
 func fillErrorDetailsFromPropertiesMap(
-	dst *generated.Errors,
+	dst *extern.Errors,
 	src map[string]any,
 ) {
-	*dst = make([]generated.ErrorDetail, 0, len(src))
+	*dst = make([]extern.ErrorDetail, 0, len(src))
 
 	for key, value := range src {
 		if strings.HasPrefix(key, "problem_") {
-			var errorDetail generated.ErrorDetail
+			var errorDetail extern.ErrorDetail
 
 			fillErrorDetailFromProperty(&errorDetail, key, value)
 
@@ -287,7 +287,7 @@ func fillErrorDetailsFromPropertiesMap(
 
 // fillErrorDetailFromProperty fills the ErrorDetail object from a property name and value.
 func fillErrorDetailFromProperty(
-	dst *generated.ErrorDetail,
+	dst *extern.ErrorDetail,
 	key string, value any,
 ) {
 	code := key

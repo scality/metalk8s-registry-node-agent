@@ -4,7 +4,7 @@ import (
 	"crypto/tls"
 	"net/http"
 
-	"github.com/scality/metalk8s-registry-node-agent/pkg/presentation/http/generated"
+	"github.com/scality/metalk8s-registry-node-agent/pkg/presentation/http/extern"
 )
 
 func (c *Container) GetHTTPClient() *http.Client {
@@ -22,11 +22,11 @@ func (c *Container) GetHTTPClient() *http.Client {
 	return c.httpClient
 }
 
-func (c *Container) GetGeneratedHTTPClient() *generated.ClientWithResponses {
+func (c *Container) GetGeneratedHTTPClient() *extern.ClientWithResponses {
 	if c.generatedHTTPClient == nil {
-		client, err := generated.NewClientWithResponses(
+		client, err := extern.NewClientWithResponses(
 			"http://localhost:5001"+c.GetRootAPIPath(),
-			generated.WithHTTPClient(c.GetHTTPClient()),
+			extern.WithHTTPClient(c.GetHTTPClient()),
 		)
 		if err != nil {
 			c.GetLogger().Fatal().Err(err).Msg("failed to create generated http client")

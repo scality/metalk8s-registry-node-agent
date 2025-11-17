@@ -5,15 +5,15 @@ import (
 	"context"
 
 	"github.com/scality/go-errors"
-	"github.com/scality/metalk8s-registry-node-agent/pkg/presentation/http/generated"
+	"github.com/scality/metalk8s-registry-node-agent/pkg/presentation/http/extern"
 )
 
 type (
 	UploadPart interface {
 		UploadChunk(
 			ctx context.Context,
-			request generated.UploadChunkRequestObject,
-		) (generated.UploadChunkResponseObject, error)
+			request extern.UploadChunkRequestObject,
+		) (extern.UploadChunkResponseObject, error)
 	}
 
 	Root struct {
@@ -21,7 +21,7 @@ type (
 	}
 )
 
-var _ generated.StrictServerInterface = (*Root)(nil)
+var _ extern.StrictServerInterface = (*Root)(nil)
 
 func NewRoot(
 	uploadPart UploadPart,
@@ -33,8 +33,8 @@ func NewRoot(
 
 func (r *Root) UploadChunk(
 	ctx context.Context,
-	request generated.UploadChunkRequestObject,
-) (generated.UploadChunkResponseObject, error) {
+	request extern.UploadChunkRequestObject,
+) (extern.UploadChunkResponseObject, error) {
 	response, err := r.UploadPart.UploadChunk(ctx, request)
 	if err != nil {
 		return nil, errors.Intercept(err).

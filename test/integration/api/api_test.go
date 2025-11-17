@@ -16,7 +16,7 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/scality/metalk8s-registry-node-agent/cmd/config"
 	"github.com/scality/metalk8s-registry-node-agent/pkg/infrastructure/di"
-	"github.com/scality/metalk8s-registry-node-agent/pkg/presentation/http/generated"
+	"github.com/scality/metalk8s-registry-node-agent/pkg/presentation/http/extern"
 	"github.com/scality/metalk8s-registry-node-agent/pkg/service"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
@@ -29,7 +29,7 @@ type TestingSuite struct {
 	ArtifactStorageDirectory string
 	ArtifactStorageProvider  service.StorageProvider
 
-	*generated.ClientWithResponses
+	*extern.ClientWithResponses
 }
 
 const (

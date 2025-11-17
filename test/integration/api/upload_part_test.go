@@ -12,7 +12,7 @@ import (
 
 	"github.com/scality/metalk8s-registry-node-agent/pkg/domain"
 	"github.com/scality/metalk8s-registry-node-agent/pkg/library"
-	"github.com/scality/metalk8s-registry-node-agent/pkg/presentation/http/generated"
+	"github.com/scality/metalk8s-registry-node-agent/pkg/presentation/http/extern"
 )
 
 const uploadPartTestString = "\x00\nIs there any interesting thing here\n"
@@ -34,7 +34,7 @@ var _ = Describe("API", func() {
 			resUpl, err := testingSuite.UploadChunkWithBodyWithResponse(
 				context.TODO(),
 				"artesca-base",
-				&generated.UploadChunkParams{
+				&extern.UploadChunkParams{
 					XTargetVersion:  "3.0.0-preview.2",
 					XSha256Checksum: "sha",
 					ContentRange:    "bytes 0-37/200",
@@ -83,12 +83,12 @@ var _ = Describe("API", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			By("successfully uploading all the chunks and responding adequately")
-			var resUpl *generated.UploadChunkResponse
+			var resUpl *extern.UploadChunkResponse
 			for i := range 3 {
 				resUpl, err = testingSuite.UploadChunkWithBodyWithResponse(
 					ctx,
 					"platform",
-					&generated.UploadChunkParams{
+					&extern.UploadChunkParams{
 						XTargetVersion:  "127.0.2-tiny",
 						XSha256Checksum: "a2c60bdd4a4fd806fe368bacc30819173ecb9d5f109127bf35dfeaa927b275f0",
 						ContentRange:    fmt.Sprintf("bytes %d-%d/30", i*10, (i*10)+9),
@@ -147,7 +147,7 @@ var _ = Describe("API", func() {
 			resUpl, err := testingSuite.UploadChunkWithBodyWithResponse(
 				context.TODO(),
 				"artesca-base",
-				&generated.UploadChunkParams{
+				&extern.UploadChunkParams{
 					XTargetVersion:  "3.0.0-preview.3",
 					XSha256Checksum: "sha",
 					ContentRange:    "bytes 0-19/200",
@@ -173,13 +173,13 @@ var _ = Describe("API", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			By("successfully uploading all the chunks")
-			var resUpl *generated.UploadChunkResponse
+			var resUpl *extern.UploadChunkResponse
 			// For first uploads (up to the penultimate)
 			for i := range 3 {
 				resUpl, err = testingSuite.UploadChunkWithBodyWithResponse(
 					ctx,
 					"platform",
-					&generated.UploadChunkParams{
+					&extern.UploadChunkParams{
 						XTargetVersion:  "127.0.3-tiny",
 						XSha256Checksum: "a2c60bdd4a4fd806fe368bacc30819173ecb9d5f109127bf35dfeaa927b275f1",
 						ContentRange:    fmt.Sprintf("bytes %d-%d/30", i*10, (i*10)+9),
@@ -248,7 +248,7 @@ var _ = Describe("API", func() {
 			resUpl, err := testingSuite.UploadChunkWithBodyWithResponse(
 				context.TODO(),
 				"artesca-base",
-				&generated.UploadChunkParams{
+				&extern.UploadChunkParams{
 					XTargetVersion:  "3.0.0-preview.4",
 					XSha256Checksum: "sha",
 					ContentRange:    "bytes 0-1/200",
@@ -275,7 +275,7 @@ var _ = Describe("API", func() {
 			_, err := testingSuite.container.GetInitializeSessionUseCase().Execute(artifact)
 			Expect(err).NotTo(HaveOccurred())
 
-			var resUpl *generated.UploadChunkResponse
+			var resUpl *extern.UploadChunkResponse
 
 			/*
 				BEGIN - Simulating previous wrong parts uploads
@@ -285,7 +285,7 @@ var _ = Describe("API", func() {
 			resUpl, err = testingSuite.UploadChunkWithBodyWithResponse(
 				ctx,
 				"platform",
-				&generated.UploadChunkParams{
+				&extern.UploadChunkParams{
 					XTargetVersion:  "127.0.3-small",
 					XSha256Checksum: "c8db76b15eda867f25a4baa791cd14a673944fda1298cc440abe8568f33edef7",
 					ContentRange:    fmt.Sprintf("bytes %d-%d/40", 1*10, (1*10)+9),
@@ -300,7 +300,7 @@ var _ = Describe("API", func() {
 			resUpl, err = testingSuite.UploadChunkWithBodyWithResponse(
 				ctx,
 				"platform",
-				&generated.UploadChunkParams{
+				&extern.UploadChunkParams{
 					XTargetVersion:  "127.0.3-small",
 					XSha256Checksum: "c8db76b15eda867f25a4baa791cd14a673944fda1298cc440abe8568f33edef7",
 					ContentRange:    fmt.Sprintf("bytes %d-%d/40", 2*10, (2*10)+9),
@@ -320,7 +320,7 @@ var _ = Describe("API", func() {
 				resUpl, err = testingSuite.UploadChunkWithBodyWithResponse(
 					ctx,
 					"platform",
-					&generated.UploadChunkParams{
+					&extern.UploadChunkParams{
 						XTargetVersion:  "127.0.3-small",
 						XSha256Checksum: "c8db76b15eda867f25a4baa791cd14a673944fda1298cc440abe8568f33edef7",
 						ContentRange:    fmt.Sprintf("bytes %d-%d/40", i*10, (i*10)+9),
