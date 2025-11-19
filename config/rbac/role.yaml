@@ -21,6 +21,7 @@ rules:
   resources:
   - nodesolutionarchives/finalizers
   verbs:
+  - delete
   - update
 - apiGroups:
   - metalk8s.scality.com

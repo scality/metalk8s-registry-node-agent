@@ -53,7 +53,7 @@ type NodeSolutionArchiveReconciler struct {
 
 // +kubebuilder:rbac:groups=metalk8s.scality.com,resources=nodesolutionarchives,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=metalk8s.scality.com,resources=nodesolutionarchives/status,verbs=get;update;patch
-// +kubebuilder:rbac:groups=metalk8s.scality.com,resources=nodesolutionarchives/finalizers,verbs=update
+// +kubebuilder:rbac:groups=metalk8s.scality.com,resources=nodesolutionarchives/finalizers,verbs=update;delete
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
