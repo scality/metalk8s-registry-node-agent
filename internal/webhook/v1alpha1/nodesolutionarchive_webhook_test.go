@@ -24,17 +24,17 @@ import (
 	// TODO (user): Add any additional imports if needed
 )
 
-var _ = Describe("NodeArtifact Webhook", func() {
+var _ = Describe("NodeSolutionArchive Webhook", func() {
 	var (
-		obj       *metalk8sv1alpha1.NodeArtifact
-		oldObj    *metalk8sv1alpha1.NodeArtifact
-		validator NodeArtifactCustomValidator
+		obj       *metalk8sv1alpha1.NodeSolutionArchive
+		oldObj    *metalk8sv1alpha1.NodeSolutionArchive
+		validator NodeSolutionArchiveCustomValidator
 	)
 
 	BeforeEach(func() {
-		obj = &metalk8sv1alpha1.NodeArtifact{}
-		oldObj = &metalk8sv1alpha1.NodeArtifact{}
-		validator = NodeArtifactCustomValidator{}
+		obj = &metalk8sv1alpha1.NodeSolutionArchive{}
+		oldObj = &metalk8sv1alpha1.NodeSolutionArchive{}
+		validator = NodeSolutionArchiveCustomValidator{}
 		Expect(validator).NotTo(BeNil(), "Expected validator to be initialized")
 		Expect(oldObj).NotTo(BeNil(), "Expected oldObj to be initialized")
 		Expect(obj).NotTo(BeNil(), "Expected obj to be initialized")
@@ -45,7 +45,7 @@ var _ = Describe("NodeArtifact Webhook", func() {
 		// TODO (user): Add any teardown logic common to all tests
 	})
 
-	Context("When creating or updating NodeArtifact under Validating Webhook", func() {
+	Context("When creating or updating NodeSolutionArchive under Validating Webhook", func() {
 		// TODO (user): Add logic for validating webhooks
 		// Example:
 		// It("Should deny creation if a required field is missing", func() {

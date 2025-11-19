@@ -26,7 +26,7 @@ The MetalK8s Registry Node Agent is designed to:
 - **Concurrent Access**: Thread-safe operations with proper locking
 
 ### 3. Kubernetes Integration
-- **Custom Resource Definition**: `NodeArtifact` CRD for artifact management
+- **Custom Resource Definition**: `NodeSolutionArchive` CRD for artifact management
 - **Controller Pattern**: Reconciles desired state with actual state
 - **RBAC Support**: Proper role-based access control
 - **Metrics Integration**: Prometheus metrics for monitoring
@@ -47,7 +47,7 @@ The agent can be configured using environment variables:
 
 The agent includes comprehensive Kubernetes manifests:
 
-- **CRD**: Custom Resource Definition for `NodeArtifact`
+- **CRD**: Custom Resource Definition for `NodeSolutionArchive`
 - **RBAC**: Role-based access control configuration
 - **Manager**: Deployment and service configuration
 - **Metrics**: Prometheus monitoring setup
@@ -56,10 +56,10 @@ The agent includes comprehensive Kubernetes manifests:
 
 ### Initialize an Upload Session
 
-**Create a NodeArtifact resource**:
+**Create a NodeSolutionArchive resource**:
 ```yaml
 apiVersion: metalk8s.scality.com/v1alpha1
-kind: NodeArtifact
+kind: NodeSolutionArchive
 metadata:
     name: metalk8s-1.25.3
 spec:

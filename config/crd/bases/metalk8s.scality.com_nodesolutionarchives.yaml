@@ -4,20 +4,21 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.18.0
-  name: nodeartifacts.metalk8s.scality.com
+  name: nodesolutionarchives.metalk8s.scality.com
 spec:
   group: metalk8s.scality.com
   names:
-    kind: NodeArtifact
-    listKind: NodeArtifactList
-    plural: nodeartifacts
-    singular: nodeartifact
+    kind: NodeSolutionArchive
+    listKind: NodeSolutionArchiveList
+    plural: nodesolutionarchives
+    singular: nodesolutionarchive
   scope: Cluster
   versions:
   - name: v1alpha1
     schema:
       openAPIV3Schema:
-        description: NodeArtifact is the Schema for the nodeartifacts API.
+        description: NodeSolutionArchive is the Schema for the nodesolutionarchives
+          API.
         properties:
           apiVersion:
             description: |-
@@ -37,10 +38,10 @@ spec:
           metadata:
             type: object
           spec:
-            description: NodeArtifactSpec defines the desired state of NodeArtifact.
+            description: NodeSolutionArchiveSpec defines the desired state of NodeSolutionArchive.
             properties:
               name:
-                description: Name of the Artifact
+                description: Name of the SolutionArchive
                 pattern: ^[a-zA-Z0-9][a-zA-Z0-9_\-\.]{1,98}[a-zA-Z0-9]$
                 type: string
                 x-kubernetes-validations:
@@ -53,10 +54,10 @@ spec:
                 - message: Value is immutable
                   rule: self == oldSelf
               validation:
-                description: Validation details for the Artifact
+                description: Validation details for the SolutionArchive
                 properties:
                   checksum:
-                    description: Checksum of the Artifact
+                    description: Checksum of the SolutionArchive
                     properties:
                       type:
                         description: Type of digest
@@ -86,7 +87,7 @@ spec:
                 - message: Value is immutable
                   rule: self == oldSelf
               version:
-                description: Version of the Artifact
+                description: Version of the SolutionArchive
                 type: string
                 x-kubernetes-validations:
                 - message: Value is immutable
@@ -98,10 +99,10 @@ spec:
             - version
             type: object
           status:
-            description: NodeArtifactStatus defines the observed state of NodeArtifact.
+            description: NodeSolutionArchiveStatus defines the observed state of NodeSolutionArchive.
             properties:
               available:
-                description: Availability of the Artifact on the Node
+                description: Availability of the SolutionArchive on the Node
                 type: boolean
               conditions:
                 items:

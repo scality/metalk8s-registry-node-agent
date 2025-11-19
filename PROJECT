@@ -16,7 +16,7 @@ resources:
   controller: true
   domain: scality.com
   group: metalk8s
-  kind: NodeArtifact
+  kind: NodeSolutionArchive
   path: github.com/scality/metalk8s-registry-node-agent/api/v1alpha1
   version: v1alpha1
   webhooks:

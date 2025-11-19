@@ -33,12 +33,12 @@ import (
 
 // nolint:unused
 // log is for logging in this package.
-var nodeartifactlog = logf.Log.WithName("nodeartifact-resource")
+var nodesolutionarchivelog = logf.Log.WithName("nodesolutionarchive-resource")
 
-// SetupNodeArtifactWebhookWithManager registers the webhook for NodeArtifact in the manager.
-func SetupNodeArtifactWebhookWithManager(mgr ctrl.Manager) error {
-	return ctrl.NewWebhookManagedBy(mgr).For(&metalk8sv1alpha1.NodeArtifact{}).
-		WithValidator(&NodeArtifactCustomValidator{
+// SetupNodeSolutionArchiveWebhookWithManager registers the webhook for NodeSolutionArchive in the manager.
+func SetupNodeSolutionArchiveWebhookWithManager(mgr ctrl.Manager) error {
+	return ctrl.NewWebhookManagedBy(mgr).For(&metalk8sv1alpha1.NodeSolutionArchive{}).
+		WithValidator(&NodeSolutionArchiveCustomValidator{
 			client: mgr.GetClient(),
 		}).
 		Complete()
@@ -46,57 +46,57 @@ func SetupNodeArtifactWebhookWithManager(mgr ctrl.Manager) error {
 
 // NOTE: The 'path' attribute must follow a specific pattern and should not be modified directly here.
 // Modifying the path for an invalid path can cause API server errors; failing to locate the webhook.
-// +kubebuilder:webhook:path=/validate-metalk8s-scality-com-v1alpha1-nodeartifact,mutating=false,failurePolicy=fail,sideEffects=None,groups=metalk8s.scality.com,resources=nodeartifacts,verbs=create,versions=v1alpha1,name=vnodeartifact-v1alpha1.kb.io,admissionReviewVersions=v1
+// +kubebuilder:webhook:path=/validate-metalk8s-scality-com-v1alpha1-nodesolutionarchive,mutating=false,failurePolicy=fail,sideEffects=None,groups=metalk8s.scality.com,resources=nodesolutionarchives,verbs=create,versions=v1alpha1,name=vnodesolutionarchive-v1alpha1.kb.io,admissionReviewVersions=v1
 
-// NodeArtifactCustomValidator struct is responsible for validating the NodeArtifact resource
+// NodeSolutionArchiveCustomValidator struct is responsible for validating the NodeSolutionArchive resource
 // when it is created, updated, or deleted.
 //
 // NOTE: The +kubebuilder:object:generate=false marker prevents controller-gen from generating DeepCopy methods,
 // as this struct is used only for temporary operations and does not need to be deeply copied.
-type NodeArtifactCustomValidator struct {
+type NodeSolutionArchiveCustomValidator struct {
 	client client.Client
 }
 
-var _ webhook.CustomValidator = &NodeArtifactCustomValidator{}
+var _ webhook.CustomValidator = &NodeSolutionArchiveCustomValidator{}
 
-// ValidateCreate implements webhook.CustomValidator so a webhook will be registered for the type NodeArtifact.
-func (v *NodeArtifactCustomValidator) ValidateCreate(ctx context.Context, obj runtime.Object) (admission.Warnings, error) {
-	nodeartifact, ok := obj.(*metalk8sv1alpha1.NodeArtifact)
+// ValidateCreate implements webhook.CustomValidator so a webhook will be registered for the type NodeSolutionArchive.
+func (v *NodeSolutionArchiveCustomValidator) ValidateCreate(ctx context.Context, obj runtime.Object) (admission.Warnings, error) {
+	nodesolutionarchive, ok := obj.(*metalk8sv1alpha1.NodeSolutionArchive)
 	if !ok {
-		return nil, fmt.Errorf("expected a NodeArtifact object but got %T", obj)
+		return nil, fmt.Errorf("expected a NodeSolutionArchive object but got %T", obj)
 	}
-	nodeartifactlog.Info("Validation for NodeArtifact upon creation", "name", nodeartifact.GetName())
+	nodesolutionarchivelog.Info("Validation for NodeSolutionArchive upon creation", "name", nodesolutionarchive.GetName())
 
-	return nil, validateNodeArtifact(ctx, v.client, nodeartifact)
+	return nil, validateNodeSolutionArchive(ctx, v.client, nodesolutionarchive)
 }
 
-// ValidateUpdate implements webhook.CustomValidator so a webhook will be registered for the type NodeArtifact.
-func (v *NodeArtifactCustomValidator) ValidateUpdate(ctx context.Context, oldObj, newObj runtime.Object) (admission.Warnings, error) {
+// ValidateUpdate implements webhook.CustomValidator so a webhook will be registered for the type NodeSolutionArchive.
+func (v *NodeSolutionArchiveCustomValidator) ValidateUpdate(ctx context.Context, oldObj, newObj runtime.Object) (admission.Warnings, error) {
 	// Careful: not activated by default
 	// To enable it think about changing "verbs=create" to "verbs=create,update" in "+kubebuilder:webhook" annotation above
 	return nil, nil
 }
 
-// ValidateDelete implements webhook.CustomValidator so a webhook will be registered for the type NodeArtifact.
-func (v *NodeArtifactCustomValidator) ValidateDelete(ctx context.Context, obj runtime.Object) (admission.Warnings, error) {
+// ValidateDelete implements webhook.CustomValidator so a webhook will be registered for the type NodeSolutionArchive.
+func (v *NodeSolutionArchiveCustomValidator) ValidateDelete(ctx context.Context, obj runtime.Object) (admission.Warnings, error) {
 	// Careful: not activated by default
 	// To enable it think about changing "verbs=create" to "verbs=create,delete" in "+kubebuilder:webhook" annotation above
 	return nil, nil
 }
 
-func validateNodeArtifact(ctx context.Context, c client.Client, nodeartifact *metalk8sv1alpha1.NodeArtifact) error {
+func validateNodeSolutionArchive(ctx context.Context, c client.Client, nodesolutionarchive *metalk8sv1alpha1.NodeSolutionArchive) error {
 	// Validate the version is conform to SemVer convention
-	_, err := version.NewVersion(nodeartifact.Spec.Version)
+	_, err := version.NewVersion(nodesolutionarchive.Spec.Version)
 	if err != nil {
-		return fmt.Errorf("version is not conform to SemVer convention: %s", nodeartifact.Spec.Version)
+		return fmt.Errorf("version is not conform to SemVer convention: %s", nodesolutionarchive.Spec.Version)
 	}
-	artifactNameVersion := fmt.Sprintf("%s-%s", nodeartifact.Spec.Name, nodeartifact.Spec.Version)
-	naList := &metalk8sv1alpha1.NodeArtifactList{}
-	if err := c.List(ctx, naList, client.MatchingFields{"ArtifactNameVersion": artifactNameVersion}); err != nil {
+	artifactNameVersion := fmt.Sprintf("%s-%s", nodesolutionarchive.Spec.Name, nodesolutionarchive.Spec.Version)
+	naList := &metalk8sv1alpha1.NodeSolutionArchiveList{}
+	if err := c.List(ctx, naList, client.MatchingFields{"SolutionArchiveNameVersion": artifactNameVersion}); err != nil {
 		return err
 	}
 	for _, item := range naList.Items {
-		if item.Spec.NodeName == nodeartifact.Spec.NodeName {
+		if item.Spec.NodeName == nodesolutionarchive.Spec.NodeName {
 			return fmt.Errorf("artifact %s already exists", artifactNameVersion)
 		}
 	}

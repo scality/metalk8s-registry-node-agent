@@ -1,4 +1,4 @@
 ## Append samples of your project ##
 resources:
-- metalk8s_v1alpha1_nodeartifact.yaml
+- metalk8s_v1alpha1_nodesolutionarchive.yaml
 # +kubebuilder:scaffold:manifestskustomizesamples

@@ -11,12 +11,12 @@ metadata:
   labels:
     app.kubernetes.io/name: metalk8s-registry-node-agent
     app.kubernetes.io/managed-by: kustomize
-  name: nodeartifact-viewer-role
+  name: nodesolutionarchive-viewer-role
 rules:
 - apiGroups:
   - metalk8s.scality.com
   resources:
-  - nodeartifacts
+  - nodesolutionarchives
   verbs:
   - get
   - list
@@ -24,6 +24,6 @@ rules:
 - apiGroups:
   - metalk8s.scality.com
   resources:
-  - nodeartifacts/status
+  - nodesolutionarchives/status
   verbs:
   - get

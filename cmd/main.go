@@ -244,45 +244,45 @@ func main() {
 		os.Exit(1)
 	}
 
-	if err := (&controller.NodeArtifactReconciler{
+	if err := (&controller.NodeSolutionArchiveReconciler{
 		Client:    mgr.GetClient(),
 		Scheme:    mgr.GetScheme(),
 		NodeName:  nodeName,
 		Container: container,
 		EventChan: eventCh,
 	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "NodeArtifact")
+		setupLog.Error(err, "unable to create controller", "controller", "NodeSolutionArchive")
 		os.Exit(1)
 	}
 	// nolint:goconst
 	if os.Getenv("ENABLE_WEBHOOKS") != "false" {
-		if err := webhookv1alpha1.SetupNodeArtifactWebhookWithManager(mgr); err != nil {
-			setupLog.Error(err, "unable to create webhook", "webhook", "NodeArtifact")
+		if err := webhookv1alpha1.SetupNodeSolutionArchiveWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "NodeSolutionArchive")
 			os.Exit(1)
 		}
 	}
 	// +kubebuilder:scaffold:builder
 
-	// Create a field index for the NodeArtifact object
-	// This will allow us to quickly find the NodeArtifact object by its Name and Version
+	// Create a field index for the NodeSolutionArchive object
+	// This will allow us to quickly find the NodeSolutionArchive object by its Name and Version
 	f := func(rawObj client.Object) []string {
-		versionedNamed := rawObj.(*metalk8sv1alpha1.NodeArtifact).Spec.Name + "-" +
-			rawObj.(*metalk8sv1alpha1.NodeArtifact).Spec.Version
+		versionedNamed := rawObj.(*metalk8sv1alpha1.NodeSolutionArchive).Spec.Name + "-" +
+			rawObj.(*metalk8sv1alpha1.NodeSolutionArchive).Spec.Version
 		return []string{versionedNamed}
 	}
 	err = mgr.GetFieldIndexer().IndexField(
 		context.Background(),
-		&metalk8sv1alpha1.NodeArtifact{},
-		"ArtifactNameVersion",
+		&metalk8sv1alpha1.NodeSolutionArchive{},
+		"SolutionArchiveNameVersion",
 		f,
 	)
 	if err != nil {
-		setupLog.Error(err, "Failed to create field index for NodeArtifact")
+		setupLog.Error(err, "Failed to create field index for NodeSolutionArchive")
 		os.Exit(1)
 	}
 
 	// Start the goroutine that listens on the channel
-	// This will listen for file events and trigger a reconcile of the NodeArtifact object
+	// This will listen for file events and trigger a reconcile of the NodeSolutionArchive object
 	go controller.ListenForFileEvents(
 		ctx,
 		logger,

@@ -42,8 +42,8 @@ const (
 	FINALIZER_NAME = "metalk8s.scality.com/finalizer"
 )
 
-// NodeArtifactReconciler reconciles a NodeArtifact object
-type NodeArtifactReconciler struct {
+// NodeSolutionArchiveReconciler reconciles a NodeSolutionArchive object
+type NodeSolutionArchiveReconciler struct {
 	client.Client
 	Scheme    *runtime.Scheme
 	NodeName  string
@@ -51,26 +51,26 @@ type NodeArtifactReconciler struct {
 	EventChan chan event.GenericEvent
 }
 
-// +kubebuilder:rbac:groups=metalk8s.scality.com,resources=nodeartifacts,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups=metalk8s.scality.com,resources=nodeartifacts/status,verbs=get;update;patch
-// +kubebuilder:rbac:groups=metalk8s.scality.com,resources=nodeartifacts/finalizers,verbs=update
+// +kubebuilder:rbac:groups=metalk8s.scality.com,resources=nodesolutionarchives,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=metalk8s.scality.com,resources=nodesolutionarchives/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups=metalk8s.scality.com,resources=nodesolutionarchives/finalizers,verbs=update
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
 // TODO(user): Modify the Reconcile function to compare the state specified by
-// the NodeArtifact object against the actual cluster state, and then
+// the NodeSolutionArchive object against the actual cluster state, and then
 // perform operations to make the cluster state reflect the state specified by
 // the user.
 //
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.21.0/pkg/reconcile
-func (r *NodeArtifactReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+func (r *NodeSolutionArchiveReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	log := logf.FromContext(ctx)
-	log.Info("Reconcile NodeArtifact", "NODE_NAME", r.NodeName)
+	log.Info("Reconcile NodeSolutionArchive", "NODE_NAME", r.NodeName)
 
-	// 1. Load the NodeArtifact by name
-	nodeArtifact := &metalk8sv1alpha1.NodeArtifact{}
-	if err := r.Get(ctx, req.NamespacedName, nodeArtifact); err != nil {
+	// 1. Load the NodeSolutionArchive by name
+	nodeSolutionArchive := &metalk8sv1alpha1.NodeSolutionArchive{}
+	if err := r.Get(ctx, req.NamespacedName, nodeSolutionArchive); err != nil {
 		// we'll ignore not-found errors, since they can't be fixed by an immediate
 		// requeue (we'll need to wait for a new notification), and we can get them
 		// on deleted requests.
@@ -80,22 +80,22 @@ func (r *NodeArtifactReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	// 2. Add finalizer to deal with artifact deletion
 	//
 	// examine DeletionTimestamp to determine if object is under deletion
-	if nodeArtifact.DeletionTimestamp.IsZero() {
+	if nodeSolutionArchive.DeletionTimestamp.IsZero() {
 		// The object is not being deleted, so if it does not have our finalizer,
 		// then lets add the finalizer and update the object. This is equivalent
 		// to registering our finalizer.
-		if !controllerutil.ContainsFinalizer(nodeArtifact, FINALIZER_NAME) {
-			controllerutil.AddFinalizer(nodeArtifact, FINALIZER_NAME)
-			if err := r.Update(ctx, nodeArtifact); err != nil {
+		if !controllerutil.ContainsFinalizer(nodeSolutionArchive, FINALIZER_NAME) {
+			controllerutil.AddFinalizer(nodeSolutionArchive, FINALIZER_NAME)
+			if err := r.Update(ctx, nodeSolutionArchive); err != nil {
 				log.Error(err, "error adding finalizer")
 				return ctrl.Result{}, err
 			}
 		}
 	} else {
 		// The object is being deleted
-		if controllerutil.ContainsFinalizer(nodeArtifact, FINALIZER_NAME) {
+		if controllerutil.ContainsFinalizer(nodeSolutionArchive, FINALIZER_NAME) {
 			// our finalizer is present, so lets handle any external dependency
-			if err := r.deleteArtifactResources(nodeArtifact); err != nil {
+			if err := r.deleteArtifactResources(nodeSolutionArchive); err != nil {
 				// if fail to delete the external dependency here, return with error
 				// so that it can be retried.
 				log.Error(err, "error deleting external Resources")
@@ -103,8 +103,8 @@ func (r *NodeArtifactReconciler) Reconcile(ctx context.Context, req ctrl.Request
 			}
 
 			// remove our finalizer from the list and update it.
-			controllerutil.RemoveFinalizer(nodeArtifact, FINALIZER_NAME)
-			if err := r.Update(ctx, nodeArtifact); err != nil {
+			controllerutil.RemoveFinalizer(nodeSolutionArchive, FINALIZER_NAME)
+			if err := r.Update(ctx, nodeSolutionArchive); err != nil {
 				log.Error(err, "error removing finalizer")
 				return ctrl.Result{}, err
 			}
@@ -116,9 +116,9 @@ func (r *NodeArtifactReconciler) Reconcile(ctx context.Context, req ctrl.Request
 
 	// 3. Initialize the session
 	artifact := &domain.Artifact{
-		Name:    nodeArtifact.Spec.Name,
-		Version: nodeArtifact.Spec.Version,
-		Hash:    nodeArtifact.Spec.Validation.Checksum.Value,
+		Name:    nodeSolutionArchive.Spec.Name,
+		Version: nodeSolutionArchive.Spec.Version,
+		Hash:    nodeSolutionArchive.Spec.Validation.Checksum.Value,
 	}
 	_, err := r.Container.GetInitializeSessionUseCase().Execute(artifact)
 	if err != nil {
@@ -127,14 +127,14 @@ func (r *NodeArtifactReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	}
 
 	// 4. Checksum validation of the artifact
-	isValid, err := r.isValidArtifact(nodeArtifact)
+	isValid, err := r.isValidArtifact(nodeSolutionArchive)
 	if err != nil {
 		log.Error(err, "error validating artifact")
 		return ctrl.Result{RequeueAfter: 30 * time.Second}, nil
 	}
-	original := nodeArtifact.DeepCopy()
+	original := nodeSolutionArchive.DeepCopy()
 	if isValid {
-		nodeArtifact.SetAvailable()
+		nodeSolutionArchive.SetAvailable()
 		// Session may persist in case of manual upload of artifact
 		err = r.Container.GetRemoveSessionUseCase().Execute(artifact)
 		if err != nil {
@@ -142,22 +142,22 @@ func (r *NodeArtifactReconciler) Reconcile(ctx context.Context, req ctrl.Request
 			return ctrl.Result{RequeueAfter: 30 * time.Second}, nil
 		}
 	} else {
-		nodeArtifact.SetUnavailable()
+		nodeSolutionArchive.SetUnavailable()
 	}
-	// 5. Update the status of the NodeArtifact
-	if err := r.Status().Patch(ctx, nodeArtifact, client.MergeFrom(original)); err != nil {
-		log.Error(err, "unable to patch NodeArtifact status")
+	// 5. Update the status of the NodeSolutionArchive
+	if err := r.Status().Patch(ctx, nodeSolutionArchive, client.MergeFrom(original)); err != nil {
+		log.Error(err, "unable to patch NodeSolutionArchive status")
 		return ctrl.Result{}, err
 	}
 
 	return ctrl.Result{}, nil
 }
 
-func (r *NodeArtifactReconciler) deleteArtifactResources(nodeArtifact *metalk8sv1alpha1.NodeArtifact) error {
+func (r *NodeSolutionArchiveReconciler) deleteArtifactResources(nodeSolutionArchive *metalk8sv1alpha1.NodeSolutionArchive) error {
 	artifact := &domain.Artifact{
-		Name:    nodeArtifact.Spec.Name,
-		Version: nodeArtifact.Spec.Version,
-		Hash:    nodeArtifact.Spec.Validation.Checksum.Value,
+		Name:    nodeSolutionArchive.Spec.Name,
+		Version: nodeSolutionArchive.Spec.Version,
+		Hash:    nodeSolutionArchive.Spec.Validation.Checksum.Value,
 	}
 
 	err := r.Container.GetRemoveArtifactUseCase().Execute(artifact)
@@ -169,24 +169,24 @@ func (r *NodeArtifactReconciler) deleteArtifactResources(nodeArtifact *metalk8sv
 }
 
 func getNodeName(o client.Object) string {
-	if obj, ok := o.(*metalk8sv1alpha1.NodeArtifact); ok {
+	if obj, ok := o.(*metalk8sv1alpha1.NodeSolutionArchive); ok {
 		return obj.Spec.NodeName
 	}
 	return ""
 }
 
-func (r *NodeArtifactReconciler) isValidArtifact(nodeArtifact *metalk8sv1alpha1.NodeArtifact) (bool, error) {
+func (r *NodeSolutionArchiveReconciler) isValidArtifact(nodeSolutionArchive *metalk8sv1alpha1.NodeSolutionArchive) (bool, error) {
 	artifact := &domain.Artifact{
-		Name:    nodeArtifact.Spec.Name,
-		Version: nodeArtifact.Spec.Version,
-		Hash:    nodeArtifact.Spec.Validation.Checksum.Value,
+		Name:    nodeSolutionArchive.Spec.Name,
+		Version: nodeSolutionArchive.Spec.Version,
+		Hash:    nodeSolutionArchive.Spec.Validation.Checksum.Value,
 	}
 	return r.Container.GetValidateArtifactUseCase().Execute(artifact)
 }
 
 // SetupWithManager sets up the controller with the Manager.
-func (r *NodeArtifactReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	// Predicate will ensure that NodeArtifact from event is related to the current Node
+func (r *NodeSolutionArchiveReconciler) SetupWithManager(mgr ctrl.Manager) error {
+	// Predicate will ensure that NodeSolutionArchive from event is related to the current Node
 	p := predicate.Funcs{
 		CreateFunc: func(e event.CreateEvent) bool {
 			return getNodeName(e.Object) == r.NodeName
@@ -203,13 +203,13 @@ func (r *NodeArtifactReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	}
 
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&metalk8sv1alpha1.NodeArtifact{}, builder.WithPredicates(p)).
-		Named("nodeartifact").
+		For(&metalk8sv1alpha1.NodeSolutionArchive{}, builder.WithPredicates(p)).
+		Named("nodesolutionarchive").
 		WatchesRawSource(
 			source.Channel(
 				r.EventChan,
 				handler.EnqueueRequestsFromMapFunc(func(ctx context.Context, obj client.Object) []reconcile.Request {
-					na, ok := obj.(*metalk8sv1alpha1.NodeArtifact)
+					na, ok := obj.(*metalk8sv1alpha1.NodeSolutionArchive)
 					if !ok {
 						return nil
 					}
@@ -232,13 +232,13 @@ func ListenForFileEvents(ctx context.Context, logger *zerolog.Logger, c client.C
 	for filename := range filenameChan {
 
 		// Find the Custom Resource that matches the parsed data
-		naList := &metalk8sv1alpha1.NodeArtifactList{}
-		if err := c.List(ctx, naList, client.MatchingFields{"ArtifactNameVersion": filename[:len(filename)-4]}); err != nil {
+		naList := &metalk8sv1alpha1.NodeSolutionArchiveList{}
+		if err := c.List(ctx, naList, client.MatchingFields{"SolutionArchiveNameVersion": filename[:len(filename)-4]}); err != nil {
 			logger.Error().Err(err).Msg("Failed to list custom resources")
 			continue
 		}
 
-		var foundCR *metalk8sv1alpha1.NodeArtifact
+		var foundCR *metalk8sv1alpha1.NodeSolutionArchive
 		for _, item := range naList.Items {
 			foundCR = &item
 			break

@@ -22,7 +22,7 @@ import (
 	"k8s.io/utils/ptr"
 )
 
-type NodeArtifactChecksum struct {
+type NodeSolutionArchiveChecksum struct {
 	// Type of digest
 	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
 	// +kubebuilder:validation:Enum:=sha256
@@ -32,32 +32,32 @@ type NodeArtifactChecksum struct {
 	Value string `json:"value"`
 }
 
-type ArtifactValidation struct {
-	// Checksum of the Artifact
+type SolutionArchiveValidation struct {
+	// Checksum of the SolutionArchive
 	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
-	Checksum NodeArtifactChecksum `json:"checksum"`
+	Checksum NodeSolutionArchiveChecksum `json:"checksum"`
 }
 
-// NodeArtifactSpec defines the desired state of NodeArtifact.
-type NodeArtifactSpec struct {
-	// Name of the Artifact
+// NodeSolutionArchiveSpec defines the desired state of NodeSolutionArchive.
+type NodeSolutionArchiveSpec struct {
+	// Name of the SolutionArchive
 	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
 	// +kubebuilder:validation:Pattern:=`^[a-zA-Z0-9][a-zA-Z0-9_\-\.]{1,98}[a-zA-Z0-9]$`
 	Name string `json:"name"`
-	// Version of the Artifact
+	// Version of the SolutionArchive
 	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
 	Version string `json:"version"`
 	// Name of the Node
 	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
 	NodeName string `json:"nodeName"`
-	// Validation details for the Artifact
+	// Validation details for the SolutionArchive
 	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
-	Validation ArtifactValidation `json:"validation"`
+	Validation SolutionArchiveValidation `json:"validation"`
 }
 
-// NodeArtifactStatus defines the observed state of NodeArtifact.
-type NodeArtifactStatus struct {
-	// Availability of the Artifact on the Node
+// NodeSolutionArchiveStatus defines the observed state of NodeSolutionArchive.
+type NodeSolutionArchiveStatus struct {
+	// Availability of the SolutionArchive on the Node
 	Available  *bool              `json:"available,omitempty"`
 	Conditions []metav1.Condition `json:"conditions,omitempty"`
 }
@@ -66,29 +66,29 @@ type NodeArtifactStatus struct {
 // +kubebuilder:subresource:status
 // +kubebuilder:resource:scope=Cluster
 
-// NodeArtifact is the Schema for the nodeartifacts API.
-type NodeArtifact struct {
+// NodeSolutionArchive is the Schema for the nodesolutionarchives API.
+type NodeSolutionArchive struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   NodeArtifactSpec   `json:"spec,omitempty"`
-	Status NodeArtifactStatus `json:"status,omitempty"`
+	Spec   NodeSolutionArchiveSpec   `json:"spec,omitempty"`
+	Status NodeSolutionArchiveStatus `json:"status,omitempty"`
 }
 
 // +kubebuilder:object:root=true
 
-// NodeArtifactList contains a list of NodeArtifact.
-type NodeArtifactList struct {
+// NodeSolutionArchiveList contains a list of NodeSolutionArchive.
+type NodeSolutionArchiveList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []NodeArtifact `json:"items"`
+	Items           []NodeSolutionArchive `json:"items"`
 }
 
 func init() {
-	SchemeBuilder.Register(&NodeArtifact{}, &NodeArtifactList{})
+	SchemeBuilder.Register(&NodeSolutionArchive{}, &NodeSolutionArchiveList{})
 }
 
-func (na *NodeArtifact) SetAvailable() {
+func (na *NodeSolutionArchive) SetAvailable() {
 	condition := metav1.Condition{
 		Type:               "Available",
 		Status:             metav1.ConditionTrue,
@@ -101,7 +101,7 @@ func (na *NodeArtifact) SetAvailable() {
 	na.Status.Available = ptr.To(true)
 }
 
-func (na *NodeArtifact) SetUnavailable() {
+func (na *NodeSolutionArchive) SetUnavailable() {
 	condition := metav1.Condition{
 		Type:               "Available",
 		Status:             metav1.ConditionFalse,

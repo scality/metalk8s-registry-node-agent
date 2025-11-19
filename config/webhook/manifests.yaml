@@ -10,9 +10,9 @@ webhooks:
     service:
       name: webhook-service
       namespace: system
-      path: /validate-metalk8s-scality-com-v1alpha1-nodeartifact
+      path: /validate-metalk8s-scality-com-v1alpha1-nodesolutionarchive
   failurePolicy: Fail
-  name: vnodeartifact-v1alpha1.kb.io
+  name: vnodesolutionarchive-v1alpha1.kb.io
   rules:
   - apiGroups:
     - metalk8s.scality.com
@@ -21,5 +21,5 @@ webhooks:
     operations:
     - CREATE
     resources:
-    - nodeartifacts
+    - nodesolutionarchives
   sideEffects: None

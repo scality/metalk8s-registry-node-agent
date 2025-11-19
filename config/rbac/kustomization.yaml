@@ -22,7 +22,7 @@ resources:
 # default, aiding admins in cluster management. Those roles are
 # not used by the metalk8s-registry-node-agent itself. You can comment the following lines
 # if you do not want those helpers be installed with your Project.
-- nodeartifact_admin_role.yaml
-- nodeartifact_editor_role.yaml
-- nodeartifact_viewer_role.yaml
+- nodesolutionarchive_admin_role.yaml
+- nodesolutionarchive_editor_role.yaml
+- nodesolutionarchive_viewer_role.yaml
 

@@ -29,7 +29,7 @@ import (
 	metalk8sv1alpha1 "github.com/scality/metalk8s-registry-node-agent/api/v1alpha1"
 )
 
-var _ = Describe("NodeArtifact Controller", func() {
+var _ = Describe("NodeSolutionArchive Controller", func() {
 	Context("When reconciling a resource", func() {
 		const resourceName = "test-resource"
 
@@ -38,23 +38,23 @@ var _ = Describe("NodeArtifact Controller", func() {
 		typeNamespacedName := types.NamespacedName{
 			Name: resourceName,
 		}
-		nodeartifact := &metalk8sv1alpha1.NodeArtifact{}
+		nodesolutionarchive := &metalk8sv1alpha1.NodeSolutionArchive{}
 
 		BeforeEach(func() {
-			By("creating the custom resource for the Kind NodeArtifact")
-			err := k8sClient.Get(ctx, typeNamespacedName, nodeartifact)
+			By("creating the custom resource for the Kind NodeSolutionArchive")
+			err := k8sClient.Get(ctx, typeNamespacedName, nodesolutionarchive)
 			if err != nil && errors.IsNotFound(err) {
-				resource := &metalk8sv1alpha1.NodeArtifact{
+				resource := &metalk8sv1alpha1.NodeSolutionArchive{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: resourceName,
 					},
 					// TODO(user): Specify other spec details if needed.
-					Spec: metalk8sv1alpha1.NodeArtifactSpec{
+					Spec: metalk8sv1alpha1.NodeSolutionArchiveSpec{
 						Name:     "my-new-solution",
 						Version:  "1.2.0",
 						NodeName: "node-1",
-						Validation: metalk8sv1alpha1.ArtifactValidation{
-							Checksum: metalk8sv1alpha1.NodeArtifactChecksum{
+						Validation: metalk8sv1alpha1.SolutionArchiveValidation{
+							Checksum: metalk8sv1alpha1.NodeSolutionArchiveChecksum{
 								Type:  "sha256",
 								Value: "123abc",
 							},
@@ -67,17 +67,17 @@ var _ = Describe("NodeArtifact Controller", func() {
 
 		AfterEach(func() {
 			// TODO(user): Cleanup logic after each test, like removing the resource instance.
-			resource := &metalk8sv1alpha1.NodeArtifact{}
+			resource := &metalk8sv1alpha1.NodeSolutionArchive{}
 			err := k8sClient.Get(ctx, typeNamespacedName, resource)
 			Expect(err).NotTo(HaveOccurred())
 
-			By("Cleanup the specific resource instance NodeArtifact")
+			By("Cleanup the specific resource instance NodeSolutionArchive")
 			Expect(k8sClient.Delete(ctx, resource)).To(Succeed())
 		})
 		/*
 			It("should successfully reconcile the resource", func() {
 				By("Reconciling the created resource")
-				controllerReconciler := &NodeArtifactReconciler{
+				controllerReconciler := &NodeSolutionArchiveReconciler{
 					Client: k8sClient,
 					Scheme: k8sClient.Scheme(),
 				}

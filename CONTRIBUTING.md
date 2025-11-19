@@ -88,10 +88,10 @@ split -n 5 -x test.iso "test.iso."
     -rw-rw-r--  1 user group  4194304 Sep 25 15:46 test.iso.04
 ```
 
-**3. Create a NodeArtifact Custom Resource**
+**3. Create a NodeSolutionArchive Custom Resource**
 
 ```shell
-kubectl apply -f config/samples/metalk8s_v1alpha1_nodeartifact.yaml
+kubectl apply -f config/samples/metalk8s_v1alpha1_nodesolutionarchive.yaml
 ```
 
 **4. Upload parts**
