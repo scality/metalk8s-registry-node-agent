@@ -44,7 +44,7 @@ make docker-build
 ```bash
 # Set environment variables
 export ARTIFACT_STORAGE_ROOT_LOCATION=/tmp/artifacts
-export HTTP_ADDR=:5001
+export HTTP_EXTERN_ADDR=:5001
 
 # Run the application
 go run cmd/main.go

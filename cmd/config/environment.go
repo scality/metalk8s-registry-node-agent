@@ -16,7 +16,7 @@ import (
 var ApplicationVersion = "dev"
 
 const ApplicationName = "metalk8s-registry-node-agent"
-const RootAPIPath = "/api/v1"
+const RootExternAPIPath = "/api/v1"
 
 type (
 	Environment struct {
@@ -27,7 +27,7 @@ type (
 	}
 
 	HTTP struct {
-		Addr string `env:"ADDR, default=:5001"`
+		ExternAddr string `env:"EXTERN_ADDR, default=:5001"`
 	}
 )
 

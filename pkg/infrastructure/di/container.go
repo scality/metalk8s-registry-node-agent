@@ -12,7 +12,7 @@ import (
 	"github.com/scality/metalk8s-registry-node-agent/pkg/infrastructure/partuploader"
 	"github.com/scality/metalk8s-registry-node-agent/pkg/infrastructure/sessioninitializer"
 	"github.com/scality/metalk8s-registry-node-agent/pkg/infrastructure/sessionremover"
-	"github.com/scality/metalk8s-registry-node-agent/pkg/presentation/http/generated"
+	"github.com/scality/metalk8s-registry-node-agent/pkg/presentation/http/extern"
 	"github.com/scality/metalk8s-registry-node-agent/pkg/presentation/http/handler"
 	"github.com/scality/metalk8s-registry-node-agent/pkg/service"
 	"github.com/scality/metalk8s-registry-node-agent/pkg/usecase"
@@ -28,17 +28,17 @@ type Container struct {
 
 	logger *zerolog.Logger
 
-	filenameCh          chan string
-	httpServer          *http.Server
-	httpClient          *http.Client
-	generatedHTTPClient *generated.ClientWithResponses
-	rootAPIPath         string
+	filenameCh                chan string
+	httpExternServer          *http.Server
+	httpExternClient          *http.Client
+	generatedHTTPExternClient *extern.ClientWithResponses
+	rootExternAPIPath         string
 
 	artifactStorage service.StorageProvider
 
 	uploadPartHandler *handler.UploadPart
 
-	resolver generated.StrictServerInterface
+	externResolver extern.StrictServerInterface
 
 	storagePartUploader       *partuploader.Storage
 	storageSessionInitializer *sessioninitializer.Storage
@@ -53,11 +53,12 @@ type Container struct {
 	validateArtifactUseCase  *usecase.ValidateArtifact
 }
 
-func NewContainer(ctx context.Context, cfg *config.Environment, filenameCh chan string, rootAPIPath string) *Container {
+func NewContainer(ctx context.Context, cfg *config.Environment, filenameCh chan string,
+	rootExternAPIPath string) *Container {
 	return &Container{
-		baseCtx:     ctx,
-		config:      cfg,
-		filenameCh:  filenameCh,
-		rootAPIPath: rootAPIPath,
+		baseCtx:           ctx,
+		config:            cfg,
+		filenameCh:        filenameCh,
+		rootExternAPIPath: rootExternAPIPath,
 	}
 }

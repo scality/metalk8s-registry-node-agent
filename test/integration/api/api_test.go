@@ -16,7 +16,7 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/scality/metalk8s-registry-node-agent/cmd/config"
 	"github.com/scality/metalk8s-registry-node-agent/pkg/infrastructure/di"
-	"github.com/scality/metalk8s-registry-node-agent/pkg/presentation/http/generated"
+	"github.com/scality/metalk8s-registry-node-agent/pkg/presentation/http/extern"
 	"github.com/scality/metalk8s-registry-node-agent/pkg/service"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
@@ -29,7 +29,7 @@ type TestingSuite struct {
 	ArtifactStorageDirectory string
 	ArtifactStorageProvider  service.StorageProvider
 
-	*generated.ClientWithResponses
+	*extern.ClientWithResponses
 }
 
 const (
@@ -59,7 +59,7 @@ var _ = BeforeSuite(func() {
 		log.Fatal(err) //nolint:revive // This is basically the main function, shut up revive
 	}
 	filenameCh := make(chan string)
-	container := di.NewContainer(ctx, cfg, filenameCh, config.RootAPIPath)
+	container := di.NewContainer(ctx, cfg, filenameCh, config.RootExternAPIPath)
 
 	rootPath, err := os.MkdirTemp("/tmp", "test-integration-api_v1_uploads-*")
 	if err != nil {
@@ -72,16 +72,16 @@ var _ = BeforeSuite(func() {
 		container:                container,
 		RootPath:                 rootPath,
 		ArtifactStorageDirectory: cfg.ArtifactStorageRootLocation,
-		ClientWithResponses:      container.GetGeneratedHTTPClient(),
+		ClientWithResponses:      container.GetGeneratedHTTPExternClient(),
 		ArtifactStorageProvider:  container.GetFileSystemArtifactStorage(),
 	}
 
 	By("Starting an http Server")
 	// Get the server before starting goroutine to avoid race condition
 	// during lazy initialization
-	httpServer := testingSuite.container.GetHTTPServer()
+	httpExternServer := testingSuite.container.GetHTTPExternServer()
 	go func() {
-		serveErr := httpServer.ListenAndServe()
+		serveErr := httpExternServer.ListenAndServe()
 		if serveErr != nil {
 			if !errors.Is(serveErr, http.ErrServerClosed) {
 				testingSuite.container.GetLogger().Error().Err(serveErr).Msg("http server failure during startup")
@@ -92,8 +92,8 @@ var _ = BeforeSuite(func() {
 	}()
 
 	for range httpServerStartupTimeInSeconds {
-		res, err := testingSuite.container.GetHTTPClient().Get(
-			fmt.Sprintf("http://localhost%s", httpServer.Addr) + "/healthz",
+		res, err := testingSuite.container.GetHTTPExternClient().Get(
+			fmt.Sprintf("http://localhost%s", httpExternServer.Addr) + "/healthz",
 		)
 		if err == nil && res.StatusCode == http.StatusOK {
 			testingSuite.container.GetLogger().Info().Msg("http server is ready")
@@ -107,7 +107,7 @@ var _ = AfterSuite(func() {
 	By("tearing down the test environment")
 	cancel()
 	defer os.RemoveAll(testingSuite.RootPath) // nolint: errcheck
-	err := testingSuite.container.GetHTTPServer().Close()
+	err := testingSuite.container.GetHTTPExternServer().Close()
 	if err != nil {
 		testingSuite.logger.Fatal().Err(err).Msg("http server failure during shutdown")
 	}

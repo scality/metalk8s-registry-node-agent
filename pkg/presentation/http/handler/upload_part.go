@@ -9,7 +9,7 @@ import (
 	"github.com/scality/go-errors"
 
 	"github.com/scality/metalk8s-registry-node-agent/pkg/domain"
-	"github.com/scality/metalk8s-registry-node-agent/pkg/presentation/http/generated"
+	"github.com/scality/metalk8s-registry-node-agent/pkg/presentation/http/extern"
 	"github.com/scality/metalk8s-registry-node-agent/pkg/usecase"
 )
 
@@ -34,8 +34,8 @@ func NewUploadPart(
 //nolint:ireturn // Generated code forces to return an interface.
 func (h *UploadPart) UploadChunk(
 	_ context.Context,
-	request generated.UploadChunkRequestObject,
-) (generated.UploadChunkResponseObject, error) {
+	request extern.UploadChunkRequestObject,
+) (extern.UploadChunkResponseObject, error) {
 	var part domain.Part
 
 	if err := fillPartFromUploadChunkRequestObject(&part, &request); err != nil {
@@ -47,11 +47,11 @@ func (h *UploadPart) UploadChunk(
 		return h.genUploadChunkResponseObjectFromError(errors.Stamp(err))
 	}
 
-	var response generated.UploadChunkSuccessResponse
+	var response extern.UploadChunkSuccessResponse
 
 	fillUploadChunkSuccessResponseFromArtifactStatus(&response, artifactStatus)
 
-	return generated.UploadChunk200JSONResponse(response), nil
+	return extern.UploadChunk200JSONResponse(response), nil
 }
 
 // genUploadChunkResponseObjectFromError generates a proper AbortUploadSessionResponseObject
@@ -60,10 +60,10 @@ func (h *UploadPart) UploadChunk(
 //nolint:funlen,ireturn // Needs refactoring
 func (h *UploadPart) genUploadChunkResponseObjectFromError(
 	err error,
-) (generated.UploadChunkResponseObject, error) {
+) (extern.UploadChunkResponseObject, error) {
 	var apiErr *errors.Error
 
-	var problemDetails generated.ProblemDetails
+	var problemDetails extern.ProblemDetails
 
 	errors.As(err, &apiErr)
 
@@ -74,43 +74,43 @@ func (h *UploadPart) genUploadChunkResponseObjectFromError(
 		// TODO: Fix the status code on https://scality.atlassian.net/browse/ARTESCA-13615
 		// The status code should be 422, but the generated code uses 400.
 		// However, change this will demand changes the OpenAPI Spec.
-		return generated.UploadChunk400ApplicationProblemPlusJSONResponse{
-			BadRequestApplicationProblemPlusJSONResponse: generated.BadRequestApplicationProblemPlusJSONResponse(
+		return extern.UploadChunk400ApplicationProblemPlusJSONResponse{
+			BadRequestApplicationProblemPlusJSONResponse: extern.BadRequestApplicationProblemPlusJSONResponse(
 				problemDetails,
 			),
 		}, nil
 
 	case http.StatusUnauthorized:
-		return generated.UploadChunk401ApplicationProblemPlusJSONResponse{
-			UnauthorizedApplicationProblemPlusJSONResponse: generated.UnauthorizedApplicationProblemPlusJSONResponse(
+		return extern.UploadChunk401ApplicationProblemPlusJSONResponse{
+			UnauthorizedApplicationProblemPlusJSONResponse: extern.UnauthorizedApplicationProblemPlusJSONResponse(
 				problemDetails,
 			),
 		}, nil
 
 	case http.StatusForbidden:
-		return generated.UploadChunk403ApplicationProblemPlusJSONResponse{
-			ForbiddenApplicationProblemPlusJSONResponse: generated.ForbiddenApplicationProblemPlusJSONResponse(
+		return extern.UploadChunk403ApplicationProblemPlusJSONResponse{
+			ForbiddenApplicationProblemPlusJSONResponse: extern.ForbiddenApplicationProblemPlusJSONResponse(
 				problemDetails,
 			),
 		}, nil
 
 	case http.StatusNotFound:
-		return generated.UploadChunk404ApplicationProblemPlusJSONResponse{
-			NotFoundApplicationProblemPlusJSONResponse: generated.NotFoundApplicationProblemPlusJSONResponse(
+		return extern.UploadChunk404ApplicationProblemPlusJSONResponse{
+			NotFoundApplicationProblemPlusJSONResponse: extern.NotFoundApplicationProblemPlusJSONResponse(
 				problemDetails,
 			),
 		}, nil
 
 	case http.StatusInternalServerError:
-		return generated.UploadChunk500ApplicationProblemPlusJSONResponse{
-			ServerErrorApplicationProblemPlusJSONResponse: generated.ServerErrorApplicationProblemPlusJSONResponse(
+		return extern.UploadChunk500ApplicationProblemPlusJSONResponse{
+			ServerErrorApplicationProblemPlusJSONResponse: extern.ServerErrorApplicationProblemPlusJSONResponse(
 				problemDetails,
 			),
 		}, nil
 
 	case http.StatusInsufficientStorage:
-		return generated.UploadChunk507ApplicationProblemPlusJSONResponse{
-			InsufficientStorageApplicationProblemPlusJSONResponse: generated.InsufficientStorageApplicationProblemPlusJSONResponse(
+		return extern.UploadChunk507ApplicationProblemPlusJSONResponse{
+			InsufficientStorageApplicationProblemPlusJSONResponse: extern.InsufficientStorageApplicationProblemPlusJSONResponse(
 				problemDetails,
 			),
 		}, nil

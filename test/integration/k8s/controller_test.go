@@ -100,7 +100,7 @@ var _ = BeforeSuite(func() {
 	// and start a Mock Reconciler for the NodeArtifact resource
 	filenameCh := make(chan string)
 	eventChan := make(chan event.GenericEvent)
-	container := di.NewContainer(ctx, &config.Environment{}, filenameCh, config.RootAPIPath)
+	container := di.NewContainer(ctx, &config.Environment{}, filenameCh, config.RootExternAPIPath)
 	container.GetMockFileSystemArtifactStorage()
 
 	err = (&controller.NodeArtifactReconciler{

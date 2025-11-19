@@ -1,5 +1,5 @@
 package di
 
-func (c *Container) GetRootAPIPath() string {
-	return c.rootAPIPath
+func (c *Container) GetRootExternAPIPath() string {
+	return c.rootExternAPIPath
 }

@@ -1,4 +1,4 @@
-package: generated
+package: extern
 generate:
   models: true
   std-http-server: true
