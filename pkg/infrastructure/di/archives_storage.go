@@ -7,48 +7,48 @@ import (
 	"github.com/scality/metalk8s-registry-node-agent/pkg/service"
 )
 
-const artifactStorageNamePattern = "^.{1,251}\\.iso$"
+const solutionArchiveStorageNamePattern = "^.{1,251}\\.iso$"
 
-var artifactStorageNameRegexp = regexp.MustCompile(artifactStorageNamePattern)
+var solutionArchiveStorageNameRegexp = regexp.MustCompile(solutionArchiveStorageNamePattern)
 
-func (c *Container) GetFileSystemArtifactStorage() service.StorageProvider {
-	if c.artifactStorage == nil {
-		c.artifactStorage = storageprovider.NewFileSystem(
+func (c *Container) GetFSSolutionArchiveStorage() service.StorageProvider {
+	if c.solutionArchiveStorage == nil {
+		c.solutionArchiveStorage = storageprovider.NewFileSystem(
 			&storageprovider.FileOpts{
-				ArtifactLocation:           c.config.ArtifactStorageRootLocation,
-				InterestContentFilterRegex: artifactStorageNameRegexp,
+				SolutionArchiveLocation:    c.config.SolutionArchivesLocation,
+				InterestContentFilterRegex: solutionArchiveStorageNameRegexp,
 				Logger:                     c.GetLogger(),
 			},
 		)
 
-		err := c.artifactStorage.Init()
+		err := c.solutionArchiveStorage.Init()
 		if err != nil {
-			c.GetLogger().Fatal().Err(err).Msg("could not initialize artifacts storage")
+			c.GetLogger().Fatal().Err(err).Msg("could not initialize solution archives storage")
 		}
 
-		c.GetLogger().Info().Msg("Artifact storage initialized")
+		c.GetLogger().Info().Msg("solution archives storage initialized")
 	}
 
-	return c.artifactStorage
+	return c.solutionArchiveStorage
 }
 
-func (c *Container) GetMockFileSystemArtifactStorage() service.StorageProvider {
-	if c.artifactStorage == nil {
-		c.artifactStorage = storageprovider.NewMockFileSystem(
+func (c *Container) GetMockFSSolutionArchiveStorage() service.StorageProvider {
+	if c.solutionArchiveStorage == nil {
+		c.solutionArchiveStorage = storageprovider.NewMockFileSystem(
 			&storageprovider.MockFileOpts{
-				ArtifactLocation:           c.config.ArtifactStorageRootLocation,
-				InterestContentFilterRegex: artifactStorageNameRegexp,
+				SolutionArchiveLocation:    c.config.SolutionArchivesLocation,
+				InterestContentFilterRegex: solutionArchiveStorageNameRegexp,
 				Logger:                     c.GetLogger(),
 			},
 		)
 
-		err := c.artifactStorage.Init()
+		err := c.solutionArchiveStorage.Init()
 		if err != nil {
-			c.GetLogger().Fatal().Err(err).Msg("could not initialize artifacts storage")
+			c.GetLogger().Fatal().Err(err).Msg("could not initialize solution archives storage")
 		}
 
-		c.GetLogger().Info().Msg("Artifact storage initialized")
+		c.GetLogger().Info().Msg("solution archives storage initialized")
 	}
 
-	return c.artifactStorage
+	return c.solutionArchiveStorage
 }

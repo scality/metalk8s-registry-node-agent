@@ -30,15 +30,15 @@ type (
 
 		logger *zerolog.Logger
 
-		artifactLocation      string
-		interestContentFilter library.ContentFilter
-		watchedFileInfos      watchedFilesMap
-		watcher               *fsnotify.Watcher
+		solutionArchiveLocation string
+		interestContentFilter   library.ContentFilter
+		watchedFileInfos        watchedFilesMap
+		watcher                 *fsnotify.Watcher
 	}
 
 	FileOpts struct {
 		Logger                     *zerolog.Logger
-		ArtifactLocation           string
+		SolutionArchiveLocation    string
 		InterestContentFilterRegex *regexp.Regexp
 	}
 )
@@ -51,9 +51,9 @@ var _ service.StorageProvider = &FileSystem{}
 
 func NewFileSystem(opts *FileOpts) *FileSystem {
 	return &FileSystem{
-		logger:                opts.Logger,
-		artifactLocation:      opts.ArtifactLocation,
-		interestContentFilter: library.NewRegexNormalFileFilter(opts.InterestContentFilterRegex),
+		logger:                  opts.Logger,
+		solutionArchiveLocation: opts.SolutionArchiveLocation,
+		interestContentFilter:   library.NewRegexNormalFileFilter(opts.InterestContentFilterRegex),
 	}
 }
 
@@ -62,16 +62,16 @@ func (f *FileSystem) Init() error {
 	f.Lock()
 	defer f.Unlock()
 
-	if err := os.MkdirAll(f.artifactLocation, library.FileSystemDefaultDirMode); err != nil {
+	if err := os.MkdirAll(f.solutionArchiveLocation, library.FileSystemDefaultDirMode); err != nil {
 		return errors.From(domain.ErrStorageProviderInit).
 			WithIdentifier(500000).
 			CausedBy(err).
-			WithDetail("Failed to create artifact location.").
-			WithProperty("artifact_location", f.artifactLocation).
+			WithDetail("Failed to create solution archive location.").
+			WithProperty("solution_archive_location", f.solutionArchiveLocation).
 			Throw()
 	}
 
-	controlDirectoryPath := filepath.Join(f.artifactLocation, controlDir)
+	controlDirectoryPath := filepath.Join(f.solutionArchiveLocation, controlDir)
 
 	if err := os.MkdirAll(controlDirectoryPath, library.FileSystemDefaultDirMode); err != nil {
 		return errors.From(domain.ErrStorageProviderInit).
@@ -198,12 +198,12 @@ func (f *FileSystem) MoveFileToRoot(
 // CreateMultipartFiles creates into a bucket: a metadata file, a multipart file recipient and a parts synthesis file.
 func (f *FileSystem) CreateMultipartFiles(
 	bucketName string,
-	artifact *domain.Artifact,
-) (*domain.ArtifactStatus, error) {
-	if err := library.EnforceNamingConventions(artifact.Name); err != nil {
+	solutionArchive *domain.SolutionArchive,
+) (*domain.SolutionArchiveStatus, error) {
+	if err := library.EnforceNamingConventions(solutionArchive.Name); err != nil {
 		return nil, errors.Stamp(err)
 	}
-	meta, err := f.createMultipartFiles(bucketName, artifact)
+	meta, err := f.createMultipartFiles(bucketName, solutionArchive)
 	if err != nil {
 		return nil, errors.Stamp(err)
 	}
@@ -211,10 +211,11 @@ func (f *FileSystem) CreateMultipartFiles(
 	return meta, nil
 }
 
-// GetMultipartFile retrieves the multipart file recipient from a given bucket and returns its Artifact.
+// GetMultipartFile retrieves the multipart file recipient from a given bucket
+// and returns its Solution Archive.
 func (f *FileSystem) GetMultipartFile(
 	bucketName string,
-) (*domain.Artifact, error) {
+) (*domain.SolutionArchive, error) {
 	meta, err := f.getMultipartFile(bucketName)
 	if err != nil {
 		return nil, errors.Stamp(err)
@@ -223,13 +224,13 @@ func (f *FileSystem) GetMultipartFile(
 	return meta, nil
 }
 
-// GetMultipartFileStatus retrieves the ArtifactStatus of a multipart file recipient
-// based on bucketName and artifactMeta.
+// GetMultipartFileStatus retrieves the Solution Archive Status of a multipart file recipient
+// based on bucketName and solutionArchiveMeta.
 func (f *FileSystem) GetMultipartFileStatus(
 	bucketName string,
-	artifactMeta *domain.Artifact,
-) (*domain.ArtifactStatus, error) {
-	status, err := f.getArtifactStatus(bucketName, artifactMeta)
+	solutionArchiveMeta *domain.SolutionArchive,
+) (*domain.SolutionArchiveStatus, error) {
+	status, err := f.getSolutionArchiveStatus(bucketName, solutionArchiveMeta)
 	if err != nil {
 		return nil, errors.Stamp(err)
 	}
@@ -237,12 +238,12 @@ func (f *FileSystem) GetMultipartFileStatus(
 	return status, nil
 }
 
-// DeleteMultipartFile deletes a multipart file recipient from a bucket based on bucketName and artifactMeta.
+// DeleteMultipartFile deletes a multipart file recipient from a bucket based on bucketName and solutionArchiveMeta.
 func (f *FileSystem) DeleteMultipartFile(
 	bucketName string,
-	artifactMeta *domain.Artifact,
+	solutionArchiveMeta *domain.SolutionArchive,
 ) error {
-	if err := f.deleteMultipartFile(bucketName, artifactMeta); err != nil {
+	if err := f.deleteMultipartFile(bucketName, solutionArchiveMeta); err != nil {
 		return errors.Stamp(err)
 	}
 
@@ -253,7 +254,7 @@ func (f *FileSystem) DeleteMultipartFile(
 // on the bucket indicated by the given bucketName.
 func (f *FileSystem) WritePartToMultipartFile(bucketName string,
 	part *domain.Part,
-) (*domain.ArtifactStatus, error) {
+) (*domain.SolutionArchiveStatus, error) {
 	status, err := f.writePartToMultipartFile(bucketName, part)
 	if err != nil {
 		return nil, errors.Stamp(err)
@@ -266,10 +267,10 @@ func (f *FileSystem) WritePartToMultipartFile(bucketName string,
 // into the same bucket it is located.
 func (f *FileSystem) ConsolidateMultipartFile(
 	bucketName string,
-	artifactMeta *domain.Artifact,
+	solutionArchiveMeta *domain.SolutionArchive,
 	perm os.FileMode,
 ) error {
-	if err := f.consolidateMultipartFile(bucketName, artifactMeta, perm); err != nil {
+	if err := f.consolidateMultipartFile(bucketName, solutionArchiveMeta, perm); err != nil {
 		return errors.Stamp(err)
 	}
 
@@ -294,7 +295,7 @@ func (f *FileSystem) GetHashFromFileInfos(filename string) (string, error) {
 func (f *FileSystem) genBucketPath(
 	bucketName string,
 ) string {
-	return filepath.Join(f.artifactLocation, library.FileSystemBucketPrefix+bucketName)
+	return filepath.Join(f.solutionArchiveLocation, library.FileSystemBucketPrefix+bucketName)
 }
 
 func (f *FileSystem) createBucket(
@@ -322,7 +323,7 @@ func (f *FileSystem) createBucket(
 }
 
 func (f *FileSystem) listBuckets() ([]string, error) {
-	buckets, err := library.ListDirContentNames(f.artifactLocation, library.BucketFilter)
+	buckets, err := library.ListDirContentNames(f.solutionArchiveLocation, library.BucketFilter)
 	if err != nil {
 		return nil, errors.Stamp(err)
 	}
@@ -362,7 +363,7 @@ func (f *FileSystem) deleteBucket(
 }
 
 func (f *FileSystem) listFiles() ([]string, error) {
-	files, err := library.ListDirContentNames(f.artifactLocation, f.interestContentFilter)
+	files, err := library.ListDirContentNames(f.solutionArchiveLocation, f.interestContentFilter)
 	if err != nil {
 		return nil, errors.Stamp(err)
 	}
@@ -373,7 +374,7 @@ func (f *FileSystem) listFiles() ([]string, error) {
 func (f *FileSystem) deleteFile(
 	fileName string,
 ) error {
-	filePath := filepath.Join(f.artifactLocation, fileName)
+	filePath := filepath.Join(f.solutionArchiveLocation, fileName)
 	if err := library.CheckFile(filePath); err != nil {
 		return errors.Stamp(err)
 	}
@@ -392,7 +393,7 @@ func (f *FileSystem) hashFile(
 		return f.watchedFileInfos[fileName].Hash, nil
 	}
 
-	filePath := filepath.Join(f.artifactLocation, fileName)
+	filePath := filepath.Join(f.solutionArchiveLocation, fileName)
 	if err := library.CheckFile(filePath); err != nil {
 		return "", errors.Stamp(err)
 	}
@@ -415,7 +416,7 @@ func (f *FileSystem) isFileInfoUpToDate(filename string) bool {
 		return false
 	}
 
-	filePath := filepath.Join(f.artifactLocation, filename)
+	filePath := filepath.Join(f.solutionArchiveLocation, filename)
 
 	physicalFileInfo, err := os.Stat(filePath)
 	if err != nil {
@@ -455,7 +456,7 @@ func (f *FileSystem) moveFileToRoot(
 		return errors.Stamp(err)
 	}
 
-	newFilePath := filepath.Join(f.artifactLocation, newFileName)
+	newFilePath := filepath.Join(f.solutionArchiveLocation, newFileName)
 	if err := os.Remove(newFilePath); err != nil && !os.IsNotExist(err) {
 		return errors.From(domain.ErrStorageProviderInternal).
 			WithIdentifier(500000).
@@ -482,14 +483,14 @@ func (f *FileSystem) moveFileToRoot(
 }
 
 // SPEC: The multipart file recipient is composed by three files: the
-// artifact metadata, the part index and the recipient
+// solution Archive metadata, the part index and the recipient
 
-// SPEC: The metadata file has the same name as the final artifact but
+// SPEC: The metadata file has the same name as the final solution Archive but
 // suffixed with ".meta"
 
-// SPEC: The metadata file stores the Artifact structure encoded as JSON
+// SPEC: The metadata file stores the Solution Archive structure encoded as JSON
 
-// SPEC: The part index has the same name as the final artifact but suffixed
+// SPEC: The part index has the same name as the final solution Archive but suffixed
 // with ".parts"
 
 // SPEC: The part index must be created with an empty content
@@ -497,22 +498,22 @@ func (f *FileSystem) moveFileToRoot(
 // SPEC: The part index stores the PartMeta structures as binary
 // (pkg.go.dev/encoding/binary)
 
-// SPEC: The recipient has the same name as the final artifact but suffixed
+// SPEC: The recipient has the same name as the final solution Archive but suffixed
 // with ".recipient"
 
-// filterOrphansMeta filters the orphaned ArtifactMeta instances from the given
-// artifactMetas list and returns the filtered list.
+// filterOrphansMeta filters the orphaned SolutionArchiveMeta instances from the given
+// solutionArchiveMetas list and returns the filtered list.
 func (f *FileSystem) filterOrphansMeta(
 	bucketPath string,
-	artifacts []*domain.Artifact,
-) []*domain.Artifact {
-	filteredArtifacts := make([]*domain.Artifact, 0, len(artifacts))
+	solutionArchives []*domain.SolutionArchive,
+) []*domain.SolutionArchive {
+	filteredSolutionArchives := make([]*domain.SolutionArchive, 0, len(solutionArchives))
 
-	for _, artifact := range artifacts {
+	for _, solutionArchive := range solutionArchives {
 		if err := library.CheckFile(
 			filepath.Join(
 				bucketPath,
-				artifact.Name+library.FileSystemMultipartPartsSuffix,
+				solutionArchive.Name+library.FileSystemMultipartPartsSuffix,
 			),
 		); err != nil {
 			f.logger.Warn().Err(err).Msg("The parts file is missing for the multipart file.")
@@ -523,7 +524,7 @@ func (f *FileSystem) filterOrphansMeta(
 		if err := library.CheckFile(
 			filepath.Join(
 				bucketPath,
-				artifact.Name+library.FileSystemMultipartRecipientSuffix,
+				solutionArchive.Name+library.FileSystemMultipartRecipientSuffix,
 			),
 		); err != nil {
 			f.logger.Warn().Err(err).Msg("The recipient file is missing for the multipart file.")
@@ -531,10 +532,10 @@ func (f *FileSystem) filterOrphansMeta(
 			continue
 		}
 
-		filteredArtifacts = append(filteredArtifacts, artifact)
+		filteredSolutionArchives = append(filteredSolutionArchives, solutionArchive)
 	}
 
-	return filteredArtifacts
+	return filteredSolutionArchives
 }
 
 // genBaseMultipartFilePath generates the base multipart file path for the
@@ -573,9 +574,9 @@ func (f *FileSystem) genMultipartFilePaths(
 		f.genMultipartRecipientFilePath(bucketName, fileName)
 }
 
-// loadArtifactMeta loads the ArtifactMeta instance from the multipart meta file
-// with the given file path.
-func loadArtifactMeta(meta *domain.Artifact, filePath string) error {
+// loadSolutionArchiveMeta loads the Solution Archive Meta instance from
+// the multipart meta file with the given file path.
+func loadSolutionArchiveMeta(meta *domain.SolutionArchive, filePath string) error {
 	metaFile, err := library.GetFile(filePath)
 	if err != nil {
 		return errors.Stamp(err)
@@ -596,35 +597,35 @@ func loadArtifactMeta(meta *domain.Artifact, filePath string) error {
 	return nil
 }
 
-// getArtifactMetaList returns the list of ArtifactMeta instances in the bucket
-// with the given bucketPath.
-func (f *FileSystem) getArtifactMeta(bucketPath string) (*domain.Artifact, error) {
+// getSolutionArchiveMetaList returns the list of Solution Archive Meta instances
+// in the bucket with the given bucketPath.
+func (f *FileSystem) getSolutionArchiveMeta(bucketPath string) (*domain.SolutionArchive, error) {
 	metaFileNames, err := library.ListDirContentNames(bucketPath, library.MultipartMetaFilter)
 	if err != nil {
 		return nil, errors.Stamp(err)
 	}
 
-	artifactMetas := make([]*domain.Artifact, 0, len(metaFileNames))
+	solutionArchiveMetas := make([]*domain.SolutionArchive, 0, len(metaFileNames))
 
 	for _, metaFileName := range metaFileNames {
-		var artifactMeta domain.Artifact
+		var solutionArchiveMeta domain.SolutionArchive
 
-		if err := loadArtifactMeta(&artifactMeta, filepath.Join(bucketPath, metaFileName)); err != nil {
+		if err := loadSolutionArchiveMeta(&solutionArchiveMeta, filepath.Join(bucketPath, metaFileName)); err != nil {
 			return nil, errors.Stamp(err)
 		}
 
-		artifactMetas = append(artifactMetas, &artifactMeta)
+		solutionArchiveMetas = append(solutionArchiveMetas, &solutionArchiveMeta)
 	}
 
-	artifactMetas = f.filterOrphansMeta(bucketPath, artifactMetas)
-	if len(artifactMetas) < 1 {
+	solutionArchiveMetas = f.filterOrphansMeta(bucketPath, solutionArchiveMetas)
+	if len(solutionArchiveMetas) < 1 {
 		return nil, errors.From(domain.ErrStorageProviderNotFound).
 			WithIdentifier(404000).
 			WithDetail("No multipart files found in the bucket.").
 			WithProperty("bucket_name", bucketPath).
 			Throw()
 	}
-	if len(artifactMetas) > 1 {
+	if len(solutionArchiveMetas) > 1 {
 		return nil, errors.From(domain.ErrStorageProviderInternal).
 			WithIdentifier(500000).
 			WithDetail("Too many multipart files found in the bucket.").
@@ -632,30 +633,30 @@ func (f *FileSystem) getArtifactMeta(bucketPath string) (*domain.Artifact, error
 			Throw()
 	}
 
-	return artifactMetas[0], nil
+	return solutionArchiveMetas[0], nil
 }
 
 func (f *FileSystem) createMultipartFiles(
 	bucketName string,
-	artifactMeta *domain.Artifact,
-) (*domain.ArtifactStatus, error) {
+	solutionArchiveMeta *domain.SolutionArchive,
+) (*domain.SolutionArchiveStatus, error) {
 	if err := library.CheckDir(f.genBucketPath(bucketName)); err != nil {
 		return nil, errors.Stamp(err)
 	}
 
 	metaFilePath, partsFilePath, recipientFilePath := f.genMultipartFilePaths(
 		bucketName,
-		artifactMeta.Name,
+		solutionArchiveMeta.Name,
 	)
 
 	err := library.CheckFile(metaFilePath)
 	if err == nil {
-		artifactStatus, err := f.getArtifactStatus(bucketName, artifactMeta)
+		solutionArchiveStatus, err := f.getSolutionArchiveStatus(bucketName, solutionArchiveMeta)
 		if err != nil {
 			return nil, errors.Stamp(err)
 		}
 
-		return artifactStatus, nil
+		return solutionArchiveStatus, nil
 	}
 
 	if !errors.Is(err,
@@ -665,13 +666,13 @@ func (f *FileSystem) createMultipartFiles(
 		return nil, errors.Stamp(err)
 	}
 
-	metaContentBytes, err := json.Marshal(artifactMeta)
+	metaContentBytes, err := json.Marshal(solutionArchiveMeta)
 	if err != nil {
 		return nil, errors.From(domain.ErrStorageProviderInternal).
 			WithIdentifier(500000).
-			WithDetail("Unable to save the artifact metadata.").
-			WithProperty("artifact", artifactMeta.Name).
-			WithProperty("version", artifactMeta.Version).
+			WithDetail("Unable to save the solution archive metadata.").
+			WithProperty("solution_archive", solutionArchiveMeta.Name).
+			WithProperty("version", solutionArchiveMeta.Version).
 			WithProperty("while", "marshalling the metadata to json format").
 			Throw()
 	}
@@ -704,7 +705,7 @@ func (f *FileSystem) createMultipartFiles(
 
 	if err := library.CreateEmptyFile(
 		recipientFilePath,
-		artifactMeta.Size,
+		solutionArchiveMeta.Size,
 		library.FileSystemDefaultFileMode,
 	); err != nil {
 		cleanUp()
@@ -712,37 +713,37 @@ func (f *FileSystem) createMultipartFiles(
 		return nil, errors.Stamp(err)
 	}
 
-	return &domain.ArtifactStatus{
-		Artifact: artifactMeta,
-		Parts:    make(map[int64]*domain.PartMeta),
+	return &domain.SolutionArchiveStatus{
+		SolutionArchive: solutionArchiveMeta,
+		Parts:           make(map[int64]*domain.PartMeta),
 	}, nil
 }
 
-func (f *FileSystem) getMultipartFile(bucketName string) (*domain.Artifact, error) {
+func (f *FileSystem) getMultipartFile(bucketName string) (*domain.SolutionArchive, error) {
 	bucketPath := f.genBucketPath(bucketName)
 	if err := library.CheckDir(bucketPath); err != nil {
 		return nil, errors.Stamp(err)
 	}
 
-	artifactMeta, err := f.getArtifactMeta(bucketPath)
+	solutionArchiveMeta, err := f.getSolutionArchiveMeta(bucketPath)
 	if err != nil {
 		return nil, errors.Stamp(err)
 	}
 
-	return artifactMeta, nil
+	return solutionArchiveMeta, nil
 }
 
-func (f *FileSystem) getArtifactStatus(
+func (f *FileSystem) getSolutionArchiveStatus(
 	bucketName string,
-	artifactMeta *domain.Artifact,
-) (*domain.ArtifactStatus, error) {
+	solutionArchiveMeta *domain.SolutionArchive,
+) (*domain.SolutionArchiveStatus, error) {
 	if err := library.CheckDir(f.genBucketPath(bucketName)); err != nil {
 		return nil, errors.Stamp(err)
 	}
 
 	metaFilePath, partsFilePath, recipientFilePath := f.genMultipartFilePaths(
 		bucketName,
-		artifactMeta.Name,
+		solutionArchiveMeta.Name,
 	)
 
 	if err := library.CheckFile(metaFilePath); err != nil {
@@ -771,8 +772,8 @@ func (f *FileSystem) getArtifactStatus(
 
 	defer partsFile.Close() // nolint: errcheck // No error check on defer.
 
-	var storedArtifactMeta domain.Artifact
-	if err := json.NewDecoder(metaFile).Decode(&storedArtifactMeta); err != nil {
+	var storedSolutionArchiveMeta domain.SolutionArchive
+	if err := json.NewDecoder(metaFile).Decode(&storedSolutionArchiveMeta); err != nil {
 		return nil, errors.From(domain.ErrStorageProviderInternal).
 			WithIdentifier(500000).
 			WithDetail("Unable to load the metadata of the multipart file.").
@@ -782,7 +783,7 @@ func (f *FileSystem) getArtifactStatus(
 			Throw()
 	}
 
-	if err := library.CompareArtifactMetas(artifactMeta, &storedArtifactMeta); err != nil {
+	if err := library.CompareSolutionArchiveMetas(solutionArchiveMeta, &storedSolutionArchiveMeta); err != nil {
 		return nil, errors.Stamp(err)
 	}
 
@@ -808,15 +809,15 @@ func (f *FileSystem) getArtifactStatus(
 		partMetas[partMeta.Start] = &partMeta
 	}
 
-	return &domain.ArtifactStatus{
-		Artifact: artifactMeta,
-		Parts:    partMetas,
+	return &domain.SolutionArchiveStatus{
+		SolutionArchive: solutionArchiveMeta,
+		Parts:           partMetas,
 	}, nil
 }
 
 func (f *FileSystem) deleteMultipartFile(
 	bucketName string,
-	artifactMeta *domain.Artifact,
+	solutionArchiveMeta *domain.SolutionArchive,
 ) error {
 	if err := library.CheckDir(f.genBucketPath(bucketName)); err != nil {
 		return errors.Stamp(err)
@@ -824,7 +825,7 @@ func (f *FileSystem) deleteMultipartFile(
 
 	metaFilePath, partsFilePath, recipientFilePath := f.genMultipartFilePaths(
 		bucketName,
-		artifactMeta.Name,
+		solutionArchiveMeta.Name,
 	)
 
 	if err := library.CheckFile(metaFilePath); err != nil {
@@ -867,14 +868,14 @@ func (f *FileSystem) deleteMultipartFile(
 func (f *FileSystem) writePartToMultipartFile(
 	bucketName string,
 	part *domain.Part,
-) (*domain.ArtifactStatus, error) {
-	artifactStatus, err := f.getArtifactStatus(bucketName, part.Artifact)
+) (*domain.SolutionArchiveStatus, error) {
+	solutionArchiveStatus, err := f.getSolutionArchiveStatus(bucketName, part.SolutionArchive)
 	if err != nil {
 		return nil, errors.Stamp(err)
 	}
 
-	partsFilePath := f.genMultipartPartsFilePath(bucketName, part.Artifact.Name)
-	recipientFilePath := f.genMultipartRecipientFilePath(bucketName, part.Artifact.Name)
+	partsFilePath := f.genMultipartPartsFilePath(bucketName, part.SolutionArchive.Name)
+	recipientFilePath := f.genMultipartRecipientFilePath(bucketName, part.SolutionArchive.Name)
 
 	partsFile, err := os.OpenFile(partsFilePath, os.O_WRONLY, library.FileSystemDefaultFileMode)
 	if err != nil {
@@ -952,34 +953,34 @@ func (f *FileSystem) writePartToMultipartFile(
 			Throw()
 	}
 
-	artifactStatus.Parts[part.Meta.Start] = part.Meta
+	solutionArchiveStatus.Parts[part.Meta.Start] = part.Meta
 
-	return artifactStatus, nil
+	return solutionArchiveStatus, nil
 }
 
 func (f *FileSystem) consolidateMultipartFile(
 	bucketName string,
-	artifactMeta *domain.Artifact,
+	solutionArchiveMeta *domain.SolutionArchive,
 	perm os.FileMode,
 ) error {
-	artifactStatus, err := f.getArtifactStatus(bucketName, artifactMeta)
+	solutionArchiveStatus, err := f.getSolutionArchiveStatus(bucketName, solutionArchiveMeta)
 	if err != nil {
 		return err
 	}
 
-	if !artifactStatus.IsComplete() {
+	if !solutionArchiveStatus.IsComplete() {
 		return errors.From(domain.ErrStorageProviderBusinessRuleViolation).
 			WithIdentifier(422001).
 			WithDetail("Unable to consolidate multipart file because it is not complete.").
 			WithProperty("bucket_name", bucketName).
-			WithProperty("artifact_name", artifactMeta.Name).
+			WithProperty("solution_archive_name", solutionArchiveMeta.Name).
 			Throw()
 	}
 
-	baseFilePath := f.genBaseMultipartFilePath(bucketName, artifactMeta.Name)
+	baseFilePath := f.genBaseMultipartFilePath(bucketName, solutionArchiveMeta.Name)
 	metaFilePath, partsFilePath, recipientFilePath := f.genMultipartFilePaths(
 		bucketName,
-		artifactMeta.Name,
+		solutionArchiveMeta.Name,
 	)
 
 	// Calculate the SHA256 hash of the recipient file
@@ -1002,13 +1003,13 @@ func (f *FileSystem) consolidateMultipartFile(
 
 	calculedHash := hex.EncodeToString(hasher.Sum(nil))
 
-	if calculedHash != artifactMeta.Hash {
+	if calculedHash != solutionArchiveMeta.Hash {
 		return errors.From(domain.ErrStorageProviderBusinessRuleViolation).
 			WithIdentifier(422001).
-			WithDetail("The hash of the recipient file does not match the artifact metadata.").
-			WithProperty("component", artifactMeta.Name).
-			WithProperty("version", artifactMeta.Version).
-			WithProperty("expected_hash", artifactMeta.Hash).
+			WithDetail("The hash of the recipient file does not match the solution archive metadata.").
+			WithProperty("component", solutionArchiveMeta.Name).
+			WithProperty("version", solutionArchiveMeta.Version).
+			WithProperty("expected_hash", solutionArchiveMeta.Hash).
 			WithProperty("calculed_hash", calculedHash).
 			Throw()
 	}
@@ -1070,7 +1071,7 @@ type (
 const watchedFilesInfoName = "watched_files_info.json"
 
 func (f *FileSystem) genControlDirPath() string {
-	return filepath.Join(f.artifactLocation, controlDir)
+	return filepath.Join(f.solutionArchiveLocation, controlDir)
 }
 
 func (f *FileSystem) genWatchedFilesPath() string {
@@ -1078,7 +1079,7 @@ func (f *FileSystem) genWatchedFilesPath() string {
 }
 
 func (f *FileSystem) genWatchedFileInfo(fileEntry os.DirEntry) (*watchedFileInfo, error) {
-	filePath := filepath.Join(f.artifactLocation, fileEntry.Name())
+	filePath := filepath.Join(f.solutionArchiveLocation, fileEntry.Name())
 
 	hash, err := library.HashFile(filePath)
 	if err != nil {
@@ -1209,7 +1210,7 @@ func (f *FileSystem) updateWatchedFileInfos(saveFunc func(watchedFilesMap) error
 	}
 
 	// List actual interest content.
-	fileEntries, err := library.ListDirContent(f.artifactLocation, f.interestContentFilter)
+	fileEntries, err := library.ListDirContent(f.solutionArchiveLocation, f.interestContentFilter)
 	if err != nil {
 		return errors.Stamp(err)
 	}
@@ -1301,12 +1302,12 @@ func (f *FileSystem) startWatchFiles(filenameCh chan string) error {
 
 	go f.watchFiles(filenameCh)
 
-	if err := f.watcher.Add(f.artifactLocation); err != nil {
+	if err := f.watcher.Add(f.solutionArchiveLocation); err != nil {
 		return errors.From(domain.ErrStorageProviderInternal).
 			WithIdentifier(500000).
 			CausedBy(err).
-			WithDetail("Failed to add artifact location to watcher.").
-			WithProperty("artifact_location", f.artifactLocation).
+			WithDetail("Failed to add solution archive location to watcher.").
+			WithProperty("solution_archive_location", f.solutionArchiveLocation).
 			Throw()
 	}
 

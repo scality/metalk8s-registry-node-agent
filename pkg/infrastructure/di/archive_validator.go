@@ -1,14 +1,14 @@
 package di
 
-import "github.com/scality/metalk8s-registry-node-agent/pkg/infrastructure/artifactvalidator"
+import "github.com/scality/metalk8s-registry-node-agent/pkg/infrastructure/archivevalidator"
 
-func (c *Container) getStorageArtifactValidator() *artifactvalidator.Storage {
-	if c.storageArtifactValidator == nil {
-		c.storageArtifactValidator = artifactvalidator.NewStorage(
-			c.GetFileSystemArtifactStorage(),
+func (c *Container) getStorageSolutionArchiveValidator() *archivevalidator.Storage {
+	if c.storageSolutionArchiveValidator == nil {
+		c.storageSolutionArchiveValidator = archivevalidator.NewStorage(
+			c.GetFSSolutionArchiveStorage(),
 			c.GetLogger(),
 		)
 	}
 
-	return c.storageArtifactValidator
+	return c.storageSolutionArchiveValidator
 }

@@ -77,7 +77,7 @@ func (r *NodeSolutionArchiveReconciler) Reconcile(ctx context.Context, req ctrl.
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
-	// 2. Add finalizer to deal with artifact deletion
+	// 2. Add finalizer to deal with solution archive deletion
 	//
 	// examine DeletionTimestamp to determine if object is under deletion
 	if nodeSolutionArchive.DeletionTimestamp.IsZero() {
@@ -95,7 +95,7 @@ func (r *NodeSolutionArchiveReconciler) Reconcile(ctx context.Context, req ctrl.
 		// The object is being deleted
 		if controllerutil.ContainsFinalizer(nodeSolutionArchive, FINALIZER_NAME) {
 			// our finalizer is present, so lets handle any external dependency
-			if err := r.deleteArtifactResources(nodeSolutionArchive); err != nil {
+			if err := r.deleteSolutionArchiveResources(nodeSolutionArchive); err != nil {
 				// if fail to delete the external dependency here, return with error
 				// so that it can be retried.
 				log.Error(err, "error deleting external Resources")
@@ -115,28 +115,28 @@ func (r *NodeSolutionArchiveReconciler) Reconcile(ctx context.Context, req ctrl.
 	}
 
 	// 3. Initialize the session
-	artifact := &domain.Artifact{
+	solutionArchive := &domain.SolutionArchive{
 		Name:    nodeSolutionArchive.Spec.Name,
 		Version: nodeSolutionArchive.Spec.Version,
 		Hash:    nodeSolutionArchive.Spec.Validation.Checksum.Value,
 	}
-	_, err := r.Container.GetInitializeSessionUseCase().Execute(artifact)
+	_, err := r.Container.GetInitializeSessionUseCase().Execute(solutionArchive)
 	if err != nil {
 		log.Error(err, "error initializing session")
 		return ctrl.Result{}, err
 	}
 
-	// 4. Checksum validation of the artifact
-	isValid, err := r.isValidArtifact(nodeSolutionArchive)
+	// 4. Checksum validation of the Solution Archive
+	isValid, err := r.isValidSolutionArchive(nodeSolutionArchive)
 	if err != nil {
-		log.Error(err, "error validating artifact")
+		log.Error(err, "error validating solution archive")
 		return ctrl.Result{RequeueAfter: 30 * time.Second}, nil
 	}
 	original := nodeSolutionArchive.DeepCopy()
 	if isValid {
 		nodeSolutionArchive.SetAvailable()
-		// Session may persist in case of manual upload of artifact
-		err = r.Container.GetRemoveSessionUseCase().Execute(artifact)
+		// Session may persist in case of manual upload of solution archive
+		err = r.Container.GetRemoveSessionUseCase().Execute(solutionArchive)
 		if err != nil {
 			log.Error(err, "error removing session")
 			return ctrl.Result{RequeueAfter: 30 * time.Second}, nil
@@ -153,19 +153,19 @@ func (r *NodeSolutionArchiveReconciler) Reconcile(ctx context.Context, req ctrl.
 	return ctrl.Result{}, nil
 }
 
-func (r *NodeSolutionArchiveReconciler) deleteArtifactResources(nodeSolutionArchive *metalk8sv1alpha1.NodeSolutionArchive) error {
-	artifact := &domain.Artifact{
+func (r *NodeSolutionArchiveReconciler) deleteSolutionArchiveResources(nodeSolutionArchive *metalk8sv1alpha1.NodeSolutionArchive) error {
+	solutionArchive := &domain.SolutionArchive{
 		Name:    nodeSolutionArchive.Spec.Name,
 		Version: nodeSolutionArchive.Spec.Version,
 		Hash:    nodeSolutionArchive.Spec.Validation.Checksum.Value,
 	}
 
-	err := r.Container.GetRemoveArtifactUseCase().Execute(artifact)
+	err := r.Container.GetRemoveSolutionArchiveUseCase().Execute(solutionArchive)
 	if err != nil {
 		return err
 	}
 
-	return r.Container.GetRemoveSessionUseCase().Execute(artifact)
+	return r.Container.GetRemoveSessionUseCase().Execute(solutionArchive)
 }
 
 func getNodeName(o client.Object) string {
@@ -175,13 +175,13 @@ func getNodeName(o client.Object) string {
 	return ""
 }
 
-func (r *NodeSolutionArchiveReconciler) isValidArtifact(nodeSolutionArchive *metalk8sv1alpha1.NodeSolutionArchive) (bool, error) {
-	artifact := &domain.Artifact{
+func (r *NodeSolutionArchiveReconciler) isValidSolutionArchive(nodeSolutionArchive *metalk8sv1alpha1.NodeSolutionArchive) (bool, error) {
+	solutionArchive := &domain.SolutionArchive{
 		Name:    nodeSolutionArchive.Spec.Name,
 		Version: nodeSolutionArchive.Spec.Version,
 		Hash:    nodeSolutionArchive.Spec.Validation.Checksum.Value,
 	}
-	return r.Container.GetValidateArtifactUseCase().Execute(artifact)
+	return r.Container.GetValidateSolutionArchiveUseCase().Execute(solutionArchive)
 }
 
 // SetupWithManager sets up the controller with the Manager.

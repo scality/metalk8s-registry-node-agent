@@ -349,18 +349,18 @@ func main() {
 		}
 	}()
 
-	// Start the watcher for the file system artifact storage
-	if err := container.GetFileSystemArtifactStorage().Start(filenameCh); err != nil {
-		setupLog.Error(err, "problem starting file system artifact storage")
+	// Start the watcher for the file system solution archive storage
+	if err := container.GetFSSolutionArchiveStorage().Start(filenameCh); err != nil {
+		setupLog.Error(err, "problem starting file system solution archive storage")
 		os.Exit(1)
 	}
 
 	// Wait for a signal to shut down the server and important services.
 	<-sigCh
 
-	// Stop the watcher for the file system artifact storage
-	if err := container.GetFileSystemArtifactStorage().Stop(); err != nil {
-		setupLog.Error(err, "problem stopping file system artifact storage")
+	// Stop the watcher for the file system solution archive storage
+	if err := container.GetFSSolutionArchiveStorage().Stop(); err != nil {
+		setupLog.Error(err, "problem stopping file system solution archive storage")
 		os.Exit(1)
 	}
 

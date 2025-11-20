@@ -1,4 +1,4 @@
-package artifactremover
+package archiveremover
 
 import (
 	"github.com/rs/zerolog"
@@ -18,27 +18,27 @@ func NewStorage(
 	store service.StorageProvider,
 	logger *zerolog.Logger,
 ) *Storage {
-	l := logger.With().Str("infrastructure", "artifactremover").Logger()
+	l := logger.With().Str("infrastructure", "archiveremover").Logger()
 	return &Storage{
 		store:  store,
 		logger: &l,
 	}
 }
 
-func (s *Storage) RemoveArtifact(artifact *domain.Artifact) error {
+func (s *Storage) RemoveSolutionArchive(solutionArchive *domain.SolutionArchive) error {
 	s.store.Lock()
 	defer s.store.Unlock()
 
-	// List all artifacts in the storage
-	// matching artifactStorageNamePattern
+	// List all solution archives in the storage
+	// matching solutionArchiveStorageNamePattern
 	fileNames, err := s.store.ListFiles()
 	if err != nil {
 		return errors.Stamp(err)
 	}
 
-	// Check if the artifact exists in the storage
-	if library.ArtifactExists(artifact, fileNames) {
-		err := s.store.DeleteFile(library.GenArtifactFileName(artifact))
+	// Check if the solution archive exists in the storage
+	if library.SolutionArchiveExists(solutionArchive, fileNames) {
+		err := s.store.DeleteFile(library.GenSolutionArchiveFileName(solutionArchive))
 		if err != nil {
 			return errors.Stamp(err)
 		}

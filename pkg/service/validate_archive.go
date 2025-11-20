@@ -3,11 +3,11 @@ package service
 import "github.com/scality/metalk8s-registry-node-agent/pkg/domain"
 
 type (
-	ArtifactValidator interface {
-		ValidateArtifact(*domain.Artifact) (bool, error)
+	SolutionArchiveValidator interface {
+		ValidateSolutionArchive(*domain.SolutionArchive) (bool, error)
 	}
 
-	ValidateArtifactUseCase interface {
-		Execute(*domain.Artifact) error
+	ValidateSolutionArchiveUseCase interface {
+		Execute(*domain.SolutionArchive) error
 	}
 )

@@ -25,7 +25,7 @@ func NewUploadPart(
 	}
 }
 
-func (uc *UploadPart) Execute(part *domain.Part) (*domain.ArtifactStatus, error) {
+func (uc *UploadPart) Execute(part *domain.Part) (*domain.SolutionArchiveStatus, error) {
 	uc.logger.Info().Msg("Uploading part")
 
 	partStatus, err := uc.partUploader.UploadPart(part)

@@ -99,13 +99,13 @@ spec:
             cpu: 10m
             memory: 64Mi
         volumeMounts:
-        - mountPath: /artifacts
-          name: metalk8s-registry-node-agent-artifacts
+        - mountPath: /archives
+          name: metalk8s-registry-node-agent-archives
           readOnly: false
       volumes:
-      - name: metalk8s-registry-node-agent-artifacts
+      - name: metalk8s-registry-node-agent-archives
         hostPath:
-          path: /srv/scality/metalk8s/artifacts
+          path: /srv/scality/metalk8s/archives
           type: DirectoryOrCreate
       serviceAccountName: controller-manager
       terminationGracePeriodSeconds: 10

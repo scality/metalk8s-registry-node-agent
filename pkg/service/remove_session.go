@@ -4,10 +4,10 @@ import "github.com/scality/metalk8s-registry-node-agent/pkg/domain"
 
 type (
 	SessionRemover interface {
-		RemoveSession(*domain.Artifact) error
+		RemoveSession(*domain.SolutionArchive) error
 	}
 
 	RemoveSessionUseCase interface {
-		Execute(*domain.Artifact) error
+		Execute(*domain.SolutionArchive) error
 	}
 )

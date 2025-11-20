@@ -25,7 +25,7 @@ func NewStorage(
 	}
 }
 
-func (s *Storage) RemoveSession(artifact *domain.Artifact) error {
+func (s *Storage) RemoveSession(solutionArchive *domain.SolutionArchive) error {
 	s.store.Lock()
 	defer s.store.Unlock()
 
@@ -42,7 +42,7 @@ func (s *Storage) RemoveSession(artifact *domain.Artifact) error {
 	}
 
 	// Extract the session bucket
-	sessionBucket, err := library.ExtractSessionBucket(buckets, artifact)
+	sessionBucket, err := library.ExtractSessionBucket(buckets, solutionArchive)
 	if err != nil {
 		if errors.Is(err,
 			errors.Intercept(domain.ErrSessionRemoverNotFound).

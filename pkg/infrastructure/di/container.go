@@ -7,8 +7,8 @@ import (
 	"github.com/rs/zerolog"
 
 	"github.com/scality/metalk8s-registry-node-agent/cmd/config"
-	"github.com/scality/metalk8s-registry-node-agent/pkg/infrastructure/artifactremover"
-	"github.com/scality/metalk8s-registry-node-agent/pkg/infrastructure/artifactvalidator"
+	"github.com/scality/metalk8s-registry-node-agent/pkg/infrastructure/archiveremover"
+	"github.com/scality/metalk8s-registry-node-agent/pkg/infrastructure/archivevalidator"
 	"github.com/scality/metalk8s-registry-node-agent/pkg/infrastructure/partuploader"
 	"github.com/scality/metalk8s-registry-node-agent/pkg/infrastructure/sessioninitializer"
 	"github.com/scality/metalk8s-registry-node-agent/pkg/infrastructure/sessionremover"
@@ -34,23 +34,23 @@ type Container struct {
 	generatedHTTPExternClient *extern.ClientWithResponses
 	rootExternAPIPath         string
 
-	artifactStorage service.StorageProvider
+	solutionArchiveStorage service.StorageProvider
 
 	uploadPartHandler *handler.UploadPart
 
 	externResolver extern.StrictServerInterface
 
-	storagePartUploader       *partuploader.Storage
-	storageSessionInitializer *sessioninitializer.Storage
-	storageArtifactRemover    *artifactremover.Storage
-	storageSessionRemover     *sessionremover.Storage
-	storageArtifactValidator  *artifactvalidator.Storage
+	storagePartUploader             *partuploader.Storage
+	storageSessionInitializer       *sessioninitializer.Storage
+	storageSolutionArchiveRemover   *archiveremover.Storage
+	storageSessionRemover           *sessionremover.Storage
+	storageSolutionArchiveValidator *archivevalidator.Storage
 
-	uploadPartUseCase        *usecase.UploadPart
-	initializeSessionUseCase *usecase.InitializeSession
-	removeArtifactUseCase    *usecase.RemoveArtifact
-	removeSessionUseCase     *usecase.RemoveSession
-	validateArtifactUseCase  *usecase.ValidateArtifact
+	uploadPartUseCase              *usecase.UploadPart
+	initializeSessionUseCase       *usecase.InitializeSession
+	removeSolutionArchiveUseCase   *usecase.RemoveSolutionArchive
+	removeSessionUseCase           *usecase.RemoveSession
+	validateSolutionArchiveUseCase *usecase.ValidateSolutionArchive
 }
 
 func NewContainer(ctx context.Context, cfg *config.Environment, filenameCh chan string,

@@ -90,14 +90,14 @@ func validateNodeSolutionArchive(ctx context.Context, c client.Client, nodesolut
 	if err != nil {
 		return fmt.Errorf("version is not conform to SemVer convention: %s", nodesolutionarchive.Spec.Version)
 	}
-	artifactNameVersion := fmt.Sprintf("%s-%s", nodesolutionarchive.Spec.Name, nodesolutionarchive.Spec.Version)
+	solutionArchiveNameVersion := fmt.Sprintf("%s-%s", nodesolutionarchive.Spec.Name, nodesolutionarchive.Spec.Version)
 	naList := &metalk8sv1alpha1.NodeSolutionArchiveList{}
-	if err := c.List(ctx, naList, client.MatchingFields{"SolutionArchiveNameVersion": artifactNameVersion}); err != nil {
+	if err := c.List(ctx, naList, client.MatchingFields{"SolutionArchiveNameVersion": solutionArchiveNameVersion}); err != nil {
 		return err
 	}
 	for _, item := range naList.Items {
 		if item.Spec.NodeName == nodesolutionarchive.Spec.NodeName {
-			return fmt.Errorf("artifact %s already exists", artifactNameVersion)
+			return fmt.Errorf("solution archive %s already exists", solutionArchiveNameVersion)
 		}
 	}
 

@@ -23,11 +23,11 @@ import (
 )
 
 type TestingSuite struct {
-	logger                   *zerolog.Logger
-	container                *di.Container
-	RootPath                 string
-	ArtifactStorageDirectory string
-	ArtifactStorageProvider  service.StorageProvider
+	logger                          *zerolog.Logger
+	container                       *di.Container
+	RootPath                        string
+	SolutionArchiveStorageDirectory string
+	SolutionArchiveStorageProvider  service.StorageProvider
 
 	*extern.ClientWithResponses
 }
@@ -66,14 +66,14 @@ var _ = BeforeSuite(func() {
 		container.GetLogger().Fatal().Err(err).Msg("failed to create temporary directory")
 	}
 
-	cfg.ArtifactStorageRootLocation = rootPath
+	cfg.SolutionArchivesLocation = rootPath
 	testingSuite = &TestingSuite{
-		logger:                   container.GetLogger(),
-		container:                container,
-		RootPath:                 rootPath,
-		ArtifactStorageDirectory: cfg.ArtifactStorageRootLocation,
-		ClientWithResponses:      container.GetGeneratedHTTPExternClient(),
-		ArtifactStorageProvider:  container.GetFileSystemArtifactStorage(),
+		logger:                          container.GetLogger(),
+		container:                       container,
+		RootPath:                        rootPath,
+		SolutionArchiveStorageDirectory: cfg.SolutionArchivesLocation,
+		ClientWithResponses:             container.GetGeneratedHTTPExternClient(),
+		SolutionArchiveStorageProvider:  container.GetFSSolutionArchiveStorage(),
 	}
 
 	By("Starting an http Server")

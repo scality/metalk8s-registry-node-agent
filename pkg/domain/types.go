@@ -3,8 +3,8 @@ package domain
 import "io"
 
 type (
-	// Artifact.
-	Artifact struct {
+	// SolutionArchive.
+	SolutionArchive struct {
 		Name    string `json:"name"`
 		Version string `json:"version"`
 		Size    int64  `json:"size"`
@@ -13,15 +13,15 @@ type (
 
 	// SessionStatus.
 	SessionStatus struct {
-		Name               string          `json:"name"`
-		Version            string          `json:"version"`
-		IncompleteArtifact *ArtifactStatus `json:"artifacts"`
+		Name                      string                 `json:"name"`
+		Version                   string                 `json:"version"`
+		IncompleteSolutionArchive *SolutionArchiveStatus `json:"solutionArchives"`
 	}
 
-	// ArtifactStatus.
-	ArtifactStatus struct {
-		Artifact *Artifact           `json:"artifact"`
-		Parts    map[int64]*PartMeta `json:"parts"`
+	// SolutionArchiveStatus.
+	SolutionArchiveStatus struct {
+		SolutionArchive *SolutionArchive    `json:"solutionArchive"`
+		Parts           map[int64]*PartMeta `json:"parts"`
 	}
 
 	// PartMeta.
@@ -32,27 +32,27 @@ type (
 
 	// Part.
 	Part struct {
-		Artifact *Artifact
-		Meta     *PartMeta
-		Content  io.Reader
+		SolutionArchive *SolutionArchive
+		Meta            *PartMeta
+		Content         io.Reader
 	}
 )
 
-func (as *ArtifactStatus) ReceivedBytes() int64 {
+func (sas *SolutionArchiveStatus) ReceivedBytes() int64 {
 	var received int64
-	for _, part := range as.Parts {
+	for _, part := range sas.Parts {
 		received += part.Size()
 	}
 
 	return received
 }
 
-func (as *ArtifactStatus) MissingBytes() int64 {
-	return as.Artifact.Size - as.ReceivedBytes()
+func (sas *SolutionArchiveStatus) MissingBytes() int64 {
+	return sas.SolutionArchive.Size - sas.ReceivedBytes()
 }
 
-func (as *ArtifactStatus) IsComplete() bool {
-	return as.MissingBytes() == 0
+func (sas *SolutionArchiveStatus) IsComplete() bool {
+	return sas.MissingBytes() == 0
 }
 
 func (pm *PartMeta) Size() int64 {

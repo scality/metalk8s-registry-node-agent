@@ -3,11 +3,11 @@ package service
 import "github.com/scality/metalk8s-registry-node-agent/pkg/domain"
 
 type (
-	ArtifactRemover interface {
-		RemoveArtifact(*domain.Artifact) error
+	SolutionArchiveRemover interface {
+		RemoveSolutionArchive(*domain.SolutionArchive) error
 	}
 
-	RemoveArtifactUseCase interface {
-		Execute(*domain.Artifact) error
+	RemoveSolutionArchiveUseCase interface {
+		Execute(*domain.SolutionArchive) error
 	}
 )

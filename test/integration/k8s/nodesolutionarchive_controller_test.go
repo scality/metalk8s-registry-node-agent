@@ -83,7 +83,7 @@ var _ = Describe("NodeSolutionArchive Controller", func() {
 		})
 	})
 
-	Context("When reconciling a resource with available artifact", func() {
+	Context("When reconciling a resource with available solution archive", func() {
 		It("should successfully create the resource", func() {
 			resourceName := "test-available-resource"
 			typeNamespacedName := types.NamespacedName{
@@ -129,7 +129,7 @@ var _ = Describe("NodeSolutionArchive Controller", func() {
 		})
 	})
 
-	Context("When reconciling a resource with invalid artifact", func() {
+	Context("When reconciling a resource with invalid solution archive", func() {
 		It("should successfully create the resource", func() {
 			resourceName := "test-invalid-resource"
 			typeNamespacedName := types.NamespacedName{

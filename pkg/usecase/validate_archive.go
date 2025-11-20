@@ -8,37 +8,37 @@ import (
 	"github.com/scality/metalk8s-registry-node-agent/pkg/service"
 )
 
-type ValidateArtifact struct {
+type ValidateSolutionArchive struct {
 	logger *zerolog.Logger
 
-	artifactValidator service.ArtifactValidator
+	solutionArchiveValidator service.SolutionArchiveValidator
 }
 
-func NewValidateArtifact(
+func NewValidateSolutionArchive(
 	logger *zerolog.Logger,
-	artifactValidator service.ArtifactValidator,
-) *ValidateArtifact {
-	l := logger.With().Str("use_case", "validate_artifact").Logger()
+	solutionArchiveValidator service.SolutionArchiveValidator,
+) *ValidateSolutionArchive {
+	l := logger.With().Str("use_case", "validate_solution_archive").Logger()
 
-	return &ValidateArtifact{
-		logger:            &l,
-		artifactValidator: artifactValidator,
+	return &ValidateSolutionArchive{
+		logger:                   &l,
+		solutionArchiveValidator: solutionArchiveValidator,
 	}
 }
 
-func (uc *ValidateArtifact) Execute(artifact *domain.Artifact) (bool, error) {
+func (uc *ValidateSolutionArchive) Execute(solutionArchive *domain.SolutionArchive) (bool, error) {
 	uc.logger.Debug().
-		Any("artifact", artifact).
-		Msg("Validating artifact")
+		Any("solution_archive", solutionArchive).
+		Msg("Validating solution archive")
 
-	isValid, err := uc.artifactValidator.ValidateArtifact(artifact)
+	isValid, err := uc.solutionArchiveValidator.ValidateSolutionArchive(solutionArchive)
 	if err != nil {
 		return false, errors.Intercept(err).
-			WithDetail("failed to validate artifact").
+			WithDetail("failed to validate solution archive").
 			Throw()
 	}
 
-	uc.logger.Debug().Any("artifact", artifact).Msg("Artifact validated")
+	uc.logger.Debug().Any("solution_archive", solutionArchive).Msg("Solution archive validated")
 
 	return isValid, nil
 }

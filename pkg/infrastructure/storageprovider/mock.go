@@ -21,14 +21,14 @@ type (
 
 		logger *zerolog.Logger
 
-		artifactLocation      string
-		interestContentFilter library.ContentFilter
-		watcher               *fsnotify.Watcher
+		solutionArchiveLocation string
+		interestContentFilter   library.ContentFilter
+		watcher                 *fsnotify.Watcher
 	}
 
 	MockFileOpts struct {
 		Logger                     *zerolog.Logger
-		ArtifactLocation           string
+		SolutionArchiveLocation    string
 		InterestContentFilterRegex *regexp.Regexp
 	}
 )
@@ -37,9 +37,9 @@ var _ service.StorageProvider = &MockFileSystem{}
 
 func NewMockFileSystem(opts *MockFileOpts) *MockFileSystem {
 	return &MockFileSystem{
-		logger:                opts.Logger,
-		artifactLocation:      opts.ArtifactLocation,
-		interestContentFilter: library.NewRegexNormalFileFilter(opts.InterestContentFilterRegex),
+		logger:                  opts.Logger,
+		solutionArchiveLocation: opts.SolutionArchiveLocation,
+		interestContentFilter:   library.NewRegexNormalFileFilter(opts.InterestContentFilterRegex),
 	}
 }
 
@@ -131,9 +131,9 @@ func (f *MockFileSystem) MoveFileToRoot(
 
 func (f *MockFileSystem) CreateMultipartFiles(
 	bucketName string,
-	artifactMeta *domain.Artifact,
-) (*domain.ArtifactStatus, error) {
-	meta, err := f.createMultipartFiles(bucketName, artifactMeta)
+	solutionArchiveMeta *domain.SolutionArchive,
+) (*domain.SolutionArchiveStatus, error) {
+	meta, err := f.createMultipartFiles(bucketName, solutionArchiveMeta)
 	if err != nil {
 		return nil, errors.Stamp(err)
 	}
@@ -143,7 +143,7 @@ func (f *MockFileSystem) CreateMultipartFiles(
 
 func (f *MockFileSystem) GetMultipartFile(
 	bucketName string,
-) (*domain.Artifact, error) {
+) (*domain.SolutionArchive, error) {
 	meta, err := f.getMultipartFile(bucketName)
 	if err != nil {
 		return nil, errors.Stamp(err)
@@ -154,9 +154,9 @@ func (f *MockFileSystem) GetMultipartFile(
 
 func (f *MockFileSystem) GetMultipartFileStatus(
 	bucketName string,
-	artifactMeta *domain.Artifact,
-) (*domain.ArtifactStatus, error) {
-	status, err := f.getArtifactStatus(bucketName, artifactMeta)
+	solutionArchiveMeta *domain.SolutionArchive,
+) (*domain.SolutionArchiveStatus, error) {
+	status, err := f.getSolutionArchiveStatus(bucketName, solutionArchiveMeta)
 	if err != nil {
 		return nil, errors.Stamp(err)
 	}
@@ -166,9 +166,9 @@ func (f *MockFileSystem) GetMultipartFileStatus(
 
 func (f *MockFileSystem) DeleteMultipartFile(
 	bucketName string,
-	artifactMeta *domain.Artifact,
+	solutionArchiveMeta *domain.SolutionArchive,
 ) error {
-	if err := f.deleteMultipartFile(bucketName, artifactMeta); err != nil {
+	if err := f.deleteMultipartFile(bucketName, solutionArchiveMeta); err != nil {
 		return errors.Stamp(err)
 	}
 
@@ -177,7 +177,7 @@ func (f *MockFileSystem) DeleteMultipartFile(
 
 func (f *MockFileSystem) WritePartToMultipartFile(bucketName string,
 	part *domain.Part,
-) (*domain.ArtifactStatus, error) {
+) (*domain.SolutionArchiveStatus, error) {
 	status, err := f.writePartToMultipartFile(bucketName, part)
 	if err != nil {
 		return nil, errors.Stamp(err)
@@ -188,10 +188,10 @@ func (f *MockFileSystem) WritePartToMultipartFile(bucketName string,
 
 func (f *MockFileSystem) ConsolidateMultipartFile(
 	bucketName string,
-	artifactMeta *domain.Artifact,
+	solutionArchiveMeta *domain.SolutionArchive,
 	perm os.FileMode,
 ) error {
-	if err := f.consolidateMultipartFile(bucketName, artifactMeta, perm); err != nil {
+	if err := f.consolidateMultipartFile(bucketName, solutionArchiveMeta, perm); err != nil {
 		return errors.Stamp(err)
 	}
 
@@ -259,39 +259,39 @@ func (f *MockFileSystem) moveFileToRoot(_, _, _ string) error {
 // nolint:unparam
 func (f *MockFileSystem) createMultipartFiles(
 	_ string,
-	artifactMeta *domain.Artifact,
-) (*domain.ArtifactStatus, error) {
-	return &domain.ArtifactStatus{
-		Artifact: artifactMeta,
-		Parts:    make(map[int64]*domain.PartMeta),
+	solutionArchiveMeta *domain.SolutionArchive,
+) (*domain.SolutionArchiveStatus, error) {
+	return &domain.SolutionArchiveStatus{
+		SolutionArchive: solutionArchiveMeta,
+		Parts:           make(map[int64]*domain.PartMeta),
 	}, nil
 }
 
-func (f *MockFileSystem) getMultipartFile(_ string) (*domain.Artifact, error) {
-	return &domain.Artifact{}, nil
+func (f *MockFileSystem) getMultipartFile(_ string) (*domain.SolutionArchive, error) {
+	return &domain.SolutionArchive{}, nil
 }
 
-func (f *MockFileSystem) getArtifactStatus(
+func (f *MockFileSystem) getSolutionArchiveStatus(
 	_ string,
-	_ *domain.Artifact,
-) (*domain.ArtifactStatus, error) {
-	return &domain.ArtifactStatus{}, nil
+	_ *domain.SolutionArchive,
+) (*domain.SolutionArchiveStatus, error) {
+	return &domain.SolutionArchiveStatus{}, nil
 }
 
-func (f *MockFileSystem) deleteMultipartFile(_ string, _ *domain.Artifact) error {
+func (f *MockFileSystem) deleteMultipartFile(_ string, _ *domain.SolutionArchive) error {
 	return nil
 }
 
 func (f *MockFileSystem) writePartToMultipartFile(
 	_ string,
 	_ *domain.Part,
-) (*domain.ArtifactStatus, error) {
-	return &domain.ArtifactStatus{}, nil
+) (*domain.SolutionArchiveStatus, error) {
+	return &domain.SolutionArchiveStatus{}, nil
 }
 
 func (f *MockFileSystem) consolidateMultipartFile(
 	_ string,
-	_ *domain.Artifact,
+	_ *domain.SolutionArchive,
 	_ os.FileMode,
 ) error {
 	return nil

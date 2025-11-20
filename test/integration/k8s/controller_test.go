@@ -101,7 +101,7 @@ var _ = BeforeSuite(func() {
 	filenameCh := make(chan string)
 	eventChan := make(chan event.GenericEvent)
 	container := di.NewContainer(ctx, &config.Environment{}, filenameCh, config.RootExternAPIPath)
-	container.GetMockFileSystemArtifactStorage()
+	container.GetMockFSSolutionArchiveStorage()
 
 	err = (&controller.NodeSolutionArchiveReconciler{
 		Client:    k8sClient,

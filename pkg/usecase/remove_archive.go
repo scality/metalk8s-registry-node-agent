@@ -8,37 +8,37 @@ import (
 	"github.com/scality/metalk8s-registry-node-agent/pkg/service"
 )
 
-type RemoveArtifact struct {
+type RemoveSolutionArchive struct {
 	logger *zerolog.Logger
 
-	artifactRemover service.ArtifactRemover
+	solutionArchiveRemover service.SolutionArchiveRemover
 }
 
-func NewRemoveArtifact(
+func NewRemoveSolutionArchive(
 	logger *zerolog.Logger,
-	artifactRemover service.ArtifactRemover,
-) *RemoveArtifact {
-	l := logger.With().Str("use_case", "remove_artifact").Logger()
+	solutionArchiveRemover service.SolutionArchiveRemover,
+) *RemoveSolutionArchive {
+	l := logger.With().Str("use_case", "remove_solution_archive").Logger()
 
-	return &RemoveArtifact{
-		logger:          &l,
-		artifactRemover: artifactRemover,
+	return &RemoveSolutionArchive{
+		logger:                 &l,
+		solutionArchiveRemover: solutionArchiveRemover,
 	}
 }
 
-func (uc *RemoveArtifact) Execute(artifact *domain.Artifact) error {
+func (uc *RemoveSolutionArchive) Execute(solutionArchive *domain.SolutionArchive) error {
 	uc.logger.Debug().
-		Any("artifact", artifact).
-		Msg("Removing artifact")
+		Any("solution_archive", solutionArchive).
+		Msg("Removing solution archive")
 
-	err := uc.artifactRemover.RemoveArtifact(artifact)
+	err := uc.solutionArchiveRemover.RemoveSolutionArchive(solutionArchive)
 	if err != nil {
 		return errors.Intercept(err).
-			WithDetail("failed to remove artifact").
+			WithDetail("failed to remove solution archive").
 			Throw()
 	}
 
-	uc.logger.Debug().Any("artifact", artifact).Msg("Artifact removed")
+	uc.logger.Debug().Any("solution_archive", solutionArchive).Msg("Solution archive removed")
 
 	return nil
 }
