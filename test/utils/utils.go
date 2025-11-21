@@ -19,12 +19,15 @@ package utils
 import (
 	"bufio"
 	"bytes"
+	"crypto/tls"
 	"fmt"
+	"net/http"
 	"os"
 	"os/exec"
 	"strings"
 
 	. "github.com/onsi/ginkgo/v2" // nolint:revive,staticcheck
+	"github.com/scality/metalk8s-registry-node-agent/pkg/presentation/http/extern"
 )
 
 const (
@@ -251,4 +254,23 @@ func UncommentCode(filename, target, prefix string) error {
 	}
 
 	return nil
+}
+
+func GetHTTPExternClient() *http.Client {
+	return &http.Client{
+		Transport: &http.Transport{
+			TLSClientConfig: &tls.Config{
+				InsecureSkipVerify: true,
+			},
+		},
+	}
+}
+
+func GetGeneratedHTTPExternClient(
+	addr string, apiPath string, httpClient *http.Client,
+) (*extern.ClientWithResponses, error) {
+	return extern.NewClientWithResponses(
+		"http://localhost"+addr+apiPath,
+		extern.WithHTTPClient(httpClient),
+	)
 }

@@ -18,6 +18,7 @@ import (
 	"github.com/scality/metalk8s-registry-node-agent/pkg/infrastructure/di"
 	"github.com/scality/metalk8s-registry-node-agent/pkg/presentation/http/extern"
 	"github.com/scality/metalk8s-registry-node-agent/pkg/service"
+	"github.com/scality/metalk8s-registry-node-agent/test/utils"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 )
@@ -66,13 +67,20 @@ var _ = BeforeSuite(func() {
 		container.GetLogger().Fatal().Err(err).Msg("failed to create temporary directory")
 	}
 
+	// External HTTP Client creation
+	externHTTPClient := utils.GetHTTPExternClient()
+	externClientWithResponse, err := utils.GetGeneratedHTTPExternClient(cfg.Extern.Addr, config.RootExternAPIPath, externHTTPClient)
+	if err != nil {
+		container.GetLogger().Fatal().Err(err).Msg("failed to create generated http client")
+	}
+
 	cfg.SolutionArchivesLocation = rootPath
 	testingSuite = &TestingSuite{
 		logger:                          container.GetLogger(),
 		container:                       container,
 		RootPath:                        rootPath,
 		SolutionArchiveStorageDirectory: cfg.SolutionArchivesLocation,
-		ClientWithResponses:             container.GetGeneratedHTTPExternClient(),
+		ClientWithResponses:             externClientWithResponse,
 		SolutionArchiveStorageProvider:  container.GetFSSolutionArchiveStorage(),
 	}
 
@@ -92,7 +100,7 @@ var _ = BeforeSuite(func() {
 	}()
 
 	for range httpServerStartupTimeInSeconds {
-		res, err := testingSuite.container.GetHTTPExternClient().Get(
+		res, err := externHTTPClient.Get(
 			fmt.Sprintf("http://localhost%s", httpExternServer.Addr) + "/healthz",
 		)
 		if err == nil && res.StatusCode == http.StatusOK {
