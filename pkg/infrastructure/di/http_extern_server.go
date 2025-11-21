@@ -49,7 +49,7 @@ func (c *Container) GetHTTPExternServer() *http.Server {
 
 		c.httpExternServer = &http.Server{
 			Handler: mainRouter,
-			Addr:    c.config.HTTP.ExternAddr,
+			Addr:    c.config.Extern.Addr,
 		}
 	}
 

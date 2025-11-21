@@ -39,8 +39,8 @@ The agent can be configured using environment variables:
 
 | Variable | Description | Default |
 |----------|-------------|---------|
-| `SOLUTION_ARCHIVES_LOCATION` | Root directory for solution archive storage | `/tmp/uploads/archives` |
-| `HTTP_EXTERN_ADDR` | HTTP server address | `:5001` |
+| `SOLUTION_ARCHIVES_LOCATION` | Root directory for solution archive storage | `/archives` |
+| `EXTERN_ADDR` | HTTP server address | `:5001` |
 | `LOGGER_LOG_LEVEL` | Logging level | `info` |
 
 ### Kubernetes Configuration
