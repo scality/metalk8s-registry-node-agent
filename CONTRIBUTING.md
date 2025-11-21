@@ -44,7 +44,7 @@ make docker-build
 ```bash
 # Set environment variables
 export SOLUTION_ARCHIVES_LOCATION=/tmp/archives
-export HTTP_EXTERN_ADDR=:5001
+export EXTERN_ADDR=:5001
 
 # Run the application
 go run cmd/main.go

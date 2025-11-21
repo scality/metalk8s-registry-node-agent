@@ -21,13 +21,14 @@ const RootExternAPIPath = "/api/v1"
 type (
 	Environment struct {
 		Logger logger.Config `env:",prefix=LOGGER_"`
-		HTTP   HTTP          `env:",prefix=HTTP_"`
 
 		SolutionArchivesLocation string `env:"SOLUTION_ARCHIVES_LOCATION, default=/archives"`
+
+		Extern Extern `env:",prefix=EXTERN_"`
 	}
 
-	HTTP struct {
-		ExternAddr string `env:"EXTERN_ADDR, default=:5001"`
+	Extern struct {
+		Addr string `env:"ADDR, default=:5001"`
 	}
 )
 
