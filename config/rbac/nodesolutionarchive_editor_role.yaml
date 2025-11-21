@@ -11,12 +11,12 @@ metadata:
   labels:
     app.kubernetes.io/name: metalk8s-registry-node-agent
     app.kubernetes.io/managed-by: kustomize
-  name: nodeartifact-editor-role
+  name: nodesolutionarchive-editor-role
 rules:
 - apiGroups:
   - metalk8s.scality.com
   resources:
-  - nodeartifacts
+  - nodesolutionarchives
   verbs:
   - create
   - delete
@@ -28,6 +28,6 @@ rules:
 - apiGroups:
   - metalk8s.scality.com
   resources:
-  - nodeartifacts/status
+  - nodesolutionarchives/status
   verbs:
   - get

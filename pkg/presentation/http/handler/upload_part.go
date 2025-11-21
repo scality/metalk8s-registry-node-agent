@@ -42,14 +42,14 @@ func (h *UploadPart) UploadChunk(
 		return h.genUploadChunkResponseObjectFromError(errors.Stamp(err))
 	}
 
-	artifactStatus, err := h.uc.Execute(&part)
+	solutionArchiveStatus, err := h.uc.Execute(&part)
 	if err != nil {
 		return h.genUploadChunkResponseObjectFromError(errors.Stamp(err))
 	}
 
 	var response extern.UploadChunkSuccessResponse
 
-	fillUploadChunkSuccessResponseFromArtifactStatus(&response, artifactStatus)
+	fillUploadChunkSuccessResponseFromSolutionArchiveStatus(&response, solutionArchiveStatus)
 
 	return extern.UploadChunk200JSONResponse(response), nil
 }

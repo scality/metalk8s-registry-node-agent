@@ -31,7 +31,7 @@ import (
 )
 
 // nolint:dupl
-var _ = Describe("NodeArtifact Controller", func() {
+var _ = Describe("NodeSolutionArchive Controller", func() {
 	ctx := context.Background()
 	nodeName := "node-1"
 	timeout := 10 * time.Second
@@ -44,20 +44,20 @@ var _ = Describe("NodeArtifact Controller", func() {
 				Name: resourceName,
 			}
 
-			By("creating the custom resource for the Kind NodeArtifact")
-			resource := &metalk8sv1alpha1.NodeArtifact{
+			By("creating the custom resource for the Kind NodeSolutionArchive")
+			resource := &metalk8sv1alpha1.NodeSolutionArchive{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: resourceName,
 				},
 			}
 
 			_, err := controllerutil.CreateOrUpdate(ctx, k8sClient, resource, func() error {
-				resource.Spec = metalk8sv1alpha1.NodeArtifactSpec{
+				resource.Spec = metalk8sv1alpha1.NodeSolutionArchiveSpec{
 					Name:     "solution-1",
 					Version:  "1.2.0",
 					NodeName: nodeName,
-					Validation: metalk8sv1alpha1.ArtifactValidation{
-						Checksum: metalk8sv1alpha1.NodeArtifactChecksum{
+					Validation: metalk8sv1alpha1.SolutionArchiveValidation{
+						Checksum: metalk8sv1alpha1.NodeSolutionArchiveChecksum{
 							Type:  "sha256",
 							Value: "ce775a33b30ae640d521df1fad60868fa701707ffdc4d8b4ca7ab60edfd05c26",
 						},
@@ -71,8 +71,8 @@ var _ = Describe("NodeArtifact Controller", func() {
 			// Wait for all reconciliations loop to be done
 			time.Sleep(1 * time.Second)
 
-			By("checking the custom resource for the Kind NodeArtifact")
-			createdResource := &metalk8sv1alpha1.NodeArtifact{}
+			By("checking the custom resource for the Kind NodeSolutionArchive")
+			createdResource := &metalk8sv1alpha1.NodeSolutionArchive{}
 			Eventually(func() bool {
 				err := k8sClient.Get(ctx, typeNamespacedName, createdResource)
 				return err == nil
@@ -83,27 +83,27 @@ var _ = Describe("NodeArtifact Controller", func() {
 		})
 	})
 
-	Context("When reconciling a resource with available artifact", func() {
+	Context("When reconciling a resource with available solution archive", func() {
 		It("should successfully create the resource", func() {
 			resourceName := "test-available-resource"
 			typeNamespacedName := types.NamespacedName{
 				Name: resourceName,
 			}
 
-			By("creating the custom resource for the Kind NodeArtifact")
-			resource := &metalk8sv1alpha1.NodeArtifact{
+			By("creating the custom resource for the Kind NodeSolutionArchive")
+			resource := &metalk8sv1alpha1.NodeSolutionArchive{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: resourceName,
 				},
 			}
 
 			_, err := controllerutil.CreateOrUpdate(ctx, k8sClient, resource, func() error {
-				resource.Spec = metalk8sv1alpha1.NodeArtifactSpec{
+				resource.Spec = metalk8sv1alpha1.NodeSolutionArchiveSpec{
 					Name:     "solution-2",
 					Version:  "4.2.1",
 					NodeName: nodeName,
-					Validation: metalk8sv1alpha1.ArtifactValidation{
-						Checksum: metalk8sv1alpha1.NodeArtifactChecksum{
+					Validation: metalk8sv1alpha1.SolutionArchiveValidation{
+						Checksum: metalk8sv1alpha1.NodeSolutionArchiveChecksum{
 							Type:  "sha256",
 							Value: "ce775a33b30ae640d521df1fad60868fa701707ffdc4d8b4ca7ab60edfd05c26",
 						},
@@ -117,8 +117,8 @@ var _ = Describe("NodeArtifact Controller", func() {
 			// Wait for all reconciliations loop to be done
 			time.Sleep(1 * time.Second)
 
-			By("checking the custom resource for the Kind NodeArtifact")
-			createdResource := &metalk8sv1alpha1.NodeArtifact{}
+			By("checking the custom resource for the Kind NodeSolutionArchive")
+			createdResource := &metalk8sv1alpha1.NodeSolutionArchive{}
 			Eventually(func() bool {
 				err := k8sClient.Get(ctx, typeNamespacedName, createdResource)
 				return err == nil
@@ -129,27 +129,27 @@ var _ = Describe("NodeArtifact Controller", func() {
 		})
 	})
 
-	Context("When reconciling a resource with invalid artifact", func() {
+	Context("When reconciling a resource with invalid solution archive", func() {
 		It("should successfully create the resource", func() {
 			resourceName := "test-invalid-resource"
 			typeNamespacedName := types.NamespacedName{
 				Name: resourceName,
 			}
 
-			By("creating the custom resource for the Kind NodeArtifact")
-			resource := &metalk8sv1alpha1.NodeArtifact{
+			By("creating the custom resource for the Kind NodeSolutionArchive")
+			resource := &metalk8sv1alpha1.NodeSolutionArchive{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: resourceName,
 				},
 			}
 
 			_, err := controllerutil.CreateOrUpdate(ctx, k8sClient, resource, func() error {
-				resource.Spec = metalk8sv1alpha1.NodeArtifactSpec{
+				resource.Spec = metalk8sv1alpha1.NodeSolutionArchiveSpec{
 					Name:     "solution-2",
 					Version:  "4.2.1",
 					NodeName: nodeName,
-					Validation: metalk8sv1alpha1.ArtifactValidation{
-						Checksum: metalk8sv1alpha1.NodeArtifactChecksum{
+					Validation: metalk8sv1alpha1.SolutionArchiveValidation{
+						Checksum: metalk8sv1alpha1.NodeSolutionArchiveChecksum{
 							Type:  "sha256",
 							Value: "bad",
 						},
@@ -163,8 +163,8 @@ var _ = Describe("NodeArtifact Controller", func() {
 			// Wait for all reconciliations loop to be done
 			time.Sleep(1 * time.Second)
 
-			By("checking the custom resource for the Kind NodeArtifact")
-			createdResource := &metalk8sv1alpha1.NodeArtifact{}
+			By("checking the custom resource for the Kind NodeSolutionArchive")
+			createdResource := &metalk8sv1alpha1.NodeSolutionArchive{}
 			Eventually(func() bool {
 				err := k8sClient.Get(ctx, typeNamespacedName, createdResource)
 				return err == nil

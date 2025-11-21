@@ -26,19 +26,19 @@ func NewRemoveSession(
 	}
 }
 
-func (uc *RemoveSession) Execute(artifact *domain.Artifact) error {
+func (uc *RemoveSession) Execute(solutionArchive *domain.SolutionArchive) error {
 	uc.logger.Debug().
-		Any("artifact", artifact).
+		Any("solution_archive", solutionArchive).
 		Msg("Removing session")
 
-	err := uc.sessionRemover.RemoveSession(artifact)
+	err := uc.sessionRemover.RemoveSession(solutionArchive)
 	if err != nil {
 		return errors.Intercept(err).
 			WithDetail("failed to remove session").
 			Throw()
 	}
 
-	uc.logger.Debug().Any("artifact", artifact).Msg("Session removed")
+	uc.logger.Debug().Any("solution_archive", solutionArchive).Msg("Session removed")
 
 	return nil
 }

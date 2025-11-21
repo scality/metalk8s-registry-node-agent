@@ -36,13 +36,13 @@ func fillUploadChunkRangeFromDomainPartMeta(
 	dst.RangeEndIndex = &end
 }
 
-// fillUploadChunkSuccessResponseFromArtifactStatus fills the UploadChunkSuccessResponse object
-// from the domain.ArtifactStatus object.
-func fillUploadChunkSuccessResponseFromArtifactStatus(
+// fillUploadChunkSuccessResponseFromSolutionArchiveStatus fills the UploadChunkSuccessResponse object
+// from the domain.SolutionArchiveStatus object.
+func fillUploadChunkSuccessResponseFromSolutionArchiveStatus(
 	dst *extern.UploadChunkSuccessResponse,
-	src *domain.ArtifactStatus,
+	src *domain.SolutionArchiveStatus,
 ) {
-	size := int(src.Artifact.Size)
+	size := int(src.SolutionArchive.Size)
 
 	var uploadChuncks []extern.UploadChunkRange
 
@@ -50,11 +50,11 @@ func fillUploadChunkSuccessResponseFromArtifactStatus(
 
 	isCompleted := src.IsComplete()
 
-	dst.Artifact = &src.Artifact.Name
-	dst.Version = &src.Artifact.Version
+	dst.SolutionArchive = &src.SolutionArchive.Name
+	dst.Version = &src.SolutionArchive.Version
 	dst.Size = &size
 	dst.UploadedChunks = &uploadChuncks
-	dst.Sha256sum = &src.Artifact.Hash
+	dst.Sha256sum = &src.SolutionArchive.Hash
 	dst.IsCompleted = &isCompleted
 }
 
@@ -70,10 +70,10 @@ func fillPartFromUploadChunkRequestObject(
 			Throw()
 	}
 
-	if src.Artifact == "" {
+	if src.SolutionArchive == "" {
 		return errors.From(domain.ErrHandlerMissingRequestParameter).
 			WithIdentifier(400003).
-			WithDetail("Parameter 'artifact' is missing.").
+			WithDetail("Parameter 'solution-archive' is missing.").
 			Throw()
 	}
 
@@ -96,8 +96,8 @@ func fillPartFromUploadChunkRequestObject(
 		return errors.Stamp(err)
 	}
 
-	dst.Artifact = &domain.Artifact{
-		Name:    src.Artifact,
+	dst.SolutionArchive = &domain.SolutionArchive{
+		Name:    src.SolutionArchive,
 		Version: src.Params.XTargetVersion,
 		Size:    total,
 		Hash:    src.Params.XSha256Checksum,

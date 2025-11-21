@@ -7,7 +7,7 @@ import (
 func (c *Container) getStorageSessionInitializer() *sessioninitializer.Storage {
 	if c.storageSessionInitializer == nil {
 		c.storageSessionInitializer = sessioninitializer.NewStorage(
-			c.GetFileSystemArtifactStorage(),
+			c.GetFSSolutionArchiveStorage(),
 			c.GetLogger(),
 		)
 	}

@@ -20,14 +20,14 @@ const uploadCompleteTestString = "platform0\nplatform1\nplatform2\n\x00"
 const uploadMultipleCompleteTestString = "platform0\nplatform1\nplatform2\nplatform3\n\x00"
 
 var _ = Describe("Upload Part API", func() {
-	Context("When uploading a new part of an artifact", func() {
+	Context("When uploading a new part of an solution archive", func() {
 		It("should successfully upload and store the chunk", func() {
-			artifact := &domain.Artifact{
+			solutionArchive := &domain.SolutionArchive{
 				Name:    "artesca-base",
 				Version: "3.0.0-preview.2",
 				Hash:    "sha",
 			}
-			_, err := testingSuite.container.GetInitializeSessionUseCase().Execute(artifact)
+			_, err := testingSuite.container.GetInitializeSessionUseCase().Execute(solutionArchive)
 			Expect(err).NotTo(HaveOccurred())
 
 			By("successfully upload the chunk")
@@ -52,11 +52,11 @@ var _ = Describe("Upload Part API", func() {
 			Expect(*resUpl.JSON200.UploadedChunks).To(HaveLen(1))
 
 			By("storing the part on the file system")
-			artifactNameVersion := library.GenBucketName(artifact)
+			solutionArchiveNameVersion := library.GenBucketName(solutionArchive)
 			recipientFile, err := os.Open(
 				path.Join(
-					testingSuite.ArtifactStorageDirectory,
-					library.FileSystemBucketPrefix+artifactNameVersion,
+					testingSuite.SolutionArchiveStorageDirectory,
+					library.FileSystemBucketPrefix+solutionArchiveNameVersion,
 					"artesca-base.recipient",
 				),
 			)
@@ -72,14 +72,14 @@ var _ = Describe("Upload Part API", func() {
 		})
 	})
 
-	Context("When uploading a new complete artifact", func() {
-		It("should successfully upload the chunks and aggregate the artifact", func() {
-			artifact := &domain.Artifact{
+	Context("When uploading a new complete solution archive", func() {
+		It("should successfully upload the chunks and aggregate the solution archive", func() {
+			solutionArchive := &domain.SolutionArchive{
 				Name:    "platform",
 				Version: "127.0.2-tiny",
 				Hash:    "a2c60bdd4a4fd806fe368bacc30819173ecb9d5f109127bf35dfeaa927b275f0",
 			}
-			_, err := testingSuite.container.GetInitializeSessionUseCase().Execute(artifact)
+			_, err := testingSuite.container.GetInitializeSessionUseCase().Execute(solutionArchive)
 			Expect(err).NotTo(HaveOccurred())
 
 			By("successfully uploading all the chunks and responding adequately")
@@ -103,33 +103,33 @@ var _ = Describe("Upload Part API", func() {
 			By("returning a documented http/200 response")
 			Expect(*resUpl.JSON200.IsCompleted).To(BeTrue())
 
-			By("aggregating and storing the artifact")
-			artifactNameVersion := library.GenBucketName(artifact)
-			artifactFile, err := os.Open(
+			By("aggregating and storing the solution archive")
+			solutionArchiveNameVersion := library.GenBucketName(solutionArchive)
+			solutionArchiveFile, err := os.Open(
 				path.Join(
 					testingSuite.RootPath,
-					artifactNameVersion+".iso",
+					solutionArchiveNameVersion+".iso",
 				),
 			)
 			Expect(err).NotTo(HaveOccurred())
 
-			defer artifactFile.Close() // nolint: errcheck
+			defer solutionArchiveFile.Close() // nolint: errcheck
 
-			artifactBytes := make([]byte, 31)
-			_, err = artifactFile.Read(artifactBytes)
+			solutionArchiveBytes := make([]byte, 31)
+			_, err = solutionArchiveFile.Read(solutionArchiveBytes)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(uploadCompleteTestString).To(Equal(string(artifactBytes)))
+			Expect(uploadCompleteTestString).To(Equal(string(solutionArchiveBytes)))
 
 			By("removing the session")
 			// Verify directory/files creation
-			artifactRootDir := path.Join(testingSuite.RootPath, library.FileSystemBucketPrefix+artifactNameVersion)
-			_, err = os.Stat(artifactRootDir)
+			solutionArchiveRootDir := path.Join(testingSuite.RootPath, library.FileSystemBucketPrefix+solutionArchiveNameVersion)
+			_, err = os.Stat(solutionArchiveRootDir)
 			Expect(err).To(HaveOccurred())
 
 			// Checking work files
-			metaFilePath := path.Join(artifactRootDir, artifact.Name+library.FileSystemMultipartMetaSuffix)
-			partsFilePath := path.Join(artifactRootDir, artifact.Name+library.FileSystemMultipartPartsSuffix)
-			recipientFilePath := path.Join(artifactRootDir, artifact.Name+library.FileSystemMultipartRecipientSuffix)
+			metaFilePath := path.Join(solutionArchiveRootDir, solutionArchive.Name+library.FileSystemMultipartMetaSuffix)
+			partsFilePath := path.Join(solutionArchiveRootDir, solutionArchive.Name+library.FileSystemMultipartPartsSuffix)
+			recipientFilePath := path.Join(solutionArchiveRootDir, solutionArchive.Name+library.FileSystemMultipartRecipientSuffix)
 
 			err = library.CheckFile(metaFilePath)
 			Expect(err).To(HaveOccurred())
@@ -162,14 +162,14 @@ var _ = Describe("Upload Part API", func() {
 		})
 	})
 
-	Context("When uploading a new complete artifact with a wrong checksum", func() {
+	Context("When uploading a new complete solution archive with a wrong checksum", func() {
 		It("should fail the process", func() {
-			artifact := &domain.Artifact{
+			solutionArchive := &domain.SolutionArchive{
 				Name:    "platform",
 				Version: "127.0.3-tiny",
 				Hash:    "a2c60bdd4a4fd806fe368bacc30819173ecb9d5f109127bf35dfeaa927b275f1",
 			}
-			_, err := testingSuite.container.GetInitializeSessionUseCase().Execute(artifact)
+			_, err := testingSuite.container.GetInitializeSessionUseCase().Execute(solutionArchive)
 			Expect(err).NotTo(HaveOccurred())
 
 			By("successfully uploading all the chunks")
@@ -202,26 +202,26 @@ var _ = Describe("Upload Part API", func() {
 			Expect(*resUpl.ApplicationproblemJSON400.Code).To(Equal("422001"))
 			Expect(*resUpl.ApplicationproblemJSON400.Status).To(Equal(int32(422)))
 
-			By("not storing the artifact")
-			artifactNameVersion := library.GenBucketName(artifact)
+			By("not storing the solution archive")
+			solutionArchiveNameVersion := library.GenBucketName(solutionArchive)
 			_, err = os.Open(
 				path.Join(
 					testingSuite.RootPath,
-					artifactNameVersion+".iso",
+					solutionArchiveNameVersion+".iso",
 				),
 			)
 			Expect(err).To(HaveOccurred())
 
 			By("generating a new session")
 			// Verify directory/files creation
-			artifactRootDir := path.Join(testingSuite.RootPath, library.FileSystemBucketPrefix+artifactNameVersion)
-			_, err = os.Stat(artifactRootDir)
+			solutionArchiveRootDir := path.Join(testingSuite.RootPath, library.FileSystemBucketPrefix+solutionArchiveNameVersion)
+			_, err = os.Stat(solutionArchiveRootDir)
 			Expect(err).NotTo(HaveOccurred())
 
 			// Checking work files
-			metaFilePath := path.Join(artifactRootDir, artifact.Name+library.FileSystemMultipartMetaSuffix)
-			partsFilePath := path.Join(artifactRootDir, artifact.Name+library.FileSystemMultipartPartsSuffix)
-			recipientFilePath := path.Join(artifactRootDir, artifact.Name+library.FileSystemMultipartRecipientSuffix)
+			metaFilePath := path.Join(solutionArchiveRootDir, solutionArchive.Name+library.FileSystemMultipartMetaSuffix)
+			partsFilePath := path.Join(solutionArchiveRootDir, solutionArchive.Name+library.FileSystemMultipartPartsSuffix)
+			recipientFilePath := path.Join(solutionArchiveRootDir, solutionArchive.Name+library.FileSystemMultipartRecipientSuffix)
 
 			err = library.CheckFile(metaFilePath)
 			Expect(err).NotTo(HaveOccurred())
@@ -234,14 +234,14 @@ var _ = Describe("Upload Part API", func() {
 		})
 	})
 
-	Context("When uploading a new part of an artifact with a wrong size", func() {
+	Context("When uploading a new part of an solution archive with a wrong size", func() {
 		It("should fail the process", func() {
-			artifact := &domain.Artifact{
+			solutionArchive := &domain.SolutionArchive{
 				Name:    "artesca-base",
 				Version: "3.0.0-preview.4",
 				Hash:    "sha",
 			}
-			_, err := testingSuite.container.GetInitializeSessionUseCase().Execute(artifact)
+			_, err := testingSuite.container.GetInitializeSessionUseCase().Execute(solutionArchive)
 			Expect(err).NotTo(HaveOccurred())
 
 			By("successfully uploading all the chunks")
@@ -265,14 +265,14 @@ var _ = Describe("Upload Part API", func() {
 		})
 	})
 
-	Context("When uploading a new complete artifact, with having previously sent wrong parts", func() {
-		It("should successfully rewrite the correct chunks and aggregate the artifact", func() {
-			artifact := &domain.Artifact{
+	Context("When uploading a new complete solution archive, with having previously sent wrong parts", func() {
+		It("should successfully rewrite the correct chunks and aggregate the solution archive", func() {
+			solutionArchive := &domain.SolutionArchive{
 				Name:    "platform",
 				Version: "127.0.3-small",
 				Hash:    "c8db76b15eda867f25a4baa791cd14a673944fda1298cc440abe8568f33edef7",
 			}
-			_, err := testingSuite.container.GetInitializeSessionUseCase().Execute(artifact)
+			_, err := testingSuite.container.GetInitializeSessionUseCase().Execute(solutionArchive)
 			Expect(err).NotTo(HaveOccurred())
 
 			var resUpl *extern.UploadChunkResponse
@@ -335,33 +335,33 @@ var _ = Describe("Upload Part API", func() {
 			By("returning a documented http/200 response")
 			Expect(*resUpl.JSON200.IsCompleted).To(BeTrue())
 
-			By("aggregating and storing the artifact")
-			artifactNameVersion := library.GenBucketName(artifact)
-			artifactFile, err := os.Open(
+			By("aggregating and storing the solution archive")
+			solutionArchiveNameVersion := library.GenBucketName(solutionArchive)
+			solutionArchiveFile, err := os.Open(
 				path.Join(
 					testingSuite.RootPath,
-					artifactNameVersion+".iso",
+					solutionArchiveNameVersion+".iso",
 				),
 			)
 			Expect(err).NotTo(HaveOccurred())
 
-			defer artifactFile.Close() // nolint: errcheck
+			defer solutionArchiveFile.Close() // nolint: errcheck
 
-			artifactBytes := make([]byte, 41)
-			_, err = artifactFile.Read(artifactBytes)
+			solutionArchiveBytes := make([]byte, 41)
+			_, err = solutionArchiveFile.Read(solutionArchiveBytes)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(uploadMultipleCompleteTestString).To(Equal(string(artifactBytes)))
+			Expect(uploadMultipleCompleteTestString).To(Equal(string(solutionArchiveBytes)))
 
 			By("removing the session")
 			// Verify directory/files creation
-			artifactRootDir := path.Join(testingSuite.RootPath, library.FileSystemBucketPrefix+artifactNameVersion)
-			_, err = os.Stat(artifactRootDir)
+			solutionArchiveRootDir := path.Join(testingSuite.RootPath, library.FileSystemBucketPrefix+solutionArchiveNameVersion)
+			_, err = os.Stat(solutionArchiveRootDir)
 			Expect(err).To(HaveOccurred())
 
 			// Checking work files
-			metaFilePath := path.Join(artifactRootDir, artifact.Name+library.FileSystemMultipartMetaSuffix)
-			partsFilePath := path.Join(artifactRootDir, artifact.Name+library.FileSystemMultipartPartsSuffix)
-			recipientFilePath := path.Join(artifactRootDir, artifact.Name+library.FileSystemMultipartRecipientSuffix)
+			metaFilePath := path.Join(solutionArchiveRootDir, solutionArchive.Name+library.FileSystemMultipartMetaSuffix)
+			partsFilePath := path.Join(solutionArchiveRootDir, solutionArchive.Name+library.FileSystemMultipartPartsSuffix)
+			recipientFilePath := path.Join(solutionArchiveRootDir, solutionArchive.Name+library.FileSystemMultipartRecipientSuffix)
 
 			err = library.CheckFile(metaFilePath)
 			Expect(err).To(HaveOccurred())

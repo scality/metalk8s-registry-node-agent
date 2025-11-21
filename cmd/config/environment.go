@@ -23,7 +23,7 @@ type (
 		Logger logger.Config `env:",prefix=LOGGER_"`
 		HTTP   HTTP          `env:",prefix=HTTP_"`
 
-		ArtifactStorageRootLocation string `env:"ARTIFACT_STORAGE_ROOT_LOCATION, default=/artifacts"`
+		SolutionArchivesLocation string `env:"SOLUTION_ARCHIVES_LOCATION, default=/archives"`
 	}
 
 	HTTP struct {

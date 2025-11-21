@@ -1,4 +1,4 @@
-package artifactvalidator
+package archivevalidator
 
 import (
 	"github.com/rs/zerolog"
@@ -18,35 +18,35 @@ func NewStorage(
 	store service.StorageProvider,
 	logger *zerolog.Logger,
 ) *Storage {
-	l := logger.With().Str("infrastructure", "artifactvalidator").Logger()
+	l := logger.With().Str("infrastructure", "archivevalidator").Logger()
 	return &Storage{
 		store:  store,
 		logger: &l,
 	}
 }
 
-func (s *Storage) ValidateArtifact(artifact *domain.Artifact) (bool, error) {
+func (s *Storage) ValidateSolutionArchive(solutionArchive *domain.SolutionArchive) (bool, error) {
 	s.store.Lock()
 	defer s.store.Unlock()
 
-	// List all artifacts in the storage
-	// matching artifactStorageNamePattern
+	// List all solution archives in the storage
+	// matching solutionArchiveStorageNamePattern
 	fileNames, err := s.store.ListFiles()
 	if err != nil {
 		return false, errors.Stamp(err)
 	}
 
-	// Check if the artifact exists in the storage
-	if !library.ArtifactExists(artifact, fileNames) {
+	// Check if the solution archive exists in the storage
+	if !library.SolutionArchiveExists(solutionArchive, fileNames) {
 		return false, nil
 	}
 
-	hash, err := s.store.GetHashFromFileInfos(library.GenArtifactFileName(artifact))
+	hash, err := s.store.GetHashFromFileInfos(library.GenSolutionArchiveFileName(solutionArchive))
 	if err != nil {
 		return false, errors.Stamp(err)
 	}
-	if hash != artifact.Hash {
-		err := s.store.DeleteFile(library.GenArtifactFileName(artifact))
+	if hash != solutionArchive.Hash {
+		err := s.store.DeleteFile(library.GenSolutionArchiveFileName(solutionArchive))
 		if err != nil {
 			return false, errors.Stamp(err)
 		}

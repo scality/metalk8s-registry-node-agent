@@ -27,26 +27,26 @@ func NewStorage(
 	}
 }
 
-func (s *Storage) InitializeSession(artifact *domain.Artifact) (*domain.SessionStatus, error) {
+func (s *Storage) InitializeSession(solutionArchive *domain.SolutionArchive) (*domain.SessionStatus, error) {
 	s.store.Lock()
 	defer s.store.Unlock()
 
-	// List all artifacts in the storage
-	// matching artifactStorageNamePattern
+	// List all solution archives in the storage
+	// matching solutionArchiveStorageNamePattern
 	fileNames, err := s.store.ListFiles()
 	if err != nil {
 		return nil, errors.Stamp(err)
 	}
 
-	// Check if the artifact already exists in the storage
-	if library.ArtifactExists(artifact, fileNames) {
+	// Check if the solution archive already exists in the storage
+	if library.SolutionArchiveExists(solutionArchive, fileNames) {
 		return &domain.SessionStatus{
-			Version:            artifact.Version,
-			IncompleteArtifact: nil,
+			Version:                   solutionArchive.Version,
+			IncompleteSolutionArchive: nil,
 		}, nil
 	}
 
-	bucketName := library.GenBucketName(artifact)
+	bucketName := library.GenBucketName(solutionArchive)
 
 	// Check if the session bucket already exists
 	exist, err := s.sessionBucketAlreadyExists(bucketName)
@@ -54,13 +54,13 @@ func (s *Storage) InitializeSession(artifact *domain.Artifact) (*domain.SessionS
 		return nil, err
 	}
 	if exist {
-		artifactStatus, err := s.store.GetMultipartFileStatus(bucketName, artifact)
+		solutionArchiveStatus, err := s.store.GetMultipartFileStatus(bucketName, solutionArchive)
 		if err != nil {
 			return nil, errors.Stamp(err)
 		}
 		return &domain.SessionStatus{
-			Version:            artifact.Version,
-			IncompleteArtifact: artifactStatus,
+			Version:                   solutionArchive.Version,
+			IncompleteSolutionArchive: solutionArchiveStatus,
 		}, nil
 	}
 
@@ -81,15 +81,15 @@ func (s *Storage) InitializeSession(artifact *domain.Artifact) (*domain.SessionS
 	}
 
 	storageProvider := s.store
-	artifactStatus, err := storageProvider.CreateMultipartFiles(bucketName, artifact)
+	solutionArchiveStatus, err := storageProvider.CreateMultipartFiles(bucketName, solutionArchive)
 	if err != nil {
 		cleanup()
 		return nil, errors.Stamp(err)
 	}
 
 	return &domain.SessionStatus{
-		Version:            artifact.Version,
-		IncompleteArtifact: artifactStatus,
+		Version:                   solutionArchive.Version,
+		IncompleteSolutionArchive: solutionArchiveStatus,
 	}, nil
 }
 

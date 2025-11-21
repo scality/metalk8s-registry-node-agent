@@ -4,7 +4,7 @@ import "github.com/scality/metalk8s-registry-node-agent/pkg/usecase"
 
 type containerInterface interface {
 	GetRemoveSessionUseCase() *usecase.RemoveSession
-	GetRemoveArtifactUseCase() *usecase.RemoveArtifact
-	GetValidateArtifactUseCase() *usecase.ValidateArtifact
+	GetRemoveSolutionArchiveUseCase() *usecase.RemoveSolutionArchive
+	GetValidateSolutionArchiveUseCase() *usecase.ValidateSolutionArchive
 	GetInitializeSessionUseCase() *usecase.InitializeSession
 }

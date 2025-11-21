@@ -3,11 +3,11 @@ package service
 import "github.com/scality/metalk8s-registry-node-agent/pkg/domain"
 
 type (
-	SessionRemover interface {
-		RemoveSession(*domain.SolutionArchive) error
+	SolutionArchiveRemover interface {
+		RemoveSolutionArchive(*domain.SolutionArchive) error
 	}
 
-	RemoveSessionUseCase interface {
+	RemoveSolutionArchiveUseCase interface {
 		Execute(*domain.SolutionArchive) error
 	}
 )

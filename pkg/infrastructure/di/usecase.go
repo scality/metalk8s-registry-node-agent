@@ -25,24 +25,24 @@ func (c *Container) GetInitializeSessionUseCase() *usecase.InitializeSession {
 	return c.initializeSessionUseCase
 }
 
-func (c *Container) GetRemoveArtifactUseCase() *usecase.RemoveArtifact {
-	if c.removeArtifactUseCase == nil {
-		c.removeArtifactUseCase = usecase.NewRemoveArtifact(
+func (c *Container) GetRemoveSolutionArchiveUseCase() *usecase.RemoveSolutionArchive {
+	if c.removeSolutionArchiveUseCase == nil {
+		c.removeSolutionArchiveUseCase = usecase.NewRemoveSolutionArchive(
 			c.GetLogger(),
-			c.getStorageArtifactRemover(),
+			c.getStorageSolutionArchiveRemover(),
 		)
 	}
-	return c.removeArtifactUseCase
+	return c.removeSolutionArchiveUseCase
 }
 
-func (c *Container) GetValidateArtifactUseCase() *usecase.ValidateArtifact {
-	if c.validateArtifactUseCase == nil {
-		c.validateArtifactUseCase = usecase.NewValidateArtifact(
+func (c *Container) GetValidateSolutionArchiveUseCase() *usecase.ValidateSolutionArchive {
+	if c.validateSolutionArchiveUseCase == nil {
+		c.validateSolutionArchiveUseCase = usecase.NewValidateSolutionArchive(
 			c.GetLogger(),
-			c.getStorageArtifactValidator(),
+			c.getStorageSolutionArchiveValidator(),
 		)
 	}
-	return c.validateArtifactUseCase
+	return c.validateSolutionArchiveUseCase
 }
 
 func (c *Container) GetRemoveSessionUseCase() *usecase.RemoveSession {

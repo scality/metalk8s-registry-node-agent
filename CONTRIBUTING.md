@@ -43,7 +43,7 @@ make docker-build
 
 ```bash
 # Set environment variables
-export ARTIFACT_STORAGE_ROOT_LOCATION=/tmp/artifacts
+export SOLUTION_ARCHIVES_LOCATION=/tmp/archives
 export HTTP_EXTERN_ADDR=:5001
 
 # Run the application
@@ -88,10 +88,10 @@ split -n 5 -x test.iso "test.iso."
     -rw-rw-r--  1 user group  4194304 Sep 25 15:46 test.iso.04
 ```
 
-**3. Create a NodeArtifact Custom Resource**
+**3. Create a NodeSolutionArchive Custom Resource**
 
 ```shell
-kubectl apply -f config/samples/metalk8s_v1alpha1_nodeartifact.yaml
+kubectl apply -f config/samples/metalk8s_v1alpha1_nodesolutionarchive.yaml
 ```
 
 **4. Upload parts**
@@ -104,7 +104,7 @@ wget -qO- \
 ```
 ```json
 {
-  "artifact": "metalk8s",
+  "solutionArchive": "metalk8s",
   "isCompleted": false,
   "sha256sum": "ce775a33b30ae640d521df1fad60868fa701707ffdc4d8b4ca7ab60edfd05c26",
   "size": 20971520,
@@ -127,7 +127,7 @@ wget -qO- --header="X-Target-Version: 1.25.3" --header="X-Sha256-checksum: ce775
 ```
 ```json
 {
-  "artifact": "metalk8s",
+  "solutionArchive": "metalk8s",
   "isCompleted": false,
   "sha256sum": "ce775a33b30ae640d521df1fad60868fa701707ffdc4d8b4ca7ab60edfd05c26",
   "size": 20971520,
@@ -166,7 +166,7 @@ wget -qO- \
 ```
 ```json
 {
-  "artifact": "metalk8s",
+  "solutionArchive": "metalk8s",
   "isCompleted": true,
   "sha256sum": "ce775a33b30ae640d521df1fad60868fa701707ffdc4d8b4ca7ab60edfd05c26",
   "size": 20971520,

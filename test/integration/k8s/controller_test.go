@@ -97,13 +97,13 @@ var _ = BeforeSuite(func() {
 	Expect(err).ToNot(HaveOccurred())
 
 	// Initialize a Mock Container
-	// and start a Mock Reconciler for the NodeArtifact resource
+	// and start a Mock Reconciler for the NodeSolutionArchive resource
 	filenameCh := make(chan string)
 	eventChan := make(chan event.GenericEvent)
 	container := di.NewContainer(ctx, &config.Environment{}, filenameCh, config.RootExternAPIPath)
-	container.GetMockFileSystemArtifactStorage()
+	container.GetMockFSSolutionArchiveStorage()
 
-	err = (&controller.NodeArtifactReconciler{
+	err = (&controller.NodeSolutionArchiveReconciler{
 		Client:    k8sClient,
 		Scheme:    k8sClient.Scheme(),
 		NodeName:  "node-1",

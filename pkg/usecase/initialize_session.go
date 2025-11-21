@@ -26,12 +26,12 @@ func NewInitializeSession(
 	}
 }
 
-func (uc *InitializeSession) Execute(artifact *domain.Artifact) (*domain.SessionStatus, error) {
+func (uc *InitializeSession) Execute(solutionArchive *domain.SolutionArchive) (*domain.SessionStatus, error) {
 	uc.logger.Debug().
-		Any("artifact", artifact).
+		Any("solution_archive", solutionArchive).
 		Msg("Initializing session")
 
-	sessionStatus, err := uc.sessionInitializer.InitializeSession(artifact)
+	sessionStatus, err := uc.sessionInitializer.InitializeSession(solutionArchive)
 	if err != nil {
 		return nil, errors.Intercept(err).
 			WithDetail("failed to initialize session").

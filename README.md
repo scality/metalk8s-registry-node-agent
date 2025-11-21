@@ -1,12 +1,12 @@
 # MetalK8s Registry Node Agent
 
-A Kubernetes operator and HTTP service for managing artifact uploads and distribution in MetalK8s clusters. This agent runs on each node labelled as `node-role.kubernetes.io/registry` and provides a local registry for MetalK8s components, enabling efficient artifact distribution and management.
+A Kubernetes operator and HTTP service for managing solution archive uploads and distribution in MetalK8s clusters. This agent runs on each node labelled as `node-role.kubernetes.io/registry` and provides a local registry for MetalK8s components, enabling efficient solution archive distribution and management.
 
 ## Overview
 
 The MetalK8s Registry Node Agent is designed to:
 
-- **Manage Artifact Uploads**: Handle multipart uploads of MetalK8s ISO artifacts and components
+- **Manage SolutionArchive Uploads**: Handle multipart uploads of MetalK8s ISO solutions
 - **Session Management**: Initialize and manage upload sessions with proper validation
 - **Storage Management**: Provide filesystem-based storage with bucket organization
 - **Kubernetes Integration**: Operate as a Kubernetes operator with custom resource definitions
@@ -18,7 +18,7 @@ The MetalK8s Registry Node Agent is designed to:
 - **Chunked Uploads**: Support for uploading large files in parts
 - **Checksum Validation**: SHA256 validation for data integrity
 - **Session Initialization**: Create isolated upload sessions
-- **Artifact Validation**: Validate artifact metadata and requirements
+- **SolutionArchive Validation**: Validate solution archive metadata and requirements
 
 ### 2. Storage Provider
 - **Filesystem Backend**: Local filesystem storage implementation
@@ -26,7 +26,7 @@ The MetalK8s Registry Node Agent is designed to:
 - **Concurrent Access**: Thread-safe operations with proper locking
 
 ### 3. Kubernetes Integration
-- **Custom Resource Definition**: `NodeArtifact` CRD for artifact management
+- **Custom Resource Definition**: `NodeSolutionArchive` CRD for solution archive management
 - **Controller Pattern**: Reconciles desired state with actual state
 - **RBAC Support**: Proper role-based access control
 - **Metrics Integration**: Prometheus metrics for monitoring
@@ -39,7 +39,7 @@ The agent can be configured using environment variables:
 
 | Variable | Description | Default |
 |----------|-------------|---------|
-| `ARTIFACT_STORAGE_ROOT_LOCATION` | Root directory for artifact storage | `/tmp/uploads/artifacts` |
+| `SOLUTION_ARCHIVES_LOCATION` | Root directory for solution archive storage | `/tmp/uploads/archives` |
 | `HTTP_EXTERN_ADDR` | HTTP server address | `:5001` |
 | `LOGGER_LOG_LEVEL` | Logging level | `info` |
 
@@ -47,7 +47,7 @@ The agent can be configured using environment variables:
 
 The agent includes comprehensive Kubernetes manifests:
 
-- **CRD**: Custom Resource Definition for `NodeArtifact`
+- **CRD**: Custom Resource Definition for `NodeSolutionArchive`
 - **RBAC**: Role-based access control configuration
 - **Manager**: Deployment and service configuration
 - **Metrics**: Prometheus monitoring setup
@@ -56,10 +56,10 @@ The agent includes comprehensive Kubernetes manifests:
 
 ### Initialize an Upload Session
 
-**Create a NodeArtifact resource**:
+**Create a NodeSolutionArchive resource**:
 ```yaml
 apiVersion: metalk8s.scality.com/v1alpha1
-kind: NodeArtifact
+kind: NodeSolutionArchive
 metadata:
     name: metalk8s-1.25.3
 spec:
@@ -74,9 +74,9 @@ spec:
 
 ### Upload API
 
-Endpoint: `POST /api/v1/uploads/{artifact}`
+Endpoint: `POST /api/v1/uploads/{solution-archive}`
 
-Upload a chunk of an artifact to the registry.  
+Upload a chunk of an solution archive to the registry.  
 Review the API specification in `pkg/presentation/http/generated/uploads-openapi.yaml`
 
 **Upload chunks via API**:

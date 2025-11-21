@@ -18,19 +18,19 @@ type Storage struct {
 }
 
 func NewStorage(
-	artifact service.StorageProvider,
+	store service.StorageProvider,
 	logger *zerolog.Logger,
 	rootAPIPath string,
 ) *Storage {
 	l := logger.With().Str("infrastructure", "partuploader").Logger()
 	return &Storage{
-		store:       artifact,
+		store:       store,
 		logger:      &l,
 		rootAPIPath: rootAPIPath,
 	}
 }
 
-func (s *Storage) UploadPart(part *domain.Part) (*domain.ArtifactStatus, error) {
+func (s *Storage) UploadPart(part *domain.Part) (*domain.SolutionArchiveStatus, error) {
 	s.store.Lock()
 	defer s.store.Unlock()
 
@@ -41,7 +41,7 @@ func (s *Storage) UploadPart(part *domain.Part) (*domain.ArtifactStatus, error) 
 	}
 
 	// Extract the session bucket
-	sessionBucket, err := library.ExtractSessionBucket(buckets, part.Artifact)
+	sessionBucket, err := library.ExtractSessionBucket(buckets, part.SolutionArchive)
 	if err != nil {
 		return nil, errors.Intercept(err).
 			WithDetail("failed to extract the session bucket").
@@ -49,107 +49,107 @@ func (s *Storage) UploadPart(part *domain.Part) (*domain.ArtifactStatus, error) 
 	}
 
 	// Load the manifest from metadata file
-	artifactFromManifest, err := s.loadManifest(sessionBucket)
+	solutionArchiveFromManifest, err := s.loadManifest(sessionBucket)
 	if err != nil {
 		return nil, errors.Intercept(err).
-			WithProperty("instance", fmt.Sprintf("%s/uploads/%s", s.rootAPIPath, part.Artifact.Name)).
+			WithProperty("instance", fmt.Sprintf("%s/uploads/%s", s.rootAPIPath, part.SolutionArchive.Name)).
 			Throw()
 	}
 
-	// Test if a session related to the artifact from the part exists
-	if artifactFromManifest.Name != part.Artifact.Name ||
-		artifactFromManifest.Version != part.Artifact.Version ||
-		artifactFromManifest.Hash != part.Artifact.Hash {
+	// Test if a session related to the solution archive from the part exists
+	if solutionArchiveFromManifest.Name != part.SolutionArchive.Name ||
+		solutionArchiveFromManifest.Version != part.SolutionArchive.Version ||
+		solutionArchiveFromManifest.Hash != part.SolutionArchive.Hash {
 		return nil, errors.From(domain.ErrPartUploaderNotFound).
 			WithIdentifier(404000).
-			WithDetail("Artifact not found in the current session manifest.").
-			WithProperty("instance", fmt.Sprintf("%s/uploads/%s", s.rootAPIPath, part.Artifact.Name)).
-			WithProperty("component", part.Artifact.Name).
-			WithProperty("version", part.Artifact.Version).
-			WithProperty("hash", part.Artifact.Hash).
+			WithDetail("solution archive not found in the current session manifest.").
+			WithProperty("instance", fmt.Sprintf("%s/uploads/%s", s.rootAPIPath, part.SolutionArchive.Name)).
+			WithProperty("component", part.SolutionArchive.Name).
+			WithProperty("version", part.SolutionArchive.Version).
+			WithProperty("hash", part.SolutionArchive.Hash).
 			Throw()
 	}
 
-	// When this is the first upload for an artifact, the size is not set in the manifest
+	// When this is the first upload for a solution archive, the size is not set in the manifest
 	// so we use the size from the part
-	if artifactFromManifest.Size == 0 {
-		artifactFromManifest.Size = part.Artifact.Size
+	if solutionArchiveFromManifest.Size == 0 {
+		solutionArchiveFromManifest.Size = part.SolutionArchive.Size
 
-		err = s.store.DeleteMultipartFile(sessionBucket, artifactFromManifest)
+		err = s.store.DeleteMultipartFile(sessionBucket, solutionArchiveFromManifest)
 		if err != nil {
 			return nil, errors.Intercept(err).
-				WithProperty("instance", fmt.Sprintf("%s/uploads/%s", s.rootAPIPath, part.Artifact.Name)).
+				WithProperty("instance", fmt.Sprintf("%s/uploads/%s", s.rootAPIPath, part.SolutionArchive.Name)).
 				Throw()
 		}
 
-		_, err = s.store.CreateMultipartFiles(sessionBucket, artifactFromManifest)
+		_, err = s.store.CreateMultipartFiles(sessionBucket, solutionArchiveFromManifest)
 		if err != nil {
 			return nil, errors.Intercept(err).
-				WithProperty("instance", fmt.Sprintf("%s/uploads/%s", s.rootAPIPath, part.Artifact.Name)).
+				WithProperty("instance", fmt.Sprintf("%s/uploads/%s", s.rootAPIPath, part.SolutionArchive.Name)).
 				Throw()
 		}
 	}
 
-	part.Artifact = artifactFromManifest
+	part.SolutionArchive = solutionArchiveFromManifest
 
-	artifactStatus, err := s.store.WritePartToMultipartFile(sessionBucket, part)
+	solutionArchiveStatus, err := s.store.WritePartToMultipartFile(sessionBucket, part)
 	if err != nil {
 		return nil, errors.Intercept(err).
-			WithProperty("instance", fmt.Sprintf("%s/uploads/%s", s.rootAPIPath, part.Artifact.Name)).
+			WithProperty("instance", fmt.Sprintf("%s/uploads/%s", s.rootAPIPath, part.SolutionArchive.Name)).
 			Throw()
 	}
 
-	if !artifactStatus.IsComplete() {
-		return artifactStatus, nil
+	if !solutionArchiveStatus.IsComplete() {
+		return solutionArchiveStatus, nil
 	}
 
-	// Artifact upload is complete, so let's consolidate it,
+	// Solution archive upload is complete, so let's consolidate it,
 	// move it to the storage root location and then
 	// remove the bucket.
 	cleanUpCorrupted := func() {
-		if err := s.store.DeleteMultipartFile(sessionBucket, part.Artifact); err != nil {
-			s.logger.Error().Err(err).Any("artifact", part.Artifact).Msg("failed to delete multipart file")
+		if err := s.store.DeleteMultipartFile(sessionBucket, part.SolutionArchive); err != nil {
+			s.logger.Error().Err(err).Any("solution archive", part.SolutionArchive).Msg("failed to delete multipart file")
 		}
 
-		if _, err := s.store.CreateMultipartFiles(sessionBucket, part.Artifact); err != nil {
-			s.logger.Error().Err(err).Any("artifact", part.Artifact).Msg("failed to create multipart file")
+		if _, err := s.store.CreateMultipartFiles(sessionBucket, part.SolutionArchive); err != nil {
+			s.logger.Error().Err(err).Any("solution archive", part.SolutionArchive).Msg("failed to create multipart file")
 		}
 	}
 
-	err = s.store.ConsolidateMultipartFile(sessionBucket, part.Artifact, library.FileSystemDefaultFileMode)
+	err = s.store.ConsolidateMultipartFile(sessionBucket, part.SolutionArchive, library.FileSystemDefaultFileMode)
 	if err != nil {
 		cleanUpCorrupted()
 
 		return nil, errors.Intercept(err).
-			WithProperty("instance", fmt.Sprintf("%s/uploads/%s", s.rootAPIPath, part.Artifact.Name)).
+			WithProperty("instance", fmt.Sprintf("%s/uploads/%s", s.rootAPIPath, part.SolutionArchive.Name)).
 			Throw()
 	}
 
-	artifactFileName := library.GenArtifactFileName(part.Artifact)
-	err = s.store.MoveFileToRoot(sessionBucket, part.Artifact.Name, artifactFileName)
+	solutionArchiveFileName := library.GenSolutionArchiveFileName(part.SolutionArchive)
+	err = s.store.MoveFileToRoot(sessionBucket, part.SolutionArchive.Name, solutionArchiveFileName)
 	if err != nil {
 		cleanUpCorrupted()
 
 		return nil, errors.Intercept(err).
-			WithProperty("instance", fmt.Sprintf("%s/uploads/%s", s.rootAPIPath, part.Artifact.Name)).
+			WithProperty("instance", fmt.Sprintf("%s/uploads/%s", s.rootAPIPath, part.SolutionArchive.Name)).
 			Throw()
 	}
 	err = s.store.DeleteBucket(sessionBucket)
 	if err != nil {
 		return nil, errors.Intercept(err).
-			WithProperty("instance", fmt.Sprintf("%s/uploads/%s", s.rootAPIPath, part.Artifact.Name)).
+			WithProperty("instance", fmt.Sprintf("%s/uploads/%s", s.rootAPIPath, part.SolutionArchive.Name)).
 			Throw()
 	}
 
-	return artifactStatus, nil
+	return solutionArchiveStatus, nil
 }
 
 // loadManifest loads the manifest from the session bucket.
-func (s *Storage) loadManifest(sessionBucket string) (*domain.Artifact, error) {
-	artifact, err := s.store.GetMultipartFile(sessionBucket)
+func (s *Storage) loadManifest(sessionBucket string) (*domain.SolutionArchive, error) {
+	solutionArchive, err := s.store.GetMultipartFile(sessionBucket)
 	if err != nil {
 		return nil, errors.Stamp(err)
 	}
 
-	return artifact, nil
+	return solutionArchive, nil
 }

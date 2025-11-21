@@ -1,31 +1,31 @@
 openapi: 3.0.3
 info:
-  title: Upload artifacts for MetalK8s
-  description: "Upload artifacts for MetalK8s"
+  title: Upload solution archives for MetalK8s
+  description: "Upload solution archives for MetalK8s"
   version: 1.0.0
 servers:
   - url: https://IP:5001/api/v1/
 paths:
-  /uploads/{artifact}:
+  /uploads/{solutionArchive}:
     post:
-      summary: Upload the chunk of the artifact.
+      summary: Upload the chunk of the solution archive.
       operationId: uploadChunk
       parameters:
-        - name: artifact
+        - name: solutionArchive
           in: path
-          description: Name of the artifact
+          description: Name of the solution archive
           required: true
           schema:
             type: string
         - name: X-Target-Version
           in: header
-          description: Version of the artifact
+          description: Version of the solution archive
           required: true
           schema:
             type: string
         - name: X-Sha256-checksum
           in: header
-          description: Sha256 of the artifact
+          description: Sha256 of the solution archive
           required: true
           schema:
             type: string
@@ -169,12 +169,12 @@ components:
           type: integer
         rangeSize:
           type: integer
-    IncompleteArtifact:
+    IncompleteSolutionArchive:
       type: object
       properties:
         version:
           type: string
-        artifact:
+        solutionArchive:
           type: string
         sha256sum:
           type: string
@@ -186,7 +186,7 @@ components:
             $ref: "#/components/schemas/UploadChunkRange"
     UploadChunkSuccessResponse:
       allOf:
-        - $ref: "#/components/schemas/IncompleteArtifact"
+        - $ref: "#/components/schemas/IncompleteSolutionArchive"
         - type: object
           properties:
             isCompleted:

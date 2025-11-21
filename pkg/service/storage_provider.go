@@ -6,8 +6,8 @@ import (
 	"github.com/scality/metalk8s-registry-node-agent/pkg/domain"
 )
 
-// StorageProvider encapsulates all storage methods required by the Artesca
-// Artifacts Upload feature.
+// StorageProvider encapsulates all storage methods required by the Solution
+// Archives Upload feature.
 //
 // Implementations MUST be stateless. All methods MUST perform their operations
 // directly on the storage background with no information retention. If some
@@ -86,34 +86,34 @@ type StorageProvider interface {
 	// - a parts synthesis file
 	CreateMultipartFiles(
 		bucketName string,
-		artifactMeta *domain.Artifact,
-	) (*domain.ArtifactStatus, error)
+		solutionArchiveMeta *domain.SolutionArchive,
+	) (*domain.SolutionArchiveStatus, error)
 
 	// GetMultipartFile retrieves the multipart file recipient from a given
-	// bucket and returns its ArtifactMeta.
-	GetMultipartFile(bucketName string) (*domain.Artifact, error)
+	// bucket and returns its SolutionArchiveMeta.
+	GetMultipartFile(bucketName string) (*domain.SolutionArchive, error)
 
-	// GetMultipartFileStatus retrieves the ArtifactStatus of a multipart file
-	// recipient based on bucketName and artifactMeta.
+	// GetMultipartFileStatus retrieves the SolutionArchiveStatus of a multipart file
+	// recipient based on bucketName and solutionArchiveMeta.
 	GetMultipartFileStatus(
 		bucketName string,
-		artifactMeta *domain.Artifact,
-	) (*domain.ArtifactStatus, error)
+		solutionArchiveMeta *domain.SolutionArchive,
+	) (*domain.SolutionArchiveStatus, error)
 
 	// DeleteMultipartFile deletes a multipart file recipient from a bucket
-	// based in given bucketName and artifactMeta.
-	DeleteMultipartFile(bucketName string, artifactMeta *domain.Artifact) error
+	// based in given bucketName and solutionArchiveMeta.
+	DeleteMultipartFile(bucketName string, solutionArchiveMeta *domain.SolutionArchive) error
 
 	// WritePartToMultipartFile properly writes the content of the given part
 	// into the multipart file recipient on the bucket indicated by the given
 	// bucketName.
-	WritePartToMultipartFile(bucketName string, part *domain.Part) (*domain.ArtifactStatus, error)
+	WritePartToMultipartFile(bucketName string, part *domain.Part) (*domain.SolutionArchiveStatus, error)
 
 	// ConsolidateMultipartFile consolidates all the parts of a multipart file
 	// in a single flat file into the same bucket it is located.
 	//
-	// The resulting fileName is the artifactMeta.FileName appended with the
-	// artifactMeta.Version. The file extension is properly moved to the end.
+	// The resulting fileName is the solutionArchiveMeta.FileName appended with the
+	// solutionArchiveMeta.Version. The file extension is properly moved to the end.
 	// Since the multipart file is consolidated, the parts and all metadata
 	// associated are no more available.
 	//
@@ -124,7 +124,7 @@ type StorageProvider interface {
 	// the file permissions.
 	ConsolidateMultipartFile(
 		bucketName string,
-		artifactMeta *domain.Artifact,
+		solutionArchiveMeta *domain.SolutionArchive,
 		perm os.FileMode,
 	) error
 

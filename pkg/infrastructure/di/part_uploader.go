@@ -7,7 +7,7 @@ import (
 func (c *Container) getStoragePartUploader() *partuploader.Storage {
 	if c.storagePartUploader == nil {
 		c.storagePartUploader = partuploader.NewStorage(
-			c.GetFileSystemArtifactStorage(),
+			c.GetFSSolutionArchiveStorage(),
 			c.GetLogger(),
 			c.GetRootExternAPIPath(),
 		)

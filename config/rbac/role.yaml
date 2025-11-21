@@ -7,7 +7,7 @@ rules:
 - apiGroups:
   - metalk8s.scality.com
   resources:
-  - nodeartifacts
+  - nodesolutionarchives
   verbs:
   - create
   - delete
@@ -19,13 +19,13 @@ rules:
 - apiGroups:
   - metalk8s.scality.com
   resources:
-  - nodeartifacts/finalizers
+  - nodesolutionarchives/finalizers
   verbs:
   - update
 - apiGroups:
   - metalk8s.scality.com
   resources:
-  - nodeartifacts/status
+  - nodesolutionarchives/status
   verbs:
   - get
   - patch

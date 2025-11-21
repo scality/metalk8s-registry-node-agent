@@ -290,20 +290,20 @@ func HashReader(
 	return fmt.Sprintf("%x", hasher.Sum(nil)), nil
 }
 
-// GenBucketName generates a unique bucket name for a session based on the artifact's name and version.
-func GenBucketName(artifact *domain.Artifact) string {
-	return fmt.Sprintf("%s-%s", artifact.Name, artifact.Version)
+// GenBucketName generates a unique bucket name for a session based on the solution archive's name and version.
+func GenBucketName(solutionArchive *domain.SolutionArchive) string {
+	return fmt.Sprintf("%s-%s", solutionArchive.Name, solutionArchive.Version)
 }
 
-// GenArtifactFileName generates a unique artifact file name.
-func GenArtifactFileName(artifact *domain.Artifact) string {
-	return fmt.Sprintf("%s-%s.iso", artifact.Name, artifact.Version)
+// GenSolutionArchiveFileName generates a unique solution archive file name.
+func GenSolutionArchiveFileName(solutionArchive *domain.SolutionArchive) string {
+	return fmt.Sprintf("%s-%s.iso", solutionArchive.Name, solutionArchive.Version)
 }
 
-// artifactExists returns if the artifact is already present in
+// solutionArchiveExists returns if the solution archive is already present in
 // the final storage.
-func ArtifactExists(
-	artifact *domain.Artifact,
+func SolutionArchiveExists(
+	solutionArchive *domain.SolutionArchive,
 	fileNames []string,
 ) bool {
 	filesMap := make(map[string]any, len(fileNames))
@@ -311,7 +311,7 @@ func ArtifactExists(
 		filesMap[fileName] = nil
 	}
 
-	fileName := GenArtifactFileName(artifact)
+	fileName := GenSolutionArchiveFileName(solutionArchive)
 	if _, ok := filesMap[fileName]; ok {
 		return true
 	}
@@ -319,11 +319,11 @@ func ArtifactExists(
 }
 
 // ExtractSessionBucket validate and extract the session bucket from the given list of buckets.
-func ExtractSessionBucket(buckets []string, artifact *domain.Artifact) (string, error) {
+func ExtractSessionBucket(buckets []string, solutionArchive *domain.SolutionArchive) (string, error) {
 	var sessionBuckets []string
 
 	// Only keep the session buckets
-	bucketName := GenBucketName(artifact)
+	bucketName := GenBucketName(solutionArchive)
 	for _, bucket := range buckets {
 		if strings.HasPrefix(bucket, bucketName) {
 			sessionBuckets = append(sessionBuckets, bucket)
@@ -352,10 +352,10 @@ func ExtractSessionBucket(buckets []string, artifact *domain.Artifact) (string, 
  *
  */
 
-// compareArtifactMetas compares the given ArtifactMeta instances and returns
+// compareSolutionArchiveMetas compares the given Solution Archive Meta instances and returns
 // an error if they are different.
-func CompareArtifactMetas(
-	a, b *domain.Artifact,
+func CompareSolutionArchiveMetas(
+	a, b *domain.SolutionArchive,
 ) error {
 	if a == b {
 		return nil
@@ -382,7 +382,7 @@ func CompareArtifactMetas(
 	if len(problems) > 0 {
 		return errors.From(domain.ErrConflict).
 			WithIdentifier(409000).
-			WithDetail("Artifact metas do not match.").
+			WithDetail("Solution Archive metas do not match.").
 			WithProperty("problems", problems).
 			Throw()
 	}

@@ -4,10 +4,10 @@ import "github.com/scality/metalk8s-registry-node-agent/pkg/domain"
 
 type (
 	SessionInitializer interface {
-		InitializeSession(artifact *domain.Artifact) (*domain.SessionStatus, error)
+		InitializeSession(solutionArchive *domain.SolutionArchive) (*domain.SessionStatus, error)
 	}
 
 	InitializeSessionUseCase interface {
-		Execute(*domain.Artifact) (*domain.SessionStatus, error)
+		Execute(*domain.SolutionArchive) (*domain.SessionStatus, error)
 	}
 )
