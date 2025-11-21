@@ -28,11 +28,9 @@ type Container struct {
 
 	logger *zerolog.Logger
 
-	filenameCh                chan string
-	httpExternServer          *http.Server
-	httpExternClient          *http.Client
-	generatedHTTPExternClient *extern.ClientWithResponses
-	rootExternAPIPath         string
+	filenameCh        chan string
+	httpExternServer  *http.Server
+	rootExternAPIPath string
 
 	solutionArchiveStorage service.StorageProvider
 
