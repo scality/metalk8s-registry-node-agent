@@ -14,7 +14,20 @@ spec:
     singular: nodesolutionarchive
   scope: Cluster
   versions:
-  - name: v1alpha1
+  - additionalPrinterColumns:
+    - jsonPath: .spec.name
+      name: Name
+      type: string
+    - jsonPath: .spec.version
+      name: Version
+      type: string
+    - jsonPath: .spec.nodeName
+      name: NodeName
+      type: string
+    - jsonPath: .status.available
+      name: Available
+      type: boolean
+    name: v1alpha1
     schema:
       openAPIV3Schema:
         description: NodeSolutionArchive is the Schema for the nodesolutionarchives
