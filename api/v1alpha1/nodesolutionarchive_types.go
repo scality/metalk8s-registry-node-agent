@@ -66,6 +66,10 @@ type NodeSolutionArchiveStatus struct {
 // +kubebuilder:subresource:status
 // +kubebuilder:resource:scope=Cluster
 
+// +kubebuilder:printcolumn:name="Name",type="string",JSONPath=".spec.name"
+// +kubebuilder:printcolumn:name="Version",type="string",JSONPath=".spec.version"
+// +kubebuilder:printcolumn:name="NodeName",type="string",JSONPath=".spec.nodeName"
+// +kubebuilder:printcolumn:name="Available",type="boolean",JSONPath=".status.available"
 // NodeSolutionArchive is the Schema for the nodesolutionarchives API.
 type NodeSolutionArchive struct {
 	metav1.TypeMeta   `json:",inline"`
