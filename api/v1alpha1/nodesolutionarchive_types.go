@@ -60,6 +60,8 @@ type NodeSolutionArchiveStatus struct {
 	// Availability of the SolutionArchive on the Node
 	Available  *bool              `json:"available,omitempty"`
 	Conditions []metav1.Condition `json:"conditions,omitempty"`
+	// URL of the SolutionArchive (used internally to replicate archive between nodes)
+	URL string `json:"url,omitempty"`
 }
 
 // +kubebuilder:object:root=true

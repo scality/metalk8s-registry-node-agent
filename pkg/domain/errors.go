@@ -31,6 +31,17 @@ var (
 var (
 	ErrSessionRemoverNotFound error = errors.New("Not Found Error")
 )
+
+var (
+	ErrGetExternalSolutionArchiveNotFound error = errors.New("Not Found Error")
+	ErrGetExternalSolutionArchiveInternal error = errors.New("Internal Error")
+)
+
+var (
+	ErrExternalDownloaderInternal error = errors.New("Internal Error")
+	ErrExternalDownloaderNotFound error = errors.New("Not Found Error")
+)
+
 var (
 	ErrHandlerBadRequest                 error = errors.New("Bad Request Error")
 	ErrHandlerMissingRequestParameter    error = errors.New("Missing Request Parameter Error")

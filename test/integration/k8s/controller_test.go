@@ -100,16 +100,32 @@ var _ = BeforeSuite(func() {
 	// and start a Mock Reconciler for the NodeSolutionArchive resource
 	filenameCh := make(chan string)
 	eventChan := make(chan event.GenericEvent)
-	container := di.NewContainer(ctx, &config.Environment{}, filenameCh, config.RootExternAPIPath)
+	container := di.NewContainer(ctx, &config.Environment{}, filenameCh)
 	container.GetMockFSSolutionArchiveStorage()
+	container.GetMockHTTPInternClient()
 
 	err = (&controller.NodeSolutionArchiveReconciler{
-		Client:    k8sClient,
+		Client:    k8sManager.GetClient(),
 		Scheme:    k8sClient.Scheme(),
 		NodeName:  "node-1",
 		Container: container,
 		EventChan: eventChan,
 	}).SetupWithManager(k8sManager)
+	Expect(err).ToNot(HaveOccurred())
+
+	// Create a field index for the NodeSolutionArchive object
+	// This will allow us to quickly find the NodeSolutionArchive object by its Name and Version
+	f := func(rawObj client.Object) []string {
+		versionedNamed := rawObj.(*metalk8sv1alpha1.NodeSolutionArchive).Spec.Name + "-" +
+			rawObj.(*metalk8sv1alpha1.NodeSolutionArchive).Spec.Version
+		return []string{versionedNamed}
+	}
+	err = k8sManager.GetFieldIndexer().IndexField(
+		context.Background(),
+		&metalk8sv1alpha1.NodeSolutionArchive{},
+		"SolutionArchiveNameVersion",
+		f,
+	)
 	Expect(err).ToNot(HaveOccurred())
 
 	go func() {
@@ -135,7 +151,7 @@ var _ = AfterSuite(func() {
 // setting the 'KUBEBUILDER_ASSETS' environment variable. To ensure the binaries are
 // properly set up, run 'make setup-envtest' beforehand.
 func getFirstFoundEnvTestBinaryDir() string {
-	basePath := filepath.Join("..", "..", "bin", "k8s")
+	basePath := filepath.Join("..", "..", "..", "bin", "k8s")
 	entries, err := os.ReadDir(basePath)
 	if err != nil {
 		logf.Log.Error(err, "Failed to read directory", "path", basePath)

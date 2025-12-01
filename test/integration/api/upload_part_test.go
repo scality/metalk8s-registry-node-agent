@@ -31,7 +31,7 @@ var _ = Describe("Upload Part API", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			By("successfully upload the chunk")
-			resUpl, err := testingSuite.UploadChunkWithBodyWithResponse(
+			resUpl, err := testingSuite.ExternClientWithResponse.UploadChunkWithBodyWithResponse(
 				context.TODO(),
 				"artesca-base",
 				&extern.UploadChunkParams{
@@ -85,7 +85,7 @@ var _ = Describe("Upload Part API", func() {
 			By("successfully uploading all the chunks and responding adequately")
 			var resUpl *extern.UploadChunkResponse
 			for i := range 3 {
-				resUpl, err = testingSuite.UploadChunkWithBodyWithResponse(
+				resUpl, err = testingSuite.ExternClientWithResponse.UploadChunkWithBodyWithResponse(
 					ctx,
 					"platform",
 					&extern.UploadChunkParams{
@@ -144,7 +144,7 @@ var _ = Describe("Upload Part API", func() {
 
 	Context("When uploading a chunk without an opened session", func() {
 		It("should fail the process", func() {
-			resUpl, err := testingSuite.UploadChunkWithBodyWithResponse(
+			resUpl, err := testingSuite.ExternClientWithResponse.UploadChunkWithBodyWithResponse(
 				context.TODO(),
 				"artesca-base",
 				&extern.UploadChunkParams{
@@ -176,7 +176,7 @@ var _ = Describe("Upload Part API", func() {
 			var resUpl *extern.UploadChunkResponse
 			// For first uploads (up to the penultimate)
 			for i := range 3 {
-				resUpl, err = testingSuite.UploadChunkWithBodyWithResponse(
+				resUpl, err = testingSuite.ExternClientWithResponse.UploadChunkWithBodyWithResponse(
 					ctx,
 					"platform",
 					&extern.UploadChunkParams{
@@ -245,7 +245,7 @@ var _ = Describe("Upload Part API", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			By("successfully uploading all the chunks")
-			resUpl, err := testingSuite.UploadChunkWithBodyWithResponse(
+			resUpl, err := testingSuite.ExternClientWithResponse.UploadChunkWithBodyWithResponse(
 				context.TODO(),
 				"artesca-base",
 				&extern.UploadChunkParams{
@@ -282,7 +282,7 @@ var _ = Describe("Upload Part API", func() {
 			*/
 			// Invert part#1 and #2 files
 			// We send part#2 file with Content-Range of part#1
-			resUpl, err = testingSuite.UploadChunkWithBodyWithResponse(
+			resUpl, err = testingSuite.ExternClientWithResponse.UploadChunkWithBodyWithResponse(
 				ctx,
 				"platform",
 				&extern.UploadChunkParams{
@@ -297,7 +297,7 @@ var _ = Describe("Upload Part API", func() {
 			Expect(resUpl.HTTPResponse.StatusCode).To(Equal(200))
 
 			// We send part#2 file with Content-Range of part#3
-			resUpl, err = testingSuite.UploadChunkWithBodyWithResponse(
+			resUpl, err = testingSuite.ExternClientWithResponse.UploadChunkWithBodyWithResponse(
 				ctx,
 				"platform",
 				&extern.UploadChunkParams{
@@ -317,7 +317,7 @@ var _ = Describe("Upload Part API", func() {
 			By("successfully uploading all the chunks and responding adequately")
 			// Resend all chunks with correct order
 			for i := range 4 {
-				resUpl, err = testingSuite.UploadChunkWithBodyWithResponse(
+				resUpl, err = testingSuite.ExternClientWithResponse.UploadChunkWithBodyWithResponse(
 					ctx,
 					"platform",
 					&extern.UploadChunkParams{

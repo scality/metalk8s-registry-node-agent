@@ -1,6 +1,7 @@
 package storageprovider
 
 import (
+	"io"
 	"os"
 	"regexp"
 	"sync"
@@ -24,6 +25,7 @@ type (
 		solutionArchiveLocation string
 		interestContentFilter   library.ContentFilter
 		watcher                 *fsnotify.Watcher
+		files                   []string
 	}
 
 	MockFileOpts struct {
@@ -40,6 +42,7 @@ func NewMockFileSystem(opts *MockFileOpts) *MockFileSystem {
 		logger:                  opts.Logger,
 		solutionArchiveLocation: opts.SolutionArchiveLocation,
 		interestContentFilter:   library.NewRegexNormalFileFilter(opts.InterestContentFilterRegex),
+		files:                   []string{},
 	}
 }
 
@@ -47,12 +50,15 @@ func (f *MockFileSystem) Init() error {
 	f.Lock()
 	defer f.Unlock()
 
+	// For testing purposes, consider existing following ISO files
+	f.files = append(f.files, "solution-2-4.2.1.iso")
+
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
 		return errors.From(domain.ErrStorageProviderInternal).
 			WithIdentifier(500000).
 			CausedBy(err).
-			WithDetail("Failed to create watcher.").
+			WithDetail("failed to create watcher").
 			Throw()
 	}
 
@@ -72,9 +78,24 @@ func (f *MockFileSystem) Stop() error {
 	return f.stopWatchFiles()
 }
 
+func (f *MockFileSystem) SaveFile(
+	fileName string,
+	content io.Reader,
+	perm os.FileMode,
+) error {
+	f.files = append(f.files, fileName)
+	return nil
+}
+
 // ListFiles lists all the flat files in the root location of the storage
 func (f *MockFileSystem) ListFiles() ([]string, error) {
 	return f.listFiles()
+}
+
+func (f *MockFileSystem) GetFile(
+	fileName string,
+) (io.ReadCloser, error) {
+	return io.ReadCloser(nil), nil
 }
 
 func (f *MockFileSystem) DeleteFile(
@@ -201,6 +222,7 @@ func (f *MockFileSystem) ConsolidateMultipartFile(
 func (f *MockFileSystem) GetHashFromFileInfos(filename string) (string, error) {
 	hashMap := map[string]string{
 		"solution-2-4.2.1.iso": "ce775a33b30ae640d521df1fad60868fa701707ffdc4d8b4ca7ab60edfd05c26",
+		"solution-3-4.2.1.iso": "95162a9fe88f9d11c7f7ef7dc20c2426814e188fd858b27adb5274d3689675af",
 	}
 
 	if hash, ok := hashMap[filename]; ok {
@@ -209,9 +231,13 @@ func (f *MockFileSystem) GetHashFromFileInfos(filename string) (string, error) {
 
 	return "", errors.From(domain.ErrStorageProviderNotFound).
 		WithIdentifier(404000).
-		WithDetail("File not found.").
+		WithDetail("file not found").
 		WithProperty("file_name", filename).
 		Throw()
+}
+
+func (f *MockFileSystem) GetSizeFromFileInfos(filename string) (int64, error) {
+	return 0, nil
 }
 
 // Bucket handling methods
@@ -233,11 +259,7 @@ func (f *MockFileSystem) deleteBucket(
 }
 
 func (f *MockFileSystem) listFiles() ([]string, error) {
-	// For testing purposes, consider existing following ISO files
-	isoFiles := []string{
-		"solution-2-4.2.1.iso",
-	}
-	return isoFiles, nil
+	return f.files, nil
 }
 
 func (f *MockFileSystem) deleteFile(

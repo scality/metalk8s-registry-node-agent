@@ -5,12 +5,12 @@ import (
 	"net/http"
 
 	middleware "github.com/oapi-codegen/nethttp-middleware"
-	"github.com/scality/metalk8s-registry-node-agent/pkg/presentation/http/extern"
+	"github.com/scality/metalk8s-registry-node-agent/pkg/presentation/http/intern"
 )
 
-func (c *Container) GetHTTPExternServer() *http.Server {
-	if c.httpExternServer == nil {
-		swagger, err := extern.GetSwagger()
+func (c *Container) GetHTTPInternServer() *http.Server {
+	if c.httpInternServer == nil {
+		swagger, err := intern.GetSwagger()
 		if err != nil {
 			c.GetLogger().Fatal().Err(err).Msg("failed to get swagger")
 		}
@@ -24,8 +24,8 @@ func (c *Container) GetHTTPExternServer() *http.Server {
 
 		apiRouter := http.NewServeMux()
 
-		// Register the extern handlers
-		extern.HandlerFromMux(extern.NewStrictHandler(c.getHTTPResolver(), nil), apiRouter)
+		// Register the intern handlers
+		intern.HandlerFromMux(intern.NewStrictHandler(c.getHTTPInternResolver(), nil), apiRouter)
 
 		validatorOptions := &middleware.Options{
 			ErrorHandler: func(writer http.ResponseWriter, message string, statusCode int) {
@@ -41,18 +41,18 @@ func (c *Container) GetHTTPExternServer() *http.Server {
 
 		// Use the middleware to check all requests
 		mainRouter.Handle(
-			c.GetRootExternAPIPath()+"/",
+			c.GetRootInternAPIPath()+"/",
 			http.StripPrefix(
-				c.GetRootExternAPIPath(),
+				c.GetRootInternAPIPath(),
 				middleware.OapiRequestValidatorWithOptions(swagger, validatorOptions)(apiRouter),
 			),
 		)
 
-		c.httpExternServer = &http.Server{
+		c.httpInternServer = &http.Server{
 			Handler: mainRouter,
-			Addr:    c.config.Extern.Addr,
+			Addr:    c.config.Intern.Addr,
 		}
 	}
 
-	return c.httpExternServer
+	return c.httpInternServer
 }

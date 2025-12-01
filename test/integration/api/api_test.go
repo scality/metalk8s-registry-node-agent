@@ -1,12 +1,14 @@
 package api
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
 	"log"
 	"net/http"
 	"os"
+	"path/filepath"
 	"testing"
 	"time"
 
@@ -17,6 +19,7 @@ import (
 	"github.com/scality/metalk8s-registry-node-agent/cmd/config"
 	"github.com/scality/metalk8s-registry-node-agent/pkg/infrastructure/di"
 	"github.com/scality/metalk8s-registry-node-agent/pkg/presentation/http/extern"
+	"github.com/scality/metalk8s-registry-node-agent/pkg/presentation/http/intern"
 	"github.com/scality/metalk8s-registry-node-agent/pkg/service"
 	"github.com/scality/metalk8s-registry-node-agent/test/utils"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
@@ -30,17 +33,23 @@ type TestingSuite struct {
 	SolutionArchiveStorageDirectory string
 	SolutionArchiveStorageProvider  service.StorageProvider
 
-	*extern.ClientWithResponses
+	ExternClientWithResponse *extern.ClientWithResponses
+	InternClientWithResponse *intern.ClientWithResponses
 }
 
 const (
 	httpServerStartupTimeInSeconds = 10
+	controlDir                     = ".storageprovider"
+	watchedFilesInfoName           = "watched_files_info.json"
 )
 
 var (
 	ctx          context.Context
 	cancel       context.CancelFunc
 	testingSuite *TestingSuite
+
+	timeout  = time.Second * 5
+	interval = time.Millisecond * 250
 )
 
 func TestAPI(t *testing.T) {
@@ -60,7 +69,7 @@ var _ = BeforeSuite(func() {
 		log.Fatal(err) //nolint:revive // This is basically the main function, shut up revive
 	}
 	filenameCh := make(chan string)
-	container := di.NewContainer(ctx, cfg, filenameCh, config.RootExternAPIPath)
+	container := di.NewContainer(ctx, cfg, filenameCh)
 
 	rootPath, err := os.MkdirTemp("/tmp", "test-integration-api_v1_uploads-*")
 	if err != nil {
@@ -69,7 +78,7 @@ var _ = BeforeSuite(func() {
 
 	// External HTTP Client creation
 	externHTTPClient := utils.GetHTTPExternClient()
-	externClientWithResponse, err := utils.GetGeneratedHTTPExternClient(cfg.Extern.Addr, config.RootExternAPIPath, externHTTPClient)
+	externClientWithResponse, err := utils.GetGeneratedHTTPExternClient(cfg.Extern.Addr, cfg.RootExternAPIPath, externHTTPClient)
 	if err != nil {
 		container.GetLogger().Fatal().Err(err).Msg("failed to create generated http client")
 	}
@@ -80,11 +89,12 @@ var _ = BeforeSuite(func() {
 		container:                       container,
 		RootPath:                        rootPath,
 		SolutionArchiveStorageDirectory: cfg.SolutionArchivesLocation,
-		ClientWithResponses:             externClientWithResponse,
+		ExternClientWithResponse:        externClientWithResponse,
+		InternClientWithResponse:        container.GetGeneratedHTTPInternClient(),
 		SolutionArchiveStorageProvider:  container.GetFSSolutionArchiveStorage(),
 	}
 
-	By("Starting an http Server")
+	By("Starting an http Extern Server")
 	// Get the server before starting goroutine to avoid race condition
 	// during lazy initialization
 	httpExternServer := testingSuite.container.GetHTTPExternServer()
@@ -92,11 +102,11 @@ var _ = BeforeSuite(func() {
 		serveErr := httpExternServer.ListenAndServe()
 		if serveErr != nil {
 			if !errors.Is(serveErr, http.ErrServerClosed) {
-				testingSuite.container.GetLogger().Error().Err(serveErr).Msg("http server failure during startup")
+				testingSuite.container.GetLogger().Error().Err(serveErr).Msg("http extern server failure during startup")
 			}
 		}
 
-		testingSuite.container.GetLogger().Info().Msg("http server stopped")
+		testingSuite.container.GetLogger().Info().Msg("http extern server stopped")
 	}()
 
 	for range httpServerStartupTimeInSeconds {
@@ -104,11 +114,63 @@ var _ = BeforeSuite(func() {
 			fmt.Sprintf("http://localhost%s", httpExternServer.Addr) + "/healthz",
 		)
 		if err == nil && res.StatusCode == http.StatusOK {
-			testingSuite.container.GetLogger().Info().Msg("http server is ready")
+			testingSuite.container.GetLogger().Info().Msg("http extern server is ready")
+			break
 		}
 
 		time.Sleep(1 * time.Second)
 	}
+
+	By("Starting an http Intern Server")
+	// Get the server before starting goroutine to avoid race condition
+	// during lazy initialization
+	httpInternServer := testingSuite.container.GetHTTPInternServer()
+	go func() {
+		serveErr := httpInternServer.ListenAndServe()
+		if serveErr != nil {
+			if !errors.Is(serveErr, http.ErrServerClosed) {
+				testingSuite.container.GetLogger().Error().Err(serveErr).Msg("http intern server failure during startup")
+			}
+		}
+
+		testingSuite.container.GetLogger().Info().Msg("http intern server stopped")
+	}()
+
+	for range httpServerStartupTimeInSeconds {
+		res, err := testingSuite.container.GetHTTPInternClient().Get(
+			fmt.Sprintf("http://localhost%s", httpInternServer.Addr) + "/healthz",
+		)
+		if err == nil && res.StatusCode == http.StatusOK {
+			testingSuite.container.GetLogger().Info().Msg("http intern server is ready")
+			break
+		}
+
+		time.Sleep(1 * time.Second)
+	}
+
+	/*
+		Initialize with some solution archives
+	*/
+	for fileName, content := range map[string]string{
+		"artesca-base-4.0.0-preview.1.iso": "platform2\nplatform1\nplatform0\n",
+	} {
+		err := testingSuite.container.
+			GetFSSolutionArchiveStorage().
+			SaveFile(fileName, bytes.NewReader([]byte(content)), 0644)
+		Expect(err).NotTo(HaveOccurred())
+	}
+
+	go func() {
+		if err := testingSuite.container.GetFSSolutionArchiveStorage().Start(filenameCh); err != nil {
+			testingSuite.container.GetLogger().Error().Err(err).Msg("problem starting file system solution archive storage")
+		}
+	}()
+
+	// Wait for the watched_files_info.json to be created
+	Eventually(func() bool {
+		_, err := os.Stat(filepath.Join(testingSuite.RootPath, controlDir, watchedFilesInfoName))
+		return err == nil
+	}, timeout, interval).Should(BeTrue())
 })
 
 var _ = AfterSuite(func() {
@@ -117,6 +179,10 @@ var _ = AfterSuite(func() {
 	defer os.RemoveAll(testingSuite.RootPath) // nolint: errcheck
 	err := testingSuite.container.GetHTTPExternServer().Close()
 	if err != nil {
-		testingSuite.logger.Fatal().Err(err).Msg("http server failure during shutdown")
+		testingSuite.logger.Fatal().Err(err).Msg("http extern server failure during shutdown")
+	}
+	err = testingSuite.container.GetHTTPInternServer().Close()
+	if err != nil {
+		testingSuite.logger.Fatal().Err(err).Msg("http intern server failure during shutdown")
 	}
 })

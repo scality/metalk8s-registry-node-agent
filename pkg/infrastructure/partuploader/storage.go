@@ -22,13 +22,15 @@ func NewStorage(
 	logger *zerolog.Logger,
 	rootAPIPath string,
 ) *Storage {
-	l := logger.With().Str("infrastructure", "partuploader").Logger()
+	l := logger.With().Str("infrastructure", "part_uploader").Logger()
 	return &Storage{
 		store:       store,
 		logger:      &l,
 		rootAPIPath: rootAPIPath,
 	}
 }
+
+var _ service.PartUploader = &Storage{}
 
 func (s *Storage) UploadPart(part *domain.Part) (*domain.SolutionArchiveStatus, error) {
 	s.store.Lock()
@@ -62,7 +64,7 @@ func (s *Storage) UploadPart(part *domain.Part) (*domain.SolutionArchiveStatus, 
 		solutionArchiveFromManifest.Hash != part.SolutionArchive.Hash {
 		return nil, errors.From(domain.ErrPartUploaderNotFound).
 			WithIdentifier(404000).
-			WithDetail("solution archive not found in the current session manifest.").
+			WithDetail("solution archive not found in the current session manifest").
 			WithProperty("instance", fmt.Sprintf("%s/uploads/%s", s.rootAPIPath, part.SolutionArchive.Name)).
 			WithProperty("component", part.SolutionArchive.Name).
 			WithProperty("version", part.SolutionArchive.Version).

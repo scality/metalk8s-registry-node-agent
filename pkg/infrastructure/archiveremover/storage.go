@@ -18,12 +18,14 @@ func NewStorage(
 	store service.StorageProvider,
 	logger *zerolog.Logger,
 ) *Storage {
-	l := logger.With().Str("infrastructure", "archiveremover").Logger()
+	l := logger.With().Str("infrastructure", "archive_remover").Logger()
 	return &Storage{
 		store:  store,
 		logger: &l,
 	}
 }
+
+var _ service.SolutionArchiveRemover = &Storage{}
 
 func (s *Storage) RemoveSolutionArchive(solutionArchive *domain.SolutionArchive) error {
 	s.store.Lock()

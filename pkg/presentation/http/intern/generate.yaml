@@ -1,0 +1,10 @@
+package: intern
+generate:
+  models: true
+  std-http-server: true
+  strict-server: true
+  client: true
+  embedded-spec: true
+output-options:
+  nullable-type: false
+output: generated.go

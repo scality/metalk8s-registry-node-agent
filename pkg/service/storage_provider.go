@@ -1,6 +1,7 @@
 package service
 
 import (
+	"io"
 	"os"
 
 	"github.com/scality/metalk8s-registry-node-agent/pkg/domain"
@@ -52,9 +53,25 @@ type StorageProvider interface {
 	// Stop stops the watcher on the storage provider.
 	Stop() error
 
+	// SaveFile saves a file to the root location in the storage. The fileName
+	// MUST be unique relative to the root location.
+	//
+	// When supported by the storage backend, the perm parameter is used to set
+	// the file permissions.
+	//
+	// The caller should close the content reader as soon as possible after
+	// this method returns.
+	SaveFile(fileName string, content io.Reader, perm os.FileMode) error
+
 	// ListFiles lists all the flat files in the root location of the storage
 	// and returns their names.
 	ListFiles() ([]string, error)
+
+	// GetFile retrieves the content of a file from the root location in the
+	// storage based on its fileName.
+	//
+	// The caller should close the content reader as early as possible.
+	GetFile(fileName string) (io.ReadCloser, error)
 
 	// DeleteFile deletes a file from the root location in the storage based on
 	// its fileName.
@@ -131,4 +148,8 @@ type StorageProvider interface {
 	// GetHashFromFileInfos retrieves the hash of a file from the storage
 	// backend.
 	GetHashFromFileInfos(fileName string) (string, error)
+
+	// GetSizeFromFileInfos retrieves the size of a file from the storage
+	// backend.
+	GetSizeFromFileInfos(fileName string) (int64, error)
 }

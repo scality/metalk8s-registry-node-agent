@@ -54,3 +54,23 @@ func (c *Container) GetRemoveSessionUseCase() *usecase.RemoveSession {
 	}
 	return c.removeSessionUseCase
 }
+
+func (c *Container) GetDownloadSolutionArchiveUseCase() *usecase.DownloadSolutionArchive {
+	if c.downloadSolutionArchiveUseCase == nil {
+		c.downloadSolutionArchiveUseCase = usecase.NewDownloadSolutionArchive(
+			c.GetLogger(),
+			c.getStorageSolutionArchiveDownloader(),
+		)
+	}
+	return c.downloadSolutionArchiveUseCase
+}
+
+func (c *Container) GetGetExternalSolutionArchiveUseCase() *usecase.GetExternalSolutionArchive {
+	if c.getExternalSolutionArchiveUseCase == nil {
+		c.getExternalSolutionArchiveUseCase = usecase.NewGetExternalSolutionArchive(
+			c.GetLogger(),
+			c.getStorageExternalSolutionArchiveGetter(),
+		)
+	}
+	return c.getExternalSolutionArchiveUseCase
+}

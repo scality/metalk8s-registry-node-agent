@@ -95,9 +95,10 @@ func validateNodeSolutionArchive(ctx context.Context, c client.Client, nodesolut
 	if err := c.List(ctx, naList, client.MatchingFields{"SolutionArchiveNameVersion": solutionArchiveNameVersion}); err != nil {
 		return err
 	}
+	// Check if any of the found NodeSolutionArchives is for the same node
 	for _, item := range naList.Items {
 		if item.Spec.NodeName == nodesolutionarchive.Spec.NodeName {
-			return fmt.Errorf("solution archive %s already exists", solutionArchiveNameVersion)
+			return fmt.Errorf("solution archive %s already exists for node %s", solutionArchiveNameVersion, nodesolutionarchive.Spec.NodeName)
 		}
 	}
 

@@ -26,6 +26,7 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/utils/ptr"
 
 	metalk8sv1alpha1 "github.com/scality/metalk8s-registry-node-agent/api/v1alpha1"
 )
@@ -174,4 +175,86 @@ var _ = Describe("NodeSolutionArchive Controller", func() {
 			Expect(*createdResource.Status.Available).To(BeFalse())
 		})
 	})
+
+	Context("When reconciling a resource with external solution archive", func() {
+		It("should successfully create the resource", func() {
+			resourceNameNode1 := "test-external-resource-node1"
+			typeNamespacedNameNode1 := types.NamespacedName{
+				Name: resourceNameNode1,
+			}
+
+			resourceNameNode2 := "test-external-resource-node2"
+
+			By("creating a custom resource for the Kind NodeSolutionArchive on other Node")
+			otherResource := &metalk8sv1alpha1.NodeSolutionArchive{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: resourceNameNode2,
+				},
+			}
+			_, err := controllerutil.CreateOrUpdate(ctx, k8sClient, otherResource, func() error {
+				otherResource.Spec = metalk8sv1alpha1.NodeSolutionArchiveSpec{
+					Name:     "solution-3",
+					Version:  "4.2.1",
+					NodeName: "otherNodeName",
+					Validation: metalk8sv1alpha1.SolutionArchiveValidation{
+						Checksum: metalk8sv1alpha1.NodeSolutionArchiveChecksum{
+							Type:  "sha256",
+							Value: "95162a9fe88f9d11c7f7ef7dc20c2426814e188fd858b27adb5274d3689675af",
+						},
+					},
+				}
+
+				return nil
+			})
+
+			Expect(err).NotTo(HaveOccurred())
+
+			By("updating its status to available")
+			otherResource.Status = metalk8sv1alpha1.NodeSolutionArchiveStatus{
+				Available: ptr.To(true),
+				URL:       "http://example.com:5002/api/v1/downloads/solution-3/4.2.1",
+			}
+			err = k8sClient.Status().Update(ctx, otherResource)
+
+			Expect(err).NotTo(HaveOccurred())
+
+			By("creating the custom resource for the Kind NodeSolutionArchive")
+			resource := &metalk8sv1alpha1.NodeSolutionArchive{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: resourceNameNode1,
+				},
+			}
+
+			_, err = controllerutil.CreateOrUpdate(ctx, k8sClient, resource, func() error {
+				resource.Spec = metalk8sv1alpha1.NodeSolutionArchiveSpec{
+					Name:     "solution-3",
+					Version:  "4.2.1",
+					NodeName: nodeName,
+					Validation: metalk8sv1alpha1.SolutionArchiveValidation{
+						Checksum: metalk8sv1alpha1.NodeSolutionArchiveChecksum{
+							Type:  "sha256",
+							Value: "95162a9fe88f9d11c7f7ef7dc20c2426814e188fd858b27adb5274d3689675af",
+						},
+					},
+				}
+				return nil
+			})
+
+			Expect(err).NotTo(HaveOccurred())
+
+			// Wait for all reconciliations loop to be done
+			time.Sleep(1 * time.Second)
+
+			By("checking the custom resource for the Kind NodeSolutionArchive")
+			createdResource := &metalk8sv1alpha1.NodeSolutionArchive{}
+			Eventually(func() bool {
+				err := k8sClient.Get(ctx, typeNamespacedNameNode1, createdResource)
+				return err == nil
+			}, timeout, interval).Should(BeTrue())
+
+			Expect(createdResource.Spec).To(Equal(resource.Spec))
+			Expect(*createdResource.Status.Available).To(BeTrue())
+		})
+	})
+
 })

@@ -18,12 +18,14 @@ func NewStorage(
 	store service.StorageProvider,
 	logger *zerolog.Logger,
 ) *Storage {
-	l := logger.With().Str("infrastructure", "sessionremover").Logger()
+	l := logger.With().Str("infrastructure", "session_remover").Logger()
 	return &Storage{
 		store:  store,
 		logger: &l,
 	}
 }
+
+var _ service.SessionRemover = &Storage{}
 
 func (s *Storage) RemoveSession(solutionArchive *domain.SolutionArchive) error {
 	s.store.Lock()

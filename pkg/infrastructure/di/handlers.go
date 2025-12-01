@@ -13,3 +13,13 @@ func (c *Container) getUploadPartHandler() *handler.UploadPart {
 
 	return c.uploadPartHandler
 }
+
+func (c *Container) getDownloadSolutionArchiveHandler() *handler.DownloadSolutionArchive {
+	if c.downloadSolutionArchiveHandler == nil {
+		c.downloadSolutionArchiveHandler = handler.NewDownloadSolutionArchive(
+			c.GetLogger(),
+			c.GetDownloadSolutionArchiveUseCase(),
+		)
+	}
+	return c.downloadSolutionArchiveHandler
+}
