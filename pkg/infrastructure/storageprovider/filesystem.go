@@ -1516,26 +1516,35 @@ func (f *FileSystem) watchFiles(filenameChan chan domain.FileEventDetails) {
 				continue
 			}
 
-			// Create an event to trigger a reconcile
-			var fileName string
+			var objectNameVersion string
 			switch origin {
 			case domain.SolutionArchivesOrigin:
-				fileName = filepath.Base(e.Name)
-			case domain.SolutionsOrigin:
-				mountPoint, err := filepath.Rel(f.solutionsLocation, e.Name)
-				if err != nil {
-					continue
+				if isDir {
+					// We consider that the directory is a working bucket
+					objectName, _ := filepath.Rel(f.solutionArchivesLocation, e.Name)
+					objectNameVersion, _ = strings.CutPrefix(objectName, library.FileSystemBucketPrefix)
+				} else {
+					// We consider that the file is a solution archive file
+					fileName := filepath.Base(e.Name)
+					objectNameVersion = strings.TrimSuffix(fileName, ".iso")
 				}
-				fileName = strings.Split(mountPoint, "/")[0] + "-" + strings.Split(mountPoint, "/")[1] + ".iso"
+			case domain.SolutionsOrigin:
+				/* objectName should be:
+				 * <solution>: for a solution directory
+				 * <solution>/<version>: for a mount point directory
+				 */
+				objectNameVersion, _ = filepath.Rel(f.solutionsLocation, e.Name)
 			}
 
-			f.logger.Debug().Msgf("Creating event to trigger a reconcile for %s", fileName)
+			f.logger.Debug().Any("source_event_type", e.Op.String()).Msgf("creating FileEventDetails for %s", e.Name)
 			filenameChan <- domain.FileEventDetails{
-				ObjectName: fileName,
-				IsDir:      isDir,
-				Origin:     origin,
+				FullPathName: e.Name,
+				ObjectName:   objectNameVersion,
+				IsDir:        isDir,
+				Origin:       origin,
+				EventType:    e.Op.String(),
 			}
-			f.logger.Debug().Msgf("Event created to trigger a reconcile for %s", fileName)
+			f.logger.Debug().Any("source_event_type", e.Op.String()).Msgf("FileEventDetails for %s created", e.Name)
 		case err, ok := <-f.watcher.Errors:
 			if !ok {
 				f.logger.Warn().Msg("watcher errors channel closed")

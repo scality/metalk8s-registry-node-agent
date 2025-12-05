@@ -50,9 +50,11 @@ type (
 	}
 
 	FileEventDetails struct {
-		ObjectName string
-		IsDir      bool
-		Origin     FileOrigin
+		FullPathName string
+		ObjectName   string
+		IsDir        bool
+		Origin       FileOrigin
+		EventType    string
 	}
 )
 
