@@ -345,3 +345,11 @@ func (f *MockFileSystem) stopWatchFiles() error {
 	f.watcher.Close()
 	return nil
 }
+
+func (f *MockFileSystem) AddWatchFileOrDirectory(path string) error {
+	return nil
+}
+
+func (f *MockFileSystem) RemoveWatchFileOrDirectory(path string) error {
+	return nil
+}

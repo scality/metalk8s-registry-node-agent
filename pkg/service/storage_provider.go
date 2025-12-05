@@ -158,4 +158,10 @@ type StorageProvider interface {
 
 	// UnmountFile unmounts a file from the storage.
 	UnmountFile(mountPoint string) error
+
+	// AddWatchFileOrDirectory adds a file or directory to the watcher.
+	AddWatchFileOrDirectory(path string) error
+
+	// RemoveWatchFileOrDirectory removes a file or directory from the watcher.
+	RemoveWatchFileOrDirectory(path string) error
 }

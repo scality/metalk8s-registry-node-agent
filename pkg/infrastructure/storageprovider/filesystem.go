@@ -486,6 +486,16 @@ func (f *FileSystem) UnmountFile(mountPoint string) error {
 	return nil
 }
 
+// AddWatchFileOrDirectory adds a file or directory to the watcher.
+func (f *FileSystem) AddWatchFileOrDirectory(path string) error {
+	return f.watcher.Add(path)
+}
+
+// RemoveWatchFileOrDirectory removes a file or directory from the watcher.
+func (f *FileSystem) RemoveWatchFileOrDirectory(path string) error {
+	return f.watcher.Remove(path)
+}
+
 // Bucket handling methods
 
 func (f *FileSystem) genBucketPath(

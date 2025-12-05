@@ -249,7 +249,7 @@ func DeleteFile(
 	filePath string,
 ) error {
 	err := os.Remove(filePath)
-	if err != nil {
+	if err != nil && !os.IsNotExist(err) {
 		return errors.From(domain.ErrInternal).
 			WithIdentifier(500000).
 			WithDetail("unexpected error while deleting the file").
