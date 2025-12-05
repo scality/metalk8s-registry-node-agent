@@ -70,7 +70,7 @@ func (f *MockFileSystem) Init() error {
 	return nil
 }
 
-func (f *MockFileSystem) Start(filenameChan chan string) error {
+func (f *MockFileSystem) Start(filenameChan chan domain.FileEventDetails) error {
 	f.Lock()
 	defer f.Unlock()
 
@@ -335,7 +335,7 @@ func (f *MockFileSystem) consolidateMultipartFile(
 	return nil
 }
 
-func (f *MockFileSystem) startWatchFiles(_ chan string) error {
+func (f *MockFileSystem) startWatchFiles(_ chan domain.FileEventDetails) error {
 	return nil
 }
 

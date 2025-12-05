@@ -48,7 +48,7 @@ type StorageProvider interface {
 	Init() error
 
 	// Start starts the watcher on the storage provider.
-	Start(filenameChan chan string) error
+	Start(filenameChan chan domain.FileEventDetails) error
 
 	// Stop stops the watcher on the storage provider.
 	Stop() error

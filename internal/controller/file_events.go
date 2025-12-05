@@ -5,6 +5,7 @@ import (
 
 	"github.com/rs/zerolog"
 	metalk8sv1alpha1 "github.com/scality/metalk8s-registry-node-agent/api/v1alpha1"
+	"github.com/scality/metalk8s-registry-node-agent/pkg/domain"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 )
@@ -17,7 +18,7 @@ type FileEvents struct {
 	ctx          context.Context
 	logger       *zerolog.Logger
 	client       KubernetesClientInterface
-	filenameChan <-chan string
+	filenameChan <-chan domain.FileEventDetails
 	eventChan    chan event.GenericEvent
 }
 
@@ -25,7 +26,7 @@ func NewFileEvents(
 	ctx context.Context,
 	l *zerolog.Logger,
 	c KubernetesClientInterface,
-	filenameChan <-chan string,
+	filenameChan <-chan domain.FileEventDetails,
 	eventChan chan event.GenericEvent,
 ) *FileEvents {
 	return &FileEvents{
@@ -44,7 +45,7 @@ func (f *FileEvents) Listen() {
 
 		// Find the Custom Resource that matches the parsed data
 		naList := &metalk8sv1alpha1.NodeSolutionArchiveList{}
-		err := f.client.List(f.ctx, naList, client.MatchingFields{"LocalSolutionArchiveNameVersion": filename[:len(filename)-4]})
+		err := f.client.List(f.ctx, naList, client.MatchingFields{"LocalSolutionArchiveNameVersion": filename.ObjectName[:len(filename.ObjectName)-4]})
 		if err != nil {
 			f.logger.Error().Err(err).Msg("Failed to list custom resources")
 			continue

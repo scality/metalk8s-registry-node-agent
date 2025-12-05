@@ -7,6 +7,7 @@ import (
 	"github.com/rs/zerolog"
 
 	"github.com/scality/metalk8s-registry-node-agent/cmd/config"
+	"github.com/scality/metalk8s-registry-node-agent/pkg/domain"
 	"github.com/scality/metalk8s-registry-node-agent/pkg/infrastructure/archivedownloader"
 	"github.com/scality/metalk8s-registry-node-agent/pkg/infrastructure/archivemounter"
 	"github.com/scality/metalk8s-registry-node-agent/pkg/infrastructure/archiveremover"
@@ -34,7 +35,7 @@ type Container struct {
 
 	logger *zerolog.Logger
 
-	filenameChan              chan string
+	filenameChan              chan domain.FileEventDetails
 	httpExternServer          *http.Server
 	httpInternServer          *http.Server
 	httpInternClient          *http.Client
@@ -72,7 +73,7 @@ type Container struct {
 	getExternalSolutionArchiveUseCase *usecase.GetExternalSolutionArchive
 }
 
-func NewContainer(ctx context.Context, cfg *config.Environment, filenameChan chan string) *Container {
+func NewContainer(ctx context.Context, cfg *config.Environment, filenameChan chan domain.FileEventDetails) *Container {
 	return &Container{
 		baseCtx:           ctx,
 		config:            cfg,

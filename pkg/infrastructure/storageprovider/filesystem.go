@@ -116,7 +116,7 @@ func (f *FileSystem) Init() error {
 }
 
 // Start starts the watcher on the storage provider.
-func (f *FileSystem) Start(filenameChan chan string) error {
+func (f *FileSystem) Start(filenameChan chan domain.FileEventDetails) error {
 	f.Lock()
 	defer f.Unlock()
 
@@ -1480,20 +1480,21 @@ func (f *FileSystem) updateWatchedFileInfos(saveFunc func(watchedFilesMap) error
 	return nil
 }
 
-func (f *FileSystem) watchFiles(filenameChan chan string) {
+func (f *FileSystem) watchFiles(filenameChan chan domain.FileEventDetails) {
 	defer f.Done()
 
 	for {
 		select {
 		case e, ok := <-f.watcher.Events:
 			if !ok {
-				f.logger.Warn().Msg("Watcher events channel closed.")
-
+				f.logger.Warn().Msg("watcher events channel closed")
 				return
 			}
 
+			f.logger.Debug().Any("source_event_type", e.Op.String()).Msgf("event received for %s", e.Name)
+
 			if err := f.updateWatchedFileInfos(f.saveWatchedFileInfosConcurrentSafe); err != nil {
-				f.logger.Error().Err(err).Msg("Failed to update watched file infos.")
+				f.logger.Error().Err(err).Msg("failed to update watched file infos")
 			}
 
 			// Create an event to trigger a reconcile
@@ -1509,7 +1510,9 @@ func (f *FileSystem) watchFiles(filenameChan chan string) {
 			}
 
 			f.logger.Debug().Msgf("Creating event to trigger a reconcile for %s", fileName)
-			filenameChan <- fileName
+			filenameChan <- domain.FileEventDetails{
+				ObjectName: fileName,
+			}
 			f.logger.Debug().Msgf("Event created to trigger a reconcile for %s", fileName)
 		case err, ok := <-f.watcher.Errors:
 			if !ok {
@@ -1523,7 +1526,7 @@ func (f *FileSystem) watchFiles(filenameChan chan string) {
 	}
 }
 
-func (f *FileSystem) startWatchFiles(filenameChan chan string) error {
+func (f *FileSystem) startWatchFiles(filenameChan chan domain.FileEventDetails) error {
 	if err := f.updateWatchedFileInfos(f.saveWatchedFileInfos); err != nil {
 		return errors.Stamp(err)
 	}

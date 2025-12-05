@@ -41,6 +41,10 @@ type (
 		Meta            *PartMeta
 		Content         io.Reader
 	}
+
+	FileEventDetails struct {
+		ObjectName string
+	}
 )
 
 func (sas *SolutionArchiveStatus) ReceivedBytes() int64 {

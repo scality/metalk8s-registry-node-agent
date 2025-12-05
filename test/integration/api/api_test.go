@@ -17,6 +17,7 @@ import (
 
 	"github.com/rs/zerolog"
 	"github.com/scality/metalk8s-registry-node-agent/cmd/config"
+	"github.com/scality/metalk8s-registry-node-agent/pkg/domain"
 	"github.com/scality/metalk8s-registry-node-agent/pkg/infrastructure/di"
 	"github.com/scality/metalk8s-registry-node-agent/pkg/presentation/http/extern"
 	"github.com/scality/metalk8s-registry-node-agent/pkg/presentation/http/intern"
@@ -69,7 +70,7 @@ var _ = BeforeSuite(func() {
 	if err != nil {
 		log.Fatal(err) //nolint:revive // This is basically the main function, shut up revive
 	}
-	filenameChan := make(chan string)
+	filenameChan := make(chan domain.FileEventDetails)
 	container := di.NewContainer(ctx, cfg, filenameChan)
 
 	rootPath, err := os.MkdirTemp("/tmp", "test-integration-api_v1_uploads-*")

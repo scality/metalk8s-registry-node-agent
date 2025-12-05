@@ -52,6 +52,7 @@ import (
 	"github.com/scality/metalk8s-registry-node-agent/cmd/config"
 	"github.com/scality/metalk8s-registry-node-agent/internal/controller"
 	webhookv1alpha1 "github.com/scality/metalk8s-registry-node-agent/internal/webhook/v1alpha1"
+	"github.com/scality/metalk8s-registry-node-agent/pkg/domain"
 	"github.com/scality/metalk8s-registry-node-agent/pkg/infrastructure/di"
 	"github.com/scality/metalk8s-registry-node-agent/pkg/library"
 	// +kubebuilder:scaffold:imports
@@ -121,7 +122,7 @@ func main() {
 	))
 
 	// Initialize channels between Controller Manager and the HTTP server
-	filenameChan := make(chan string)
+	filenameChan := make(chan domain.FileEventDetails)
 	eventChan := make(chan event.GenericEvent)
 
 	// Start API server
