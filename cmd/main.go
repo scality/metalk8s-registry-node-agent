@@ -351,6 +351,13 @@ func main() {
 	)
 	go fileEventsListener.Listen()
 
+	// Start a garbage collector
+	// It will removed unused solutions archives
+	go func() {
+		setupLog.Info("starting garbage collector")
+		container.GetStorageSolutionArchiveCleaner().Run()
+	}()
+
 	if metricsCertWatcher != nil {
 		setupLog.Info("Adding metrics certificate watcher to manager")
 		if err := mgr.Add(metricsCertWatcher); err != nil {
