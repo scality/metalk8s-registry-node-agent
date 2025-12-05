@@ -22,15 +22,17 @@ type (
 
 		logger *zerolog.Logger
 
-		solutionArchiveLocation string
-		interestContentFilter   library.ContentFilter
-		watcher                 *fsnotify.Watcher
-		files                   []string
+		solutionArchivesLocation string
+		solutionsLocation        string
+		interestContentFilter    library.ContentFilter
+		watcher                  *fsnotify.Watcher
+		files                    []string
 	}
 
 	MockFileOpts struct {
 		Logger                     *zerolog.Logger
-		SolutionArchiveLocation    string
+		SolutionArchivesLocation   string
+		SolutionsLocation          string
 		InterestContentFilterRegex *regexp.Regexp
 	}
 )
@@ -39,10 +41,11 @@ var _ service.StorageProvider = &MockFileSystem{}
 
 func NewMockFileSystem(opts *MockFileOpts) *MockFileSystem {
 	return &MockFileSystem{
-		logger:                  opts.Logger,
-		solutionArchiveLocation: opts.SolutionArchiveLocation,
-		interestContentFilter:   library.NewRegexNormalFileFilter(opts.InterestContentFilterRegex),
-		files:                   []string{},
+		logger:                   opts.Logger,
+		solutionArchivesLocation: opts.SolutionArchivesLocation,
+		solutionsLocation:        opts.SolutionsLocation,
+		interestContentFilter:    library.NewRegexNormalFileFilter(opts.InterestContentFilterRegex),
+		files:                    []string{},
 	}
 }
 
@@ -238,6 +241,19 @@ func (f *MockFileSystem) GetHashFromFileInfos(filename string) (string, error) {
 
 func (f *MockFileSystem) GetSizeFromFileInfos(filename string) (int64, error) {
 	return 0, nil
+}
+
+func (f *MockFileSystem) MountFile(
+	fileName string,
+	mountPoint string,
+) error {
+	return nil
+}
+
+func (f *MockFileSystem) UnmountFile(
+	mountPoint string,
+) error {
+	return nil
 }
 
 // Bucket handling methods

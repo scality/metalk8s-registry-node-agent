@@ -58,7 +58,9 @@ type NodeSolutionArchiveSpec struct {
 // NodeSolutionArchiveStatus defines the observed state of NodeSolutionArchive.
 type NodeSolutionArchiveStatus struct {
 	// Availability of the SolutionArchive on the Node
-	Available  *bool              `json:"available,omitempty"`
+	Available *bool `json:"available,omitempty"`
+	// The SolutionArchive is mounted on the Node
+	Served     *bool              `json:"served,omitempty"`
 	Conditions []metav1.Condition `json:"conditions,omitempty"`
 	// URL of the SolutionArchive (used internally to replicate archive between nodes)
 	URL string `json:"url,omitempty"`
@@ -72,6 +74,7 @@ type NodeSolutionArchiveStatus struct {
 // +kubebuilder:printcolumn:name="Version",type="string",JSONPath=".spec.version"
 // +kubebuilder:printcolumn:name="NodeName",type="string",JSONPath=".spec.nodeName"
 // +kubebuilder:printcolumn:name="Available",type="boolean",JSONPath=".status.available"
+// +kubebuilder:printcolumn:name="Served",type="boolean",JSONPath=".status.served"
 // NodeSolutionArchive is the Schema for the nodesolutionarchives API.
 type NodeSolutionArchive struct {
 	metav1.TypeMeta   `json:",inline"`
@@ -118,4 +121,30 @@ func (na *NodeSolutionArchive) SetUnavailable() {
 	}
 	meta.SetStatusCondition(&na.Status.Conditions, condition)
 	na.Status.Available = ptr.To(false)
+}
+
+func (na *NodeSolutionArchive) SetServed() {
+	condition := metav1.Condition{
+		Type:               "Served",
+		Status:             metav1.ConditionTrue,
+		LastTransitionTime: metav1.Now(),
+		Reason:             "ImagesServed",
+		Message:            "The images are served in the registry.",
+		ObservedGeneration: na.Generation,
+	}
+	meta.SetStatusCondition(&na.Status.Conditions, condition)
+	na.Status.Served = ptr.To(true)
+}
+
+func (na *NodeSolutionArchive) SetNotServed() {
+	condition := metav1.Condition{
+		Type:               "Served",
+		Status:             metav1.ConditionFalse,
+		LastTransitionTime: metav1.Now(),
+		Reason:             "ImagesNotServed",
+		Message:            "The images are not served in the registry.",
+		ObservedGeneration: na.Generation,
+	}
+	meta.SetStatusCondition(&na.Status.Conditions, condition)
+	na.Status.Served = ptr.To(false)
 }

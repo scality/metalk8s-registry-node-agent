@@ -74,3 +74,23 @@ func (c *Container) GetGetExternalSolutionArchiveUseCase() *usecase.GetExternalS
 	}
 	return c.getExternalSolutionArchiveUseCase
 }
+
+func (c *Container) GetMountSolutionArchiveUseCase() *usecase.MountSolutionArchive {
+	if c.mountSolutionArchiveUseCase == nil {
+		c.mountSolutionArchiveUseCase = usecase.NewMountSolutionArchive(
+			c.GetLogger(),
+			c.getStorageSolutionArchiveMounter(),
+		)
+	}
+	return c.mountSolutionArchiveUseCase
+}
+
+func (c *Container) GetUnmountSolutionArchiveUseCase() *usecase.UnmountSolutionArchive {
+	if c.unmountSolutionArchiveUseCase == nil {
+		c.unmountSolutionArchiveUseCase = usecase.NewUnmountSolutionArchive(
+			c.GetLogger(),
+			c.getStorageSolutionArchiveUnmounter(),
+		)
+	}
+	return c.unmountSolutionArchiveUseCase
+}

@@ -8,8 +8,10 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/moby/sys/mountinfo"
 	"github.com/scality/go-errors"
 	"github.com/scality/metalk8s-registry-node-agent/pkg/domain"
+	"golang.org/x/sys/unix"
 )
 
 const (
@@ -300,6 +302,27 @@ func GenSolutionArchiveFileName(solutionArchive *domain.SolutionArchive) string 
 	return fmt.Sprintf("%s-%s.iso", solutionArchive.Name, solutionArchive.Version)
 }
 
+// GenSolutionDirName generates a unique solution directory name.
+func GenSolutionDirName(solutionArchive *domain.SolutionArchive) string {
+	return fmt.Sprintf("%s/%s", solutionArchive.Name, solutionArchive.Version)
+}
+
+// IsEmpty checks if a directory is empty.
+func IsEmpty(path string) (bool, error) {
+	entries, err := os.ReadDir(path)
+	if err != nil {
+		return false, errors.From(domain.ErrInternal).
+			WithIdentifier(500000).
+			WithDetail("unexpected error while checkng the content of the directory").
+			WithProperty("path", path).
+			CausedBy(err).
+			Throw()
+
+	}
+	// Check if the slice of entries is empty
+	return len(entries) == 0, nil
+}
+
 // solutionArchiveExists returns if the solution archive is already present in
 // the final storage.
 func SolutionArchiveExists(
@@ -392,4 +415,155 @@ func CompareSolutionArchiveMetas(
 	}
 
 	return nil
+}
+
+// IsMounted checks if the given source file is mounted at the given mount point.
+// If the file is not mounted, it returns false and no error.
+// It returns true if correctly mounted, either it returns false and an error
+func IsMounted(filePath string, mountPath string) (bool, error) {
+	// Step 1: Find the loop device from the mount point
+	loopDevice, err := GetLoopDeviceForMount(mountPath)
+	if err != nil {
+		// No mount point is present, check if the directory is empty
+		if errors.Is(err, domain.ErrNotFound) {
+			entries, err := os.ReadDir(mountPath)
+			if err != nil {
+				return false, errors.Stamp(err)
+			}
+			if len(entries) > 0 {
+				return false, errors.From(domain.ErrMountSolutionArchiveNotEmptyDir).Throw()
+			}
+			return false, nil
+		}
+		return false, errors.Stamp(err)
+	}
+
+	// Step 2: Find the backing file from the loop device
+	backingFile, err := GetBackingFile(loopDevice)
+	if err != nil {
+		return false, errors.Stamp(err)
+	}
+
+	if backingFile == filePath {
+		return true, nil
+	}
+
+	return false, errors.From(domain.ErrMountSolutionArchiveIncorrectMount).
+		WithDetail("incorrect mount point").
+		WithProperty("mount_path", mountPath).
+		WithProperty("backing_file", backingFile).
+		WithProperty("file_path", filePath).
+		Throw()
+}
+
+// GetBackingFile queries a loop device (e.g., "/dev/loop0")
+// and returns the path to its associated backing file (e.g., "/tmp/myimage.img").
+func GetBackingFile(loopDevice string) (string, error) {
+	if !strings.HasPrefix(loopDevice, "/dev/loop") {
+		return "", errors.From(domain.ErrInternal).
+			WithDetail("input is not a loop device").
+			WithProperty("loop_device", loopDevice).
+			Throw()
+	}
+
+	// Extract the loop device number (e.g., "loop0" from "/dev/loop0")
+	loopName := strings.TrimPrefix(loopDevice, "/dev/")
+
+	// Use sysfs interface to read the backing file
+	// This approach doesn't require special permissions unlike opening /dev/loopX directly
+	sysfsPath := "/sys/block/" + loopName + "/loop/backing_file"
+
+	backingFileBytes, err := os.ReadFile(sysfsPath)
+	if err != nil {
+		// If sysfs method fails, fall back to ioctl method
+		// This preserves backward compatibility and works when sysfs is not available
+		return getBackingFileViaIoctl(loopDevice)
+	}
+
+	// The sysfs file contains the backing file path with a newline at the end
+	backingFile := strings.TrimSpace(string(backingFileBytes))
+	if backingFile == "" {
+		return "", errors.From(domain.ErrInternal).
+			WithDetail("loop device is not associated with a file").
+			WithProperty("loop_device", loopDevice).
+			Throw()
+	}
+
+	return backingFile, nil
+}
+
+// getBackingFileViaIoctl is a fallback method that uses ioctl to query loop device information.
+// This method requires read permissions on the loop device file.
+func getBackingFileViaIoctl(loopDevice string) (string, error) {
+	// Open the loop device file
+	file, err := os.Open(loopDevice)
+	if err != nil {
+		return "", errors.From(domain.ErrInternal).
+			WithDetail("failed to open loop device").
+			WithProperty("loop_device", loopDevice).
+			CausedBy(err).
+			Throw()
+	}
+	defer file.Close() // nolint: errcheck // No error check on defer.
+
+	// Get the file descriptor
+	fd := file.Fd()
+
+	// Prepare the struct to hold the loop info
+	var info *unix.LoopInfo64
+
+	// Call the ioctl to get the loop device status
+	// This is the Go-native way to ask the kernel "what file is backing this device?"
+	info, err = unix.IoctlLoopGetStatus64(int(fd))
+	if err != nil {
+		return "", errors.From(domain.ErrInternal).
+			WithDetail("ioctl LOOP_GET_STATUS64 failed").
+			WithProperty("loop_device", loopDevice).
+			CausedBy(err).
+			Throw()
+	}
+
+	// The file name is in info.File_name, which is a fixed-size byte array.
+	// We must convert it to a Go string, stopping at the first null byte.
+	// unix.ByteSliceToString handles this C-style string conversion perfectly.
+	backingFile := unix.ByteSliceToString(info.File_name[:])
+	if backingFile == "" {
+		return "", errors.From(domain.ErrInternal).
+			WithDetail("loop device is not associated with a file").
+			WithProperty("loop_device", loopDevice).
+			Throw()
+	}
+
+	return backingFile, nil
+}
+
+// GetLoopDeviceForMount finds the loop device for a given mount point.
+func GetLoopDeviceForMount(mountPath string) (string, error) {
+	filter := func(info *mountinfo.Info) (skip, stop bool) {
+		result := info.Mountpoint == mountPath
+		return !result, result
+	}
+
+	mounts, err := mountinfo.GetMounts(filter)
+	if err != nil {
+		return "", errors.From(domain.ErrInternal).
+			WithDetail("unexpected error while retrieving the mounts").
+			WithProperty("mount_path", mountPath).
+			CausedBy(err).
+			Throw()
+	}
+
+	if len(mounts) == 0 {
+		return "", errors.From(domain.ErrNotFound).Throw()
+	}
+
+	sourceDevice := mounts[0].Source
+	if strings.HasPrefix(sourceDevice, "/dev/loop") {
+		return sourceDevice, nil
+	}
+	return "", errors.From(domain.ErrInternal).
+		WithDetail("source device is not a loop device").
+		WithProperty("mount_path", mountPath).
+		WithProperty("source_device", sourceDevice).
+		Throw()
 }

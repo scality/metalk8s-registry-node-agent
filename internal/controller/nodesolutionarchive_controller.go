@@ -184,32 +184,45 @@ func (r *NodeSolutionArchiveReconciler) Reconcile(ctx context.Context, req ctrl.
 		return ctrl.Result{RequeueAfter: 30 * time.Second}, nil
 	}
 	original := nodeSolutionArchive.DeepCopy()
-	if isValid {
-		log.V(1).Info("solution archive is valid")
-		downloadURL, err := url.JoinPath(r.DownloadBaseURL, nodeSolutionArchive.Spec.Name, nodeSolutionArchive.Spec.Version)
-		if err != nil {
-			log.Error(err, "error building the download URL")
-			return ctrl.Result{}, err
+
+	// Ensure we update the status in case of early return
+	defer func() {
+		if err := r.Status().Patch(ctx, nodeSolutionArchive, client.MergeFrom(original)); err != nil {
+			log.Error(err, "unable to patch NodeSolutionArchive status")
 		}
-		nodeSolutionArchive.Status.URL = downloadURL
-		nodeSolutionArchive.SetAvailable()
-		// Session may persist in case of manual upload of solution archive
-		err = r.Container.GetRemoveSessionUseCase().Execute(solutionArchive)
-		if err != nil {
-			log.Error(err, "error removing session")
-			return ctrl.Result{RequeueAfter: 30 * time.Second}, nil
-		}
-	} else {
+	}()
+
+	if !isValid {
 		log.V(1).Info("solution archive is not valid")
 		nodeSolutionArchive.SetUnavailable()
+		nodeSolutionArchive.SetNotServed()
 		nodeSolutionArchive.Status.URL = ""
+		return ctrl.Result{}, nil
 	}
-	// 6. Update the status of the NodeSolutionArchive
-	log.V(1).Info("Updating the status of the NodeSolutionArchive")
-	if err := r.Status().Patch(ctx, nodeSolutionArchive, client.MergeFrom(original)); err != nil {
-		log.Error(err, "unable to patch NodeSolutionArchive status")
+
+	log.V(1).Info("solution archive is valid")
+	downloadURL, err := url.JoinPath(r.DownloadBaseURL, nodeSolutionArchive.Spec.Name, nodeSolutionArchive.Spec.Version)
+	if err != nil {
+		log.Error(err, "error building the download URL")
 		return ctrl.Result{}, err
 	}
+	nodeSolutionArchive.Status.URL = downloadURL
+	nodeSolutionArchive.SetAvailable()
+	// Session may persist in case of manual upload of solution archive
+	err = r.Container.GetRemoveSessionUseCase().Execute(solutionArchive)
+	if err != nil {
+		log.Error(err, "error removing session")
+		return ctrl.Result{RequeueAfter: 30 * time.Second}, nil
+	}
+
+	// 6. Mount the solution archive on file system
+	log.V(1).Info("Mounting the solution archive on file system")
+	err = r.Container.GetMountSolutionArchiveUseCase().Execute(solutionArchive)
+	if err != nil {
+		log.Error(err, "error mounting solution archive")
+		return ctrl.Result{RequeueAfter: 30 * time.Second}, nil
+	}
+	nodeSolutionArchive.SetServed()
 
 	return ctrl.Result{}, nil
 }
@@ -221,7 +234,12 @@ func (r *NodeSolutionArchiveReconciler) deleteSolutionArchiveResources(nodeSolut
 		Hash:    nodeSolutionArchive.Spec.Validation.Checksum.Value,
 	}
 
-	err := r.Container.GetRemoveSolutionArchiveUseCase().Execute(solutionArchive)
+	err := r.Container.GetUnmountSolutionArchiveUseCase().Execute(solutionArchive)
+	if err != nil {
+		return err
+	}
+
+	err = r.Container.GetRemoveSolutionArchiveUseCase().Execute(solutionArchive)
 	if err != nil {
 		return err
 	}

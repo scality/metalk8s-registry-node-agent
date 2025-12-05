@@ -8,7 +8,9 @@ import (
 
 	"github.com/scality/metalk8s-registry-node-agent/cmd/config"
 	"github.com/scality/metalk8s-registry-node-agent/pkg/infrastructure/archivedownloader"
+	"github.com/scality/metalk8s-registry-node-agent/pkg/infrastructure/archivemounter"
 	"github.com/scality/metalk8s-registry-node-agent/pkg/infrastructure/archiveremover"
+	"github.com/scality/metalk8s-registry-node-agent/pkg/infrastructure/archiveunmounter"
 	"github.com/scality/metalk8s-registry-node-agent/pkg/infrastructure/archivevalidator"
 	"github.com/scality/metalk8s-registry-node-agent/pkg/infrastructure/externaldownloader"
 	"github.com/scality/metalk8s-registry-node-agent/pkg/infrastructure/externalsolutionarchivegetter"
@@ -56,11 +58,15 @@ type Container struct {
 	storageSolutionArchiveValidator      *archivevalidator.Storage
 	storageSolutionArchiveDownloader     *archivedownloader.Storage
 	storageExternalSolutionArchiveGetter *externalsolutionarchivegetter.Storage
+	storageSolutionArchiveMounter        *archivemounter.Storage
+	storageSolutionArchiveUnmounter      *archiveunmounter.Storage
 
 	uploadPartUseCase                 *usecase.UploadPart
 	initializeSessionUseCase          *usecase.InitializeSession
 	removeSolutionArchiveUseCase      *usecase.RemoveSolutionArchive
 	removeSessionUseCase              *usecase.RemoveSession
+	mountSolutionArchiveUseCase       *usecase.MountSolutionArchive
+	unmountSolutionArchiveUseCase     *usecase.UnmountSolutionArchive
 	validateSolutionArchiveUseCase    *usecase.ValidateSolutionArchive
 	downloadSolutionArchiveUseCase    *usecase.DownloadSolutionArchive
 	getExternalSolutionArchiveUseCase *usecase.GetExternalSolutionArchive

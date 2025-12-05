@@ -8,4 +8,6 @@ type containerInterface interface {
 	GetValidateSolutionArchiveUseCase() *usecase.ValidateSolutionArchive
 	GetInitializeSessionUseCase() *usecase.InitializeSession
 	GetGetExternalSolutionArchiveUseCase() *usecase.GetExternalSolutionArchive
+	GetUnmountSolutionArchiveUseCase() *usecase.UnmountSolutionArchive
+	GetMountSolutionArchiveUseCase() *usecase.MountSolutionArchive
 }

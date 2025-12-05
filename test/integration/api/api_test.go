@@ -31,6 +31,7 @@ type TestingSuite struct {
 	container                       *di.Container
 	RootPath                        string
 	SolutionArchiveStorageDirectory string
+	SolutionStorageDirectory        string
 	SolutionArchiveStorageProvider  service.StorageProvider
 
 	ExternClientWithResponse *extern.ClientWithResponses
@@ -83,12 +84,14 @@ var _ = BeforeSuite(func() {
 		container.GetLogger().Fatal().Err(err).Msg("failed to create generated http client")
 	}
 
-	cfg.SolutionArchivesLocation = rootPath
+	cfg.SolutionArchivesLocation = rootPath + "/archives"
+	cfg.SolutionsLocation = rootPath + "/solutions"
 	testingSuite = &TestingSuite{
 		logger:                          container.GetLogger(),
 		container:                       container,
 		RootPath:                        rootPath,
 		SolutionArchiveStorageDirectory: cfg.SolutionArchivesLocation,
+		SolutionStorageDirectory:        cfg.SolutionsLocation,
 		ExternClientWithResponse:        externClientWithResponse,
 		InternClientWithResponse:        container.GetGeneratedHTTPInternClient(),
 		SolutionArchiveStorageProvider:  container.GetFSSolutionArchiveStorage(),
@@ -168,7 +171,7 @@ var _ = BeforeSuite(func() {
 
 	// Wait for the watched_files_info.json to be created
 	Eventually(func() bool {
-		_, err := os.Stat(filepath.Join(testingSuite.RootPath, controlDir, watchedFilesInfoName))
+		_, err := os.Stat(filepath.Join(testingSuite.SolutionArchiveStorageDirectory, controlDir, watchedFilesInfoName))
 		return err == nil
 	}, timeout, interval).Should(BeTrue())
 })

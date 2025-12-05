@@ -26,6 +26,7 @@ type (
 		Logger logger.Config `env:",prefix=LOGGER_"`
 
 		SolutionArchivesLocation string `env:"SOLUTION_ARCHIVES_LOCATION, default=/archives"`
+		SolutionsLocation        string `env:"SOLUTIONS_LOCATION, default=/solutions"`
 
 		Extern Extern `env:",prefix=EXTERN_"`
 		Intern Intern `env:",prefix=INTERN_"`

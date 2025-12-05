@@ -15,7 +15,8 @@ func (c *Container) GetFSSolutionArchiveStorage() service.StorageProvider {
 	if c.solutionArchiveStorage == nil {
 		c.solutionArchiveStorage = storageprovider.NewFileSystem(
 			&storageprovider.FileOpts{
-				SolutionArchiveLocation:    c.config.SolutionArchivesLocation,
+				SolutionArchivesLocation:   c.config.SolutionArchivesLocation,
+				SolutionsLocation:          c.config.SolutionsLocation,
 				InterestContentFilterRegex: solutionArchiveStorageNameRegexp,
 				Logger:                     c.GetLogger(),
 			},
@@ -36,7 +37,8 @@ func (c *Container) GetMockFSSolutionArchiveStorage() service.StorageProvider {
 	if c.solutionArchiveStorage == nil {
 		c.solutionArchiveStorage = storageprovider.NewMockFileSystem(
 			&storageprovider.MockFileOpts{
-				SolutionArchiveLocation:    c.config.SolutionArchivesLocation,
+				SolutionArchivesLocation:   c.config.SolutionArchivesLocation,
+				SolutionsLocation:          c.config.SolutionsLocation,
 				InterestContentFilterRegex: solutionArchiveStorageNameRegexp,
 				Logger:                     c.GetLogger(),
 			},

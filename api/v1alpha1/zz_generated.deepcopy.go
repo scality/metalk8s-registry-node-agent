@@ -123,6 +123,11 @@ func (in *NodeSolutionArchiveStatus) DeepCopyInto(out *NodeSolutionArchiveStatus
 		*out = new(bool)
 		**out = **in
 	}
+	if in.Served != nil {
+		in, out := &in.Served, &out.Served
+		*out = new(bool)
+		**out = **in
+	}
 	if in.Conditions != nil {
 		in, out := &in.Conditions, &out.Conditions
 		*out = make([]v1.Condition, len(*in))
