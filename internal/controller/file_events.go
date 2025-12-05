@@ -23,7 +23,7 @@ type FileEvents struct {
 	ctx           context.Context
 	logger        *zerolog.Logger
 	client        KubernetesClientInterface
-	filenameChan  <-chan domain.FileEventDetails
+	filenameChan  chan domain.FileEventDetails
 	reconcileChan chan event.GenericEvent
 	deleteChan    chan domain.FileEventDetails
 }
@@ -32,7 +32,7 @@ func NewFileEvents(
 	ctx context.Context,
 	l *zerolog.Logger,
 	c KubernetesClientInterface,
-	filenameChan <-chan domain.FileEventDetails,
+	filenameChan chan domain.FileEventDetails,
 	reconcileChan chan event.GenericEvent,
 	deleteChan chan domain.FileEventDetails,
 ) *FileEvents {
@@ -48,19 +48,34 @@ func NewFileEvents(
 
 // Listen runs in a goroutine, processing FileEventDetails from a channel
 func (f *FileEvents) Listen() {
+	var err error
 	for eventDetails := range f.filenameChan {
 		switch eventDetails.Origin {
 		case domain.SolutionArchivesOrigin:
-			f.handleSolutionArchiveEvent(eventDetails)
+			err = f.handleSolutionArchiveEvent(eventDetails)
+			if err != nil {
+				f.logger.Error().Err(err).Msg("Failed to handle solution archive event")
+				f.filenameChan <- eventDetails
+			}
+
 		case domain.SolutionsOrigin:
-			f.handleSolutionEvent(eventDetails)
+			err = f.handleSolutionEvent(eventDetails)
+			if err != nil {
+				f.logger.Error().Err(err).Msg("Failed to handle solution event")
+				f.filenameChan <- eventDetails
+			}
 		}
 	}
 }
 
 // handleSolutionArchiveEvent processes events from the solution archives directory
-func (f *FileEvents) handleSolutionArchiveEvent(eventDetails domain.FileEventDetails) {
-	foundCR := f.findSolutionArchiveCR(eventDetails.ObjectName)
+func (f *FileEvents) handleSolutionArchiveEvent(eventDetails domain.FileEventDetails) error {
+	foundCR, err := f.findSolutionArchiveCR(eventDetails.ObjectName)
+	if err != nil {
+		f.logger.Error().Err(err).Msg("Failed to contact kubernetes cluster")
+		return err
+	}
+
 	var underDeletion bool
 	if foundCR != nil {
 		underDeletion = !foundCR.DeletionTimestamp.IsZero()
@@ -74,21 +89,26 @@ func (f *FileEvents) handleSolutionArchiveEvent(eventDetails domain.FileEventDet
 	case fsnotify.Write.String():
 		f.handleArchiveWrite(eventDetails, foundCR, underDeletion)
 	}
+	return nil
 }
 
 // handleSolutionEvent processes events from the solutions directory
-func (f *FileEvents) handleSolutionEvent(eventDetails domain.FileEventDetails) {
+func (f *FileEvents) handleSolutionEvent(eventDetails domain.FileEventDetails) error {
 	// Delete any files in the solutions directory
 	if !eventDetails.IsDir {
 		f.deleteChan <- eventDetails
-		return
+		return nil
 	}
 
 	objectIsVersioned := strings.Contains(eventDetails.ObjectName, "/")
-	nsaList := f.findSolutionCRs(eventDetails.ObjectName, objectIsVersioned)
+	nsaList, err := f.findSolutionCRs(eventDetails.ObjectName, objectIsVersioned)
+	if err != nil {
+		f.logger.Error().Err(err).Msg("Failed to contact kubernetes cluster")
+		return err
+	}
 
 	if nsaList == nil {
-		return
+		return nil
 	}
 
 	switch eventDetails.EventType {
@@ -99,30 +119,31 @@ func (f *FileEvents) handleSolutionEvent(eventDetails domain.FileEventDetails) {
 	case fsnotify.Write.String():
 		f.handleSolutionWrite(nsaList, objectIsVersioned)
 	case fsnotify.Chmod.String():
-		return
+		return nil
 	// When mounting/unmounting, a [no events] event is raised
 	default:
 		f.handleSolutionDefault(nsaList, objectIsVersioned)
 	}
+	return nil
 }
 
 // findSolutionArchiveCR finds a CR matching the solution archive name-version
-func (f *FileEvents) findSolutionArchiveCR(objectName string) *metalk8sv1alpha1.NodeSolutionArchive {
+func (f *FileEvents) findSolutionArchiveCR(objectName string) (*metalk8sv1alpha1.NodeSolutionArchive, error) {
 	nsaList := &metalk8sv1alpha1.NodeSolutionArchiveList{}
 	err := f.client.List(f.ctx, nsaList, client.MatchingFields{"LocalSolutionArchiveNameVersion": objectName})
 	if err != nil {
 		f.logger.Error().Err(err).Msg("Failed to list custom resources")
-		return nil
+		return nil, err
 	}
 
 	if len(nsaList.Items) > 0 {
-		return &nsaList.Items[0]
+		return &nsaList.Items[0], nil
 	}
-	return nil
+	return nil, nil
 }
 
 // findSolutionCRs finds CRs matching the solution name or name-version
-func (f *FileEvents) findSolutionCRs(objectName string, isVersioned bool) *metalk8sv1alpha1.NodeSolutionArchiveList {
+func (f *FileEvents) findSolutionCRs(objectName string, isVersioned bool) (*metalk8sv1alpha1.NodeSolutionArchiveList, error) {
 	nsaList := &metalk8sv1alpha1.NodeSolutionArchiveList{}
 	var err error
 
@@ -137,9 +158,9 @@ func (f *FileEvents) findSolutionCRs(objectName string, isVersioned bool) *metal
 
 	if err != nil {
 		f.logger.Error().Err(err).Msg("Failed to list custom resources")
-		return nil
+		return nil, err
 	}
-	return nsaList
+	return nsaList, nil
 }
 
 // handleArchiveCreate handles Create events for solution archives
