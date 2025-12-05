@@ -71,7 +71,8 @@ var _ = BeforeSuite(func() {
 		log.Fatal(err) //nolint:revive // This is basically the main function, shut up revive
 	}
 	filenameChan := make(chan domain.FileEventDetails)
-	container := di.NewContainer(ctx, cfg, filenameChan)
+	deleteChan := make(chan domain.FileEventDetails)
+	container := di.NewContainer(ctx, cfg, filenameChan, deleteChan)
 
 	rootPath, err := os.MkdirTemp("/tmp", "test-integration-api_v1_uploads-*")
 	if err != nil {
