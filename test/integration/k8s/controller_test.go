@@ -100,8 +100,9 @@ var _ = BeforeSuite(func() {
 	// Initialize a Mock Container
 	// and start a Mock Reconciler for the NodeSolutionArchive resource
 	filenameChan := make(chan domain.FileEventDetails)
+	deleteChan := make(chan domain.FileEventDetails)
 	eventChan := make(chan event.GenericEvent)
-	container := di.NewContainer(ctx, &config.Environment{}, filenameChan)
+	container := di.NewContainer(ctx, &config.Environment{}, filenameChan, deleteChan)
 	container.GetMockFSSolutionArchiveStorage()
 	container.GetMockHTTPInternClient()
 

@@ -18,6 +18,7 @@ import (
 	"github.com/scality/metalk8s-registry-node-agent/pkg/infrastructure/partuploader"
 	"github.com/scality/metalk8s-registry-node-agent/pkg/infrastructure/sessioninitializer"
 	"github.com/scality/metalk8s-registry-node-agent/pkg/infrastructure/sessionremover"
+	"github.com/scality/metalk8s-registry-node-agent/pkg/infrastructure/solutionarchivecleaner"
 	"github.com/scality/metalk8s-registry-node-agent/pkg/presentation/http/extern"
 	"github.com/scality/metalk8s-registry-node-agent/pkg/presentation/http/handler"
 	"github.com/scality/metalk8s-registry-node-agent/pkg/presentation/http/intern"
@@ -36,6 +37,7 @@ type Container struct {
 	logger *zerolog.Logger
 
 	filenameChan              chan domain.FileEventDetails
+	deleteChan                chan domain.FileEventDetails
 	httpExternServer          *http.Server
 	httpInternServer          *http.Server
 	httpInternClient          *http.Client
@@ -61,6 +63,7 @@ type Container struct {
 	storageExternalSolutionArchiveGetter *externalsolutionarchivegetter.Storage
 	storageSolutionArchiveMounter        *archivemounter.Storage
 	storageSolutionArchiveUnmounter      *archiveunmounter.Storage
+	solutionArchiveCleaner               *solutionarchivecleaner.SolutionArchiveCleaner
 
 	uploadPartUseCase                 *usecase.UploadPart
 	initializeSessionUseCase          *usecase.InitializeSession
@@ -73,11 +76,17 @@ type Container struct {
 	getExternalSolutionArchiveUseCase *usecase.GetExternalSolutionArchive
 }
 
-func NewContainer(ctx context.Context, cfg *config.Environment, filenameChan chan domain.FileEventDetails) *Container {
+func NewContainer(
+	ctx context.Context,
+	cfg *config.Environment,
+	filenameChan chan domain.FileEventDetails,
+	deleteChan chan domain.FileEventDetails,
+) *Container {
 	return &Container{
 		baseCtx:           ctx,
 		config:            cfg,
 		filenameChan:      filenameChan,
+		deleteChan:        deleteChan,
 		rootExternAPIPath: cfg.RootExternAPIPath,
 		rootInternAPIPath: cfg.RootInternAPIPath,
 	}
