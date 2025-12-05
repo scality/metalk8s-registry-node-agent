@@ -377,8 +377,21 @@ func (f *FileSystem) MountFile(
 		}
 	}
 
+	// Add a watcher for the solution path
+	solutionName := strings.Split(mountPoint, "/")[0]
+	solutionPath := filepath.Join(f.solutionsLocation, solutionName)
+	err := f.watcher.Add(solutionPath)
+	if err != nil {
+		return errors.From(domain.ErrStorageProviderInternal).
+			WithIdentifier(500000).
+			CausedBy(err).
+			WithDetail("failed to add solution path to watcher").
+			WithProperty("solution_path", solutionPath).
+			Throw()
+	}
+
 	// Add a watcher for the mount path
-	err := f.watcher.Add(mountPath)
+	err = f.watcher.Add(mountPath)
 	if err != nil {
 		return errors.From(domain.ErrStorageProviderInternal).
 			WithIdentifier(500000).
@@ -1572,6 +1585,15 @@ func (f *FileSystem) startWatchFiles(filenameChan chan domain.FileEventDetails) 
 			CausedBy(err).
 			WithDetail("failed to add solution archive location to watcher").
 			WithProperty("solution_archive_location", f.solutionArchivesLocation).
+			Throw()
+	}
+
+	if err := f.watcher.Add(f.solutionsLocation); err != nil {
+		return errors.From(domain.ErrStorageProviderInternal).
+			WithIdentifier(500000).
+			CausedBy(err).
+			WithDetail("failed to add solutions location to watcher").
+			WithProperty("solutions_location", f.solutionsLocation).
 			Throw()
 	}
 
