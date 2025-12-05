@@ -1497,11 +1497,31 @@ func (f *FileSystem) watchFiles(filenameChan chan domain.FileEventDetails) {
 				f.logger.Error().Err(err).Msg("failed to update watched file infos")
 			}
 
+			// Determine the origin of the object
+			var origin domain.FileOrigin
+			if strings.HasPrefix(e.Name, f.solutionArchivesLocation) {
+				origin = domain.SolutionArchivesOrigin
+			} else if strings.HasPrefix(e.Name, f.solutionsLocation) {
+				origin = domain.SolutionsOrigin
+			}
+
+			isDir, err := isDirectory(origin, e)
+			if err != nil {
+				if errors.Is(err, domain.ErrStorageProviderNotFound) {
+					f.logger.Debug().Err(err).Msg("object not found to determine if it is a directory")
+					continue
+				}
+				f.logger.Warn().Err(err).Msg("failed to determine if the object is a directory")
+				// In our use case, we expect to do nothing if the object is undetermined
+				continue
+			}
+
 			// Create an event to trigger a reconcile
 			var fileName string
-			if strings.HasPrefix(e.Name, f.solutionArchivesLocation) {
+			switch origin {
+			case domain.SolutionArchivesOrigin:
 				fileName = filepath.Base(e.Name)
-			} else if strings.HasPrefix(e.Name, f.solutionsLocation) {
+			case domain.SolutionsOrigin:
 				mountPoint, err := filepath.Rel(f.solutionsLocation, e.Name)
 				if err != nil {
 					continue
@@ -1512,16 +1532,18 @@ func (f *FileSystem) watchFiles(filenameChan chan domain.FileEventDetails) {
 			f.logger.Debug().Msgf("Creating event to trigger a reconcile for %s", fileName)
 			filenameChan <- domain.FileEventDetails{
 				ObjectName: fileName,
+				IsDir:      isDir,
+				Origin:     origin,
 			}
 			f.logger.Debug().Msgf("Event created to trigger a reconcile for %s", fileName)
 		case err, ok := <-f.watcher.Errors:
 			if !ok {
-				f.logger.Warn().Msg("Watcher errors channel closed.")
+				f.logger.Warn().Msg("watcher errors channel closed")
 
 				return
 			}
 
-			f.logger.Error().Err(err).Msg("Watcher error.")
+			f.logger.Error().Err(err).Msg("watcher error")
 		}
 	}
 }
@@ -1558,4 +1580,65 @@ func (f *FileSystem) stopWatchFiles() error {
 	}
 
 	return nil
+}
+
+// isDirectory determines if the object is a directory or a file.
+func isDirectory(origin domain.FileOrigin, e fsnotify.Event) (bool, error) {
+	/*
+		Determine if it is a directory or a file
+		Not so easy in case of delete event the object (file/directory) no more exists
+		SolutionArchivesOrigin:
+		  * Create or Write or Chmod => os.Stat(e.Name), if FileNotFound => continue, ignore the event
+		  * Remove or Rename:
+		    * ".bucket.<solution>-<version>" => Directory
+			* "<solution>-<version>.iso" => File
+		SolutionOrigin:
+		  * Create or Write or Chmod => os.Stat(e.Name), if FileNotFound => continue, ignore the event
+		  * Remove or Rename: Directory
+	*/
+	switch e.Op {
+	case fsnotify.Remove:
+	case fsnotify.Rename:
+		if origin == domain.SolutionArchivesOrigin {
+			if strings.HasPrefix(e.Name, library.FileSystemBucketPrefix) {
+				return true, nil
+			} else if strings.HasSuffix(e.Name, ".iso") {
+				return false, nil
+			}
+			// We cannot determine if it is a directory or a file
+			// We raise an error to the caller to handle it
+			return false, errors.From(domain.ErrStorageProviderInternal).
+				WithDetail("failed to determine if the object is a directory").
+				WithProperty("object_name", e.Name).
+				WithProperty("origin", origin).
+				WithProperty("event_type", e.Op.String()).
+				Throw()
+		}
+		// We consider that the directory is a solution directory
+		// In that case, we consider that it is a directory
+		return true, nil
+
+	default:
+		fileEventStat, err := os.Stat(e.Name)
+		if err != nil {
+			if os.IsNotExist(err) {
+				return false, errors.From(domain.ErrStorageProviderNotFound).
+					WithDetail("object not found to determine if it is a directory").
+					WithProperty("object_name", e.Name).
+					WithProperty("origin", origin).
+					WithProperty("event_type", e.Op.String()).
+					Throw()
+			}
+			return false, errors.From(domain.ErrStorageProviderInternal).
+				WithDetail("failed to determine if the object is a directory").
+				WithProperty("object_name", e.Name).
+				WithProperty("origin", origin).
+				WithProperty("event_type", e.Op.String()).
+				CausedBy(err).
+				Throw()
+		}
+		return fileEventStat.IsDir(), nil
+	}
+	// We will never reach this line, but the compiler requires it
+	return false, nil
 }
