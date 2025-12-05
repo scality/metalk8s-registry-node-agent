@@ -123,7 +123,8 @@ func main() {
 
 	// Initialize channels between Controller Manager and the HTTP server
 	filenameChan := make(chan domain.FileEventDetails)
-	eventChan := make(chan event.GenericEvent)
+	reconcileChan := make(chan event.GenericEvent)
+	deleteChan := make(chan domain.FileEventDetails)
 
 	// Start API server
 	log.Printf("Starting %s:%s\n", config.ApplicationName, config.ApplicationVersion)
@@ -263,7 +264,7 @@ func main() {
 		NodeName:        nodeName,
 		DownloadBaseURL: downloadBaseURL,
 		Container:       container,
-		EventChan:       eventChan,
+		EventChan:       reconcileChan,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "NodeSolutionArchive")
 		os.Exit(1)
@@ -319,6 +320,25 @@ func main() {
 		os.Exit(1)
 	}
 
+	// Create a field index for the NodeSolutionArchive object that match only the local node (without versioning)
+	fUnversionedLocal := func(rawObj client.Object) []string {
+		unversionedNamed := ""
+		if rawObj.(*metalk8sv1alpha1.NodeSolutionArchive).Spec.NodeName == nodeName {
+			unversionedNamed = rawObj.(*metalk8sv1alpha1.NodeSolutionArchive).Spec.Name
+		}
+		return []string{unversionedNamed}
+	}
+	err = mgr.GetFieldIndexer().IndexField(
+		context.Background(),
+		&metalk8sv1alpha1.NodeSolutionArchive{},
+		"LocalSolutionArchiveName",
+		fUnversionedLocal,
+	)
+	if err != nil {
+		setupLog.Error(err, "failed to create field index for LocalNodeSolutionArchive")
+		os.Exit(1)
+	}
+
 	// Start the goroutine that listens on the channel
 	// This will listen for file events and trigger a reconcile of the NodeSolutionArchive object
 	fileEventsListener := controller.NewFileEvents(
@@ -326,7 +346,8 @@ func main() {
 		logger,
 		mgr.GetClient(),
 		filenameChan,
-		eventChan,
+		reconcileChan,
+		deleteChan,
 	)
 	go fileEventsListener.Listen()
 
