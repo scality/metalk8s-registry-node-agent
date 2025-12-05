@@ -1607,6 +1607,68 @@ func (f *FileSystem) startWatchFiles(filenameChan chan domain.FileEventDetails) 
 			Throw()
 	}
 
+	dirEntries, err := os.ReadDir(f.solutionArchivesLocation)
+	if err != nil {
+		return errors.From(domain.ErrStorageProviderInternal).
+			WithIdentifier(500000).
+			CausedBy(err).
+			WithDetail("failed to read solution archives location").
+			WithProperty("solution_archives_location", f.solutionArchivesLocation).
+			Throw()
+	}
+	go func(dEntries []os.DirEntry) {
+		for _, dirEntry := range dEntries {
+			f.logger.Debug().Msg("creating an event for object " + dirEntry.Name())
+			if !strings.HasPrefix(dirEntry.Name(), controlDir) {
+				f.watcher.Events <- fsnotify.Event{
+					Name: filepath.Join(f.solutionArchivesLocation, dirEntry.Name()),
+					Op:   fsnotify.Create,
+				}
+			}
+		}
+	}(dirEntries)
+
+	dirEntriesToAnalyze := []string{}
+	dirEntries, err = os.ReadDir(f.solutionsLocation)
+	if err != nil {
+		return errors.From(domain.ErrStorageProviderInternal).
+			WithIdentifier(500000).
+			CausedBy(err).
+			WithDetail("failed to read solutions location").
+			WithProperty("solutions_location", f.solutionsLocation).
+			Throw()
+	}
+	for _, dirEntry := range dirEntries {
+		dirEntriesToAnalyze = append(dirEntriesToAnalyze, filepath.Join(f.solutionsLocation, dirEntry.Name()))
+		if dirEntry.IsDir() {
+			subDirEntries, err := os.ReadDir(filepath.Join(f.solutionsLocation, dirEntry.Name()))
+			if err != nil {
+				return errors.From(domain.ErrStorageProviderInternal).
+					WithIdentifier(500000).
+					CausedBy(err).
+					WithDetail("failed to read sub directory").
+					WithProperty("sub_directory", filepath.Join(f.solutionsLocation, dirEntry.Name())).
+					Throw()
+			}
+			for _, subDirEntry := range subDirEntries {
+				dirEntriesToAnalyze = append(
+					dirEntriesToAnalyze,
+					filepath.Join(f.solutionsLocation, dirEntry.Name(), subDirEntry.Name()),
+				)
+			}
+		}
+
+		continue
+	}
+	go func(dEntries []string) {
+		for _, dirEntry := range dEntries {
+			f.logger.Debug().Msg("creating an event for object " + dirEntry)
+			f.watcher.Events <- fsnotify.Event{
+				Name: dirEntry,
+				Op:   fsnotify.Create,
+			}
+		}
+	}(dirEntriesToAnalyze)
 	return nil
 }
 func (f *FileSystem) stopWatchFiles() error {
