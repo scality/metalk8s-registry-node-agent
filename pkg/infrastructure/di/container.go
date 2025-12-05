@@ -34,7 +34,7 @@ type Container struct {
 
 	logger *zerolog.Logger
 
-	filenameCh                chan string
+	filenameChan              chan string
 	httpExternServer          *http.Server
 	httpInternServer          *http.Server
 	httpInternClient          *http.Client
@@ -72,11 +72,11 @@ type Container struct {
 	getExternalSolutionArchiveUseCase *usecase.GetExternalSolutionArchive
 }
 
-func NewContainer(ctx context.Context, cfg *config.Environment, filenameCh chan string) *Container {
+func NewContainer(ctx context.Context, cfg *config.Environment, filenameChan chan string) *Container {
 	return &Container{
 		baseCtx:           ctx,
 		config:            cfg,
-		filenameCh:        filenameCh,
+		filenameChan:      filenameChan,
 		rootExternAPIPath: cfg.RootExternAPIPath,
 		rootInternAPIPath: cfg.RootInternAPIPath,
 	}

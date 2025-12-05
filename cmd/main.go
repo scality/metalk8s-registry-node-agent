@@ -121,14 +121,14 @@ func main() {
 	))
 
 	// Initialize channels between Controller Manager and the HTTP server
-	filenameCh := make(chan string)
-	eventCh := make(chan event.GenericEvent)
+	filenameChan := make(chan string)
+	eventChan := make(chan event.GenericEvent)
 
 	// Start API server
 	log.Printf("Starting %s:%s\n", config.ApplicationName, config.ApplicationVersion)
 
 	// Initialize the base context of the application.
-	// 	Every dependency will be able to use this context.
+	// Every dependency will be able to use this context.
 	ctx, cancel := context.WithTimeout(context.Background(), timeoutDurationInSecond*time.Second)
 	defer cancel()
 
@@ -138,7 +138,7 @@ func main() {
 		log.Fatalf("failed to load config: %v", err)
 	}
 	// Initialize the dependency container.
-	container := di.NewContainer(ctx, cfg, filenameCh)
+	container := di.NewContainer(ctx, cfg, filenameChan)
 
 	logger := container.GetLogger()
 
@@ -262,7 +262,7 @@ func main() {
 		NodeName:        nodeName,
 		DownloadBaseURL: downloadBaseURL,
 		Container:       container,
-		EventChan:       eventCh,
+		EventChan:       eventChan,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "NodeSolutionArchive")
 		os.Exit(1)
@@ -324,9 +324,8 @@ func main() {
 		ctx,
 		logger,
 		mgr.GetClient(),
-		filenameCh,
-		eventCh,
-		nodeName,
+		filenameChan,
+		eventChan,
 	)
 	go fileEventsListener.Listen()
 
@@ -409,7 +408,7 @@ func main() {
 	}()
 
 	// Start the watcher for the file system solution archive storage
-	if err := container.GetFSSolutionArchiveStorage().Start(filenameCh); err != nil {
+	if err := container.GetFSSolutionArchiveStorage().Start(filenameChan); err != nil {
 		setupLog.Error(err, "problem starting file system solution archive storage")
 		os.Exit(1)
 	}

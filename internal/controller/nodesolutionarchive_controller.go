@@ -222,7 +222,7 @@ func (r *NodeSolutionArchiveReconciler) Reconcile(ctx context.Context, req ctrl.
 	}
 
 	// 6. Mount the solution archive on file system
-	log.V(1).Info("Mounting the solution archive on file system")
+	log.V(1).Info("mounting the solution archive on file system")
 	err = r.Container.GetMountSolutionArchiveUseCase().Execute(solutionArchive)
 	if err != nil {
 		log.Error(err, "error mounting solution archive")

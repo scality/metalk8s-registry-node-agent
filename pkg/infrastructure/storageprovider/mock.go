@@ -70,11 +70,11 @@ func (f *MockFileSystem) Init() error {
 	return nil
 }
 
-func (f *MockFileSystem) Start(filenameCh chan string) error {
+func (f *MockFileSystem) Start(filenameChan chan string) error {
 	f.Lock()
 	defer f.Unlock()
 
-	return f.startWatchFiles(filenameCh)
+	return f.startWatchFiles(filenameChan)
 }
 
 func (f *MockFileSystem) Stop() error {

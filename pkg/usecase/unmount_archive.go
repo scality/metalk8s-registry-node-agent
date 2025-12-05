@@ -38,7 +38,7 @@ func (uc *UnmountSolutionArchive) Execute(solutionArchive *domain.SolutionArchiv
 			Throw()
 	}
 
-	uc.logger.Debug().Any("solution_archive", solutionArchive).Msg("Solution archive unmounted")
+	uc.logger.Debug().Any("solution_archive", solutionArchive).Msg("Solution archive unmounting ended")
 
 	return nil
 }

@@ -116,11 +116,11 @@ func (f *FileSystem) Init() error {
 }
 
 // Start starts the watcher on the storage provider.
-func (f *FileSystem) Start(filenameCh chan string) error {
+func (f *FileSystem) Start(filenameChan chan string) error {
 	f.Lock()
 	defer f.Unlock()
 
-	return f.startWatchFiles(filenameCh)
+	return f.startWatchFiles(filenameChan)
 }
 
 // Stop stops the watcher on the storage provider.
@@ -1480,7 +1480,7 @@ func (f *FileSystem) updateWatchedFileInfos(saveFunc func(watchedFilesMap) error
 	return nil
 }
 
-func (f *FileSystem) watchFiles(filenameCh chan string) {
+func (f *FileSystem) watchFiles(filenameChan chan string) {
 	defer f.Done()
 
 	for {
@@ -1509,7 +1509,7 @@ func (f *FileSystem) watchFiles(filenameCh chan string) {
 			}
 
 			f.logger.Debug().Msgf("Creating event to trigger a reconcile for %s", fileName)
-			filenameCh <- fileName
+			filenameChan <- fileName
 			f.logger.Debug().Msgf("Event created to trigger a reconcile for %s", fileName)
 		case err, ok := <-f.watcher.Errors:
 			if !ok {
@@ -1523,14 +1523,14 @@ func (f *FileSystem) watchFiles(filenameCh chan string) {
 	}
 }
 
-func (f *FileSystem) startWatchFiles(filenameCh chan string) error {
+func (f *FileSystem) startWatchFiles(filenameChan chan string) error {
 	if err := f.updateWatchedFileInfos(f.saveWatchedFileInfos); err != nil {
 		return errors.Stamp(err)
 	}
 
 	f.Add(1)
 
-	go f.watchFiles(filenameCh)
+	go f.watchFiles(filenameChan)
 
 	if err := f.watcher.Add(f.solutionArchivesLocation); err != nil {
 		return errors.From(domain.ErrStorageProviderInternal).

@@ -19,7 +19,6 @@ type FileEvents struct {
 	client       KubernetesClientInterface
 	filenameChan <-chan string
 	eventChan    chan event.GenericEvent
-	nodeName     string
 }
 
 func NewFileEvents(
@@ -28,7 +27,6 @@ func NewFileEvents(
 	c KubernetesClientInterface,
 	filenameChan <-chan string,
 	eventChan chan event.GenericEvent,
-	nodeName string,
 ) *FileEvents {
 	return &FileEvents{
 		ctx:          ctx,
@@ -36,7 +34,6 @@ func NewFileEvents(
 		client:       c,
 		filenameChan: filenameChan,
 		eventChan:    eventChan,
-		nodeName:     nodeName,
 	}
 }
 

@@ -38,7 +38,7 @@ func (uc *ValidateSolutionArchive) Execute(solutionArchive *domain.SolutionArchi
 			Throw()
 	}
 
-	uc.logger.Debug().Any("solution_archive", solutionArchive).Msg("Solution archive validated")
+	uc.logger.Debug().Any("solution_archive", solutionArchive).Msg("Solution archive validation ended")
 
 	return isValid, nil
 }
