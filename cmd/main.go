@@ -293,7 +293,7 @@ func main() {
 		f,
 	)
 	if err != nil {
-		setupLog.Error(err, "Failed to create field index for NodeSolutionArchive")
+		setupLog.Error(err, "failed to create field index for NodeSolutionArchive")
 		os.Exit(1)
 	}
 
@@ -315,7 +315,7 @@ func main() {
 		fLocal,
 	)
 	if err != nil {
-		setupLog.Error(err, "Failed to create field index for LocalNodeSolutionArchive")
+		setupLog.Error(err, "failed to create field index for LocalNodeSolutionArchive")
 		os.Exit(1)
 	}
 
