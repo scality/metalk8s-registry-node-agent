@@ -195,6 +195,12 @@ func (r *NodeSolutionArchiveReconciler) Reconcile(ctx context.Context, req ctrl.
 	if !isValid {
 		log.V(1).Info("solution archive is not valid")
 		nodeSolutionArchive.SetUnavailable()
+		// Unmount the solution archive on file system
+		err = r.Container.GetUnmountSolutionArchiveUseCase().Execute(solutionArchive)
+		if err != nil {
+			log.Error(err, "error unmounting solution archive")
+			return ctrl.Result{}, err
+		}
 		nodeSolutionArchive.SetNotServed()
 		nodeSolutionArchive.Status.URL = ""
 		return ctrl.Result{}, nil
