@@ -9,10 +9,14 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/event"
 )
 
+type KubernetesClientInterface interface {
+	List(ctx context.Context, list client.ObjectList, opts ...client.ListOption) error
+}
+
 type FileEvents struct {
 	ctx          context.Context
 	logger       *zerolog.Logger
-	client       client.Client
+	client       KubernetesClientInterface
 	filenameChan <-chan string
 	eventChan    chan event.GenericEvent
 	nodeName     string
@@ -21,7 +25,7 @@ type FileEvents struct {
 func NewFileEvents(
 	ctx context.Context,
 	l *zerolog.Logger,
-	c client.Client,
+	c KubernetesClientInterface,
 	filenameChan <-chan string,
 	eventChan chan event.GenericEvent,
 	nodeName string,
