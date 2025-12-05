@@ -14,6 +14,9 @@ import (
 
 type KubernetesClientInterface interface {
 	List(ctx context.Context, list client.ObjectList, opts ...client.ListOption) error
+	// Create and Delete are used for testing purposes
+	Create(ctx context.Context, obj client.Object, opts ...client.CreateOption) error
+	Delete(ctx context.Context, obj client.Object, opts ...client.DeleteOption) error
 }
 
 type FileEvents struct {
