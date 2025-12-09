@@ -5,7 +5,7 @@ import "io"
 type FileOrigin int
 
 const (
-	SolutionArchivesOrigin FileOrigin = iota
+	SolutionArchivesOrigin FileOrigin = iota + 1
 	SolutionsOrigin
 )
 

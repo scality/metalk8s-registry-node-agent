@@ -10,13 +10,12 @@ import (
 	"github.com/scality/metalk8s-registry-node-agent/pkg/domain"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/event"
+
+	"github.com/scality/go-errors"
 )
 
 type KubernetesClientInterface interface {
 	List(ctx context.Context, list client.ObjectList, opts ...client.ListOption) error
-	// Create and Delete are used for testing purposes
-	Create(ctx context.Context, obj client.Object, opts ...client.CreateOption) error
-	Delete(ctx context.Context, obj client.Object, opts ...client.DeleteOption) error
 }
 
 type FileEvents struct {
@@ -54,14 +53,18 @@ func (f *FileEvents) Listen() {
 		case domain.SolutionArchivesOrigin:
 			err = f.handleSolutionArchiveEvent(eventDetails)
 			if err != nil {
-				f.logger.Error().Err(err).Msg("Failed to handle solution archive event")
+				f.logger.Error().Err(err).
+					Any("origin", "solution_archives").
+					Msg("Failed to handle event, requeuing")
 				f.filenameChan <- eventDetails
 			}
 
 		case domain.SolutionsOrigin:
 			err = f.handleSolutionEvent(eventDetails)
 			if err != nil {
-				f.logger.Error().Err(err).Msg("Failed to handle solution event")
+				f.logger.Error().Err(err).
+					Any("origin", "solutions").
+					Msg("Failed to handle event, requeuing")
 				f.filenameChan <- eventDetails
 			}
 		}
@@ -72,8 +75,7 @@ func (f *FileEvents) Listen() {
 func (f *FileEvents) handleSolutionArchiveEvent(eventDetails domain.FileEventDetails) error {
 	foundCR, err := f.findSolutionArchiveCR(eventDetails.ObjectName)
 	if err != nil {
-		f.logger.Error().Err(err).Msg("Failed to contact kubernetes cluster")
-		return err
+		return errors.Wrap(err, "failed to contact kubernetes cluster")
 	}
 
 	var underDeletion bool
@@ -96,17 +98,18 @@ func (f *FileEvents) handleSolutionArchiveEvent(eventDetails domain.FileEventDet
 func (f *FileEvents) handleSolutionEvent(eventDetails domain.FileEventDetails) error {
 	// Delete any files in the solutions directory
 	if !eventDetails.IsDir {
-		f.deleteChan <- eventDetails
+		f.queueDeletion(eventDetails)
 		return nil
 	}
 
 	objectIsVersioned := strings.Contains(eventDetails.ObjectName, "/")
 	nsaList, err := f.findSolutionCRs(eventDetails.ObjectName, objectIsVersioned)
 	if err != nil {
-		f.logger.Error().Err(err).Msg("Failed to contact kubernetes cluster")
-		return err
+		return errors.Wrap(err, "failed to contact kubernetes cluster")
 	}
 
+	// Sometimes, multiple reconcile requests are sent, but after the first one execute,
+	// CR is no more present, it is not an error, just stop working.
 	if nsaList == nil {
 		return nil
 	}
@@ -132,14 +135,18 @@ func (f *FileEvents) findSolutionArchiveCR(objectName string) (*metalk8sv1alpha1
 	nsaList := &metalk8sv1alpha1.NodeSolutionArchiveList{}
 	err := f.client.List(f.ctx, nsaList, client.MatchingFields{"LocalSolutionArchiveNameVersion": objectName})
 	if err != nil {
-		f.logger.Error().Err(err).Msg("Failed to list custom resources")
-		return nil, err
+		return nil, errors.From(domain.ErrFileEventsInternal).
+			CausedBy(err).
+			WithDetail("failed to list solution archive custom resources").
+			WithProperty("object_name", objectName).
+			Throw()
 	}
 
+	var result *metalk8sv1alpha1.NodeSolutionArchive
 	if len(nsaList.Items) > 0 {
-		return &nsaList.Items[0], nil
+		result = &nsaList.Items[0]
 	}
-	return nil, nil
+	return result, nil
 }
 
 // findSolutionCRs finds CRs matching the solution name or name-version
@@ -157,20 +164,23 @@ func (f *FileEvents) findSolutionCRs(objectName string, isVersioned bool) (*meta
 	}
 
 	if err != nil {
-		f.logger.Error().Err(err).Msg("Failed to list custom resources")
-		return nil, err
+		return nil, errors.From(domain.ErrFileEventsInternal).
+			CausedBy(err).
+			WithDetail("failed to list solution custom resources").
+			WithProperty("object_name", objectName).
+			Throw()
 	}
 	return nsaList, nil
 }
 
 // handleArchiveCreate handles Create events for solution archives
 // Files: Reconcile if CR exists and not under deletion, delete if no CR exists, do nothing if under deletion
-// Directories: Delete if CR doesn't exist or is under deletion
+// Directories: Delete if CR doesn't exist or is under deletion (if CR exists, ".bucket" is a working directory)
 func (f *FileEvents) handleArchiveCreate(eventDetails domain.FileEventDetails, foundCR *metalk8sv1alpha1.NodeSolutionArchive, underDeletion bool) {
 	if foundCR != nil && !underDeletion && !eventDetails.IsDir {
 		f.queueReconcile(foundCR)
 	} else if foundCR == nil || (underDeletion && eventDetails.IsDir) {
-		f.deleteChan <- eventDetails
+		f.queueDeletion(eventDetails)
 	}
 }
 
@@ -189,7 +199,7 @@ func (f *FileEvents) handleArchiveWrite(eventDetails domain.FileEventDetails, fo
 	if foundCR != nil && !underDeletion && !eventDetails.IsDir {
 		f.queueReconcile(foundCR)
 	} else if foundCR == nil || (underDeletion && eventDetails.IsDir) {
-		f.deleteChan <- eventDetails
+		f.queueDeletion(eventDetails)
 	}
 }
 
@@ -199,8 +209,7 @@ func (f *FileEvents) handleArchiveWrite(eventDetails domain.FileEventDetails, fo
 // No CRs found: Delete the directory
 func (f *FileEvents) handleSolutionCreate(eventDetails domain.FileEventDetails, nsaList *metalk8sv1alpha1.NodeSolutionArchiveList) {
 	if len(nsaList.Items) == 0 {
-		f.deleteChan <- eventDetails
-		return
+		f.queueDeletion(eventDetails)
 	}
 	// For both versioned and non-versioned paths, do nothing if CRs exist
 }
@@ -218,14 +227,13 @@ func (f *FileEvents) handleSolutionRemoveOrRename(nsaList *metalk8sv1alpha1.Node
 		for _, nsa := range nsaList.Items {
 			if nsa.DeletionTimestamp.IsZero() {
 				f.queueReconcile(&nsa)
-				return
 			}
 		}
-	} else {
-		// For root paths, reconcile all CRs
-		for i := range nsaList.Items {
-			f.queueReconcile(&nsaList.Items[i])
-		}
+		return
+	}
+	// For root paths, reconcile all CRs
+	for i := range nsaList.Items {
+		f.queueReconcile(&nsaList.Items[i])
 	}
 }
 
@@ -241,7 +249,6 @@ func (f *FileEvents) handleSolutionWrite(nsaList *metalk8sv1alpha1.NodeSolutionA
 	for _, nsa := range nsaList.Items {
 		if nsa.DeletionTimestamp.IsZero() {
 			f.queueReconcile(&nsa)
-			return
 		}
 	}
 }
@@ -258,15 +265,24 @@ func (f *FileEvents) handleSolutionDefault(nsaList *metalk8sv1alpha1.NodeSolutio
 	for _, nsa := range nsaList.Items {
 		if nsa.DeletionTimestamp.IsZero() {
 			f.queueReconcile(&nsa)
-			return
 		}
 	}
 }
 
 // queueReconcile queues a CR for reconciliation
 func (f *FileEvents) queueReconcile(cr *metalk8sv1alpha1.NodeSolutionArchive) {
-	f.logger.Info().Msgf("Found matching Custom Resource: %s, queueing for reconcile", cr.Name)
+	f.logger.Info().
+		Any("custom_resource", cr.Name).
+		Msg("Found matching Custom Resource, queueing for reconcile")
 	f.reconcileChan <- event.GenericEvent{
 		Object: cr,
 	}
+}
+
+// queueDeletion queues an eventDetails for deletion
+func (f *FileEvents) queueDeletion(eventDetails domain.FileEventDetails) {
+	f.logger.Info().
+		Any("object_name", eventDetails.ObjectName).
+		Msg("queueing for deletion")
+	f.deleteChan <- eventDetails
 }

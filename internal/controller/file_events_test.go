@@ -43,13 +43,11 @@ type fakeClient struct {
 }
 
 // newFakeClient creates a new fake client
-func newFakeClient() KubernetesClientInterface {
+func newFakeClient() *fakeClient {
 	return &fakeClient{
 		resources: make(map[string]*metalk8sv1alpha1.NodeSolutionArchive),
 	}
 }
-
-var _ KubernetesClientInterface = &fakeClient{}
 
 // List retrieves a list of objects
 func (f *fakeClient) List(ctx context.Context, list client.ObjectList, opts ...client.ListOption) error {
@@ -146,7 +144,7 @@ var _ = Describe("FileEvents", func() {
 		testCtx          context.Context
 		testCancel       context.CancelFunc
 		logger           zerolog.Logger
-		k8sClient        KubernetesClientInterface
+		k8sClient        *fakeClient
 	)
 
 	BeforeEach(func() {

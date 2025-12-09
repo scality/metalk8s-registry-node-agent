@@ -54,3 +54,11 @@ var (
 	ErrHandlerMissingRequestHeader       error = errors.New("Missing Request Header Error")
 	ErrHandlerInvalidRequestHeaderFormat error = errors.New("Invalid Request Header Format Error")
 )
+
+var (
+	ErrFileEventsInternal error = errors.New("Internal Error")
+)
+
+var (
+	ErrSolutionArchiveCleanerInternal error = errors.New("Internal Error")
+)

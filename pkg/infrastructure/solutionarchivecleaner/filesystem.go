@@ -11,21 +11,21 @@ import (
 	"github.com/scality/metalk8s-registry-node-agent/pkg/service"
 )
 
-type SolutionArchiveCleaner struct {
+type FileSystem struct {
 	ctx        context.Context
 	store      service.StorageProvider
 	logger     *zerolog.Logger
 	deleteChan chan domain.FileEventDetails
 }
 
-func NewSolutionArchiveCleaner(
+func NewFileSystem(
 	ctx context.Context,
 	logger *zerolog.Logger,
 	store service.StorageProvider,
 	deleteChan chan domain.FileEventDetails,
-) *SolutionArchiveCleaner {
+) *FileSystem {
 	l := logger.With().Str("infrastructure", "solution_archive_cleaner").Logger()
-	return &SolutionArchiveCleaner{
+	return &FileSystem{
 		ctx:        ctx,
 		logger:     &l,
 		store:      store,
@@ -33,7 +33,7 @@ func NewSolutionArchiveCleaner(
 	}
 }
 
-func (cl *SolutionArchiveCleaner) Run() {
+func (cl *FileSystem) Run() {
 	for eventDetails := range cl.deleteChan {
 		switch eventDetails.Origin {
 		case domain.SolutionArchivesOrigin:
@@ -42,9 +42,9 @@ func (cl *SolutionArchiveCleaner) Run() {
 				cl.logger.Error().
 					Err(err).
 					Str("path", eventDetails.FullPathName).
+					Str("origin", "solution_archives").
 					Msg("failed to clean unused solution archive")
 				cl.store.AddWatchFileOrDirectory(eventDetails.FullPathName) // nolint: errcheck // was existing before
-				continue
 			}
 		case domain.SolutionsOrigin:
 			err := cl.cleanUnusedSolutions(eventDetails.FullPathName, eventDetails.IsDir)
@@ -52,15 +52,15 @@ func (cl *SolutionArchiveCleaner) Run() {
 				cl.logger.Error().
 					Err(err).
 					Str("path", eventDetails.FullPathName).
+					Str("origin", "solutions").
 					Msg("failed to clean unused solution")
 				cl.store.AddWatchFileOrDirectory(eventDetails.FullPathName) // nolint: errcheck // was existing before
-				continue
 			}
 		}
 	}
 }
 
-func (cl *SolutionArchiveCleaner) cleanUnusedSolutions(path string, isDir bool) error {
+func (cl *FileSystem) cleanUnusedSolutions(path string, isDir bool) error {
 	cl.store.Lock()
 	defer cl.store.Unlock()
 
@@ -78,11 +78,11 @@ func (cl *SolutionArchiveCleaner) cleanUnusedSolutions(path string, isDir bool) 
 		// Delete the directory
 		err = os.RemoveAll(path)
 		if err != nil {
-			cl.logger.Error().
-				Err(err).
-				Str("path", path).
-				Msg("failed to delete unused solution directory")
-			return errors.Stamp(err)
+			return errors.From(domain.ErrSolutionArchiveCleanerInternal).
+				CausedBy(err).
+				WithDetail("failed to delete unused solution directory").
+				WithProperty("path", path).
+				Throw()
 		}
 
 		cl.logger.Debug().
@@ -94,11 +94,11 @@ func (cl *SolutionArchiveCleaner) cleanUnusedSolutions(path string, isDir bool) 
 
 	err := library.DeleteFile(path)
 	if err != nil {
-		cl.logger.Error().
-			Err(err).
-			Str("path", path).
-			Msg("failed to delete unused solution")
-		return errors.Stamp(err)
+		return errors.From(domain.ErrSolutionArchiveCleanerInternal).
+			CausedBy(err).
+			WithDetail("failed to delete unused solution").
+			WithProperty("path", path).
+			Throw()
 	}
 
 	cl.logger.Debug().
@@ -108,18 +108,18 @@ func (cl *SolutionArchiveCleaner) cleanUnusedSolutions(path string, isDir bool) 
 	return nil
 }
 
-func (cl *SolutionArchiveCleaner) cleanUnusedSolutionArchives(path string, isDir bool) error {
+func (cl *FileSystem) cleanUnusedSolutionArchives(path string, isDir bool) error {
 	cl.store.Lock()
 	defer cl.store.Unlock()
 
 	if isDir {
 		err := os.RemoveAll(path)
 		if err != nil {
-			cl.logger.Error().
-				Err(err).
-				Str("path", path).
-				Msg("failed to delete unused solution archive directory")
-			return errors.Stamp(err)
+			return errors.From(domain.ErrSolutionArchiveCleanerInternal).
+				CausedBy(err).
+				WithDetail("failed to delete unused solution archive directory").
+				WithProperty("path", path).
+				Throw()
 		}
 
 		cl.logger.Debug().
@@ -131,11 +131,11 @@ func (cl *SolutionArchiveCleaner) cleanUnusedSolutionArchives(path string, isDir
 
 	err := library.DeleteFile(path)
 	if err != nil {
-		cl.logger.Error().
-			Err(err).
-			Str("path", path).
-			Msg("failed to delete unused solution archive")
-		return errors.Stamp(err)
+		return errors.From(domain.ErrSolutionArchiveCleanerInternal).
+			CausedBy(err).
+			WithDetail("failed to delete unused solution archive").
+			WithProperty("path", path).
+			Throw()
 	}
 
 	cl.logger.Debug().

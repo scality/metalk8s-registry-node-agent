@@ -352,7 +352,7 @@ func main() {
 	go fileEventsListener.Listen()
 
 	// Start a garbage collector
-	// It will removed unused solutions archives
+	// It will remove unused solutions archives
 	go func() {
 		setupLog.Info("starting garbage collector")
 		container.GetStorageSolutionArchiveCleaner().Run()

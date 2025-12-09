@@ -63,7 +63,7 @@ type Container struct {
 	storageExternalSolutionArchiveGetter *externalsolutionarchivegetter.Storage
 	storageSolutionArchiveMounter        *archivemounter.Storage
 	storageSolutionArchiveUnmounter      *archiveunmounter.Storage
-	solutionArchiveCleaner               *solutionarchivecleaner.SolutionArchiveCleaner
+	solutionArchiveCleaner               *solutionarchivecleaner.FileSystem
 
 	uploadPartUseCase                 *usecase.UploadPart
 	initializeSessionUseCase          *usecase.InitializeSession

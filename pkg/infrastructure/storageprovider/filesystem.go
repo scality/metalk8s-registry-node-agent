@@ -1361,12 +1361,14 @@ func (f *FileSystem) genWatchedFileInfos(fileEntries []os.DirEntry) watchedFiles
 
 			watchedFileInfo, err := f.genWatchedFileInfo(fileEntry)
 			if err != nil {
-				f.logger.Error().Err(err).Msg("Failed to generate watched file info.")
+				f.logger.Error().Err(err).Msg("failed to generate watched file info")
 
 				return
 			}
 
-			f.logger.Debug().Msgf("Generated watched file info for %s", fileEntry.Name())
+			f.logger.Debug().
+				Str("file_name", fileEntry.Name()).
+				Msg("watched file info generated")
 			watchedFileChan <- &watchedFileEntry{
 				fileName: fileEntry.Name(),
 				fileInfo: watchedFileInfo,
@@ -1513,11 +1515,15 @@ func (f *FileSystem) watchFiles(filenameChan chan domain.FileEventDetails) {
 				f.logger.Warn().Msg("watcher events channel closed")
 				return
 			}
+			log := f.logger.With().
+				Str("source_event_type", e.Op.String()).
+				Str("file_name", e.Name).
+				Logger()
 
-			f.logger.Debug().Any("source_event_type", e.Op.String()).Msgf("event received for %s", e.Name)
+			log.Debug().Msg("event received")
 
 			if err := f.updateWatchedFileInfos(f.saveWatchedFileInfosConcurrentSafe); err != nil {
-				f.logger.Error().Err(err).Msg("failed to update watched file infos")
+				log.Error().Err(err).Msg("failed to update watched file infos")
 			}
 
 			// Determine the origin of the object
@@ -1531,10 +1537,10 @@ func (f *FileSystem) watchFiles(filenameChan chan domain.FileEventDetails) {
 			isDir, err := isDirectory(origin, e)
 			if err != nil {
 				if errors.Is(err, domain.ErrStorageProviderNotFound) {
-					f.logger.Debug().Err(err).Msg("object not found to determine if it is a directory")
+					log.Debug().Err(err).Msg("object not found to determine if it is a directory")
 					continue
 				}
-				f.logger.Warn().Err(err).Msg("failed to determine if the object is a directory")
+				log.Warn().Err(err).Msg("failed to determine if the object is a directory")
 				// In our use case, we expect to do nothing if the object is undetermined
 				continue
 			}
@@ -1559,7 +1565,7 @@ func (f *FileSystem) watchFiles(filenameChan chan domain.FileEventDetails) {
 				objectNameVersion, _ = filepath.Rel(f.solutionsLocation, e.Name)
 			}
 
-			f.logger.Debug().Any("source_event_type", e.Op.String()).Msgf("creating FileEventDetails for %s", e.Name)
+			log.Debug().Msg("creating FileEventDetails")
 			filenameChan <- domain.FileEventDetails{
 				FullPathName: e.Name,
 				ObjectName:   objectNameVersion,
@@ -1567,7 +1573,7 @@ func (f *FileSystem) watchFiles(filenameChan chan domain.FileEventDetails) {
 				Origin:       origin,
 				EventType:    e.Op.String(),
 			}
-			f.logger.Debug().Any("source_event_type", e.Op.String()).Msgf("FileEventDetails for %s created", e.Name)
+			log.Debug().Msg("FileEventDetails created")
 		case err, ok := <-f.watcher.Errors:
 			if !ok {
 				f.logger.Warn().Msg("watcher errors channel closed")
@@ -1607,6 +1613,7 @@ func (f *FileSystem) startWatchFiles(filenameChan chan domain.FileEventDetails) 
 			Throw()
 	}
 
+	// Below, we clean the fake objects created before the controller started
 	dirEntries, err := os.ReadDir(f.solutionArchivesLocation)
 	if err != nil {
 		return errors.From(domain.ErrStorageProviderInternal).
