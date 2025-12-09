@@ -11,6 +11,7 @@ The MetalK8s Registry Node Agent is designed to:
 - **Storage Management**: Provide filesystem-based storage with bucket organization
 - **Kubernetes Integration**: Operate as a Kubernetes operator with custom resource definitions
 - **Health Monitoring**: Provide health checks and metrics for cluster monitoring
+- **Clean unused SolutionArchives**: Provide a garbagge collector to clean unused files and directories
 
 ## Key Features
 
@@ -40,7 +41,20 @@ The agent can be configured using environment variables:
 | Variable | Description | Default |
 |----------|-------------|---------|
 | `SOLUTION_ARCHIVES_LOCATION` | Root directory for solution archive storage | `/archives` |
-| `EXTERN_ADDR` | HTTP server address | `:5001` |
+| `SOLUTIONS_LOCATION` | Root directory for solution archive storage | `/solutions` |
+| `NODE_NAME` | Node name for which the controller listens for events | none |
+| `EXTERN_ADDR` | HTTP server address for upload feature | `:5001` |
+| `INTERN_ADDR` | HTTP server address for download between nodes | `:5002` |
+| `NODE_IP` | Node IP on which to expose the download API | none |
+| `EXTERN_SERVER_TLS_CERT_FILE_PATH` | Path to TLS Certificate for upload endpoint | none |
+| `EXTERN_SERVER_TLS_KEY_FILE_PATH` | Path to TLS Key for upload endpoint | none |
+| `EXTERN_SERVER_AUTHN_CA_CERT_FILE_PATH` | Path to CA Certificate for mTLS on upload endpoint | none |
+| `INTERN_SERVER_TLS_CERT_FILE_PATH` | Path to TLS Certificate for download endpoint | none |
+| `INTERN_SERVER_TLS_KEY_FILE_PATH` | Path to TLS Key for download endpoint | none |
+| `INTERN_SERVER_AUTHN_CA_CERT_FILE_PATH` | Path to CA Certificate for mTLS on download endpoint | none |
+| `INTERN_CLIENT_TLS_CA_CERT_FILE_PATH` | Path to TLS CA Certificate for internal client for download feature | none |
+| `INTERN_CLIENT_AUTHN_CERT_FILE_PATH` | Path to mTLS Client Certificate for download feature | none |
+| `INTERN_CLIENT_AUTHN_KEY_FILE_PATH` | Path to mTLS Client Key for download feature | none |
 | `LOGGER_LOG_LEVEL` | Logging level | `info` |
 
 ### Kubernetes Configuration
@@ -77,18 +91,22 @@ spec:
 Endpoint: `POST /api/v1/uploads/{solution-archive}`
 
 Upload a chunk of an solution archive to the registry.  
-Review the API specification in `pkg/presentation/http/generated/uploads-openapi.yaml`
+Review the API specification in `pkg/presentation/http/extern/uploads-openapi.yaml`
 
 **Upload chunks via API**:
 ```bash
 curl -X POST \
+    --http1.1 \
     -H "X-Target-Version: 1.25.3" \
     -H "X-Sha256-checksum: ce775a33b30ae640d521df1fad60868fa701707ffdc4d8b4ca7ab60edfd05c26" \
     -H "Content-Range: bytes 0-1048575/20971520" \
     -H "Content-Type: application/octet-stream" \
+    --cert "/path/to/mtls/tls.crt" \
+    --key "/path/to/mtls/tls.key" \
+    --cacert "/path/to/tls/ca.crt" \
     --data-binary @chunk1.bin \
-    http://localhost:5001/api/v1/uploads/metalk8s
-``` 
+    https://localhost:5001/api/v1/uploads/metalk8s
+```
 
 ### Health Endpoints
 
