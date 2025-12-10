@@ -445,6 +445,15 @@ func main() {
 	// Wait for a signal to shut down the server and important services.
 	<-sigCh
 
+	setupLog.V(1).Info("closing channels")
+	close(filenameChan)
+	setupLog.V(1).Info("channel filename closed")
+	close(reconcileChan)
+	setupLog.V(1).Info("channel reconcile closed")
+	close(deleteChan)
+	setupLog.V(1).Info("channel delete closed")
+	setupLog.V(1).Info("channels closed")
+
 	// Stop the watcher for the file system solution archive storage
 	if err := container.GetFSSolutionArchiveStorage().Stop(); err != nil {
 		setupLog.Error(err, "problem stopping file system solution archive storage")
