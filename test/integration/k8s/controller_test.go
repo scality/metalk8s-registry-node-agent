@@ -28,6 +28,7 @@ import (
 	metalk8sv1alpha1 "github.com/scality/metalk8s-registry-node-agent/api/v1alpha1"
 	"github.com/scality/metalk8s-registry-node-agent/cmd/config"
 	"github.com/scality/metalk8s-registry-node-agent/internal/controller"
+	"github.com/scality/metalk8s-registry-node-agent/pkg/domain"
 	"github.com/scality/metalk8s-registry-node-agent/pkg/infrastructure/di"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
@@ -98,9 +99,10 @@ var _ = BeforeSuite(func() {
 
 	// Initialize a Mock Container
 	// and start a Mock Reconciler for the NodeSolutionArchive resource
-	filenameCh := make(chan string)
+	filenameChan := make(chan domain.FileEventDetails)
+	deleteChan := make(chan domain.FileEventDetails)
 	eventChan := make(chan event.GenericEvent)
-	container := di.NewContainer(ctx, &config.Environment{}, filenameCh)
+	container := di.NewContainer(ctx, &config.Environment{}, filenameChan, deleteChan)
 	container.GetMockFSSolutionArchiveStorage()
 	container.GetMockHTTPInternClient()
 

@@ -17,6 +17,7 @@ import (
 
 	"github.com/rs/zerolog"
 	"github.com/scality/metalk8s-registry-node-agent/cmd/config"
+	"github.com/scality/metalk8s-registry-node-agent/pkg/domain"
 	"github.com/scality/metalk8s-registry-node-agent/pkg/infrastructure/di"
 	"github.com/scality/metalk8s-registry-node-agent/pkg/presentation/http/extern"
 	"github.com/scality/metalk8s-registry-node-agent/pkg/presentation/http/intern"
@@ -69,8 +70,9 @@ var _ = BeforeSuite(func() {
 	if err != nil {
 		log.Fatal(err) //nolint:revive // This is basically the main function, shut up revive
 	}
-	filenameCh := make(chan string)
-	container := di.NewContainer(ctx, cfg, filenameCh)
+	filenameChan := make(chan domain.FileEventDetails)
+	deleteChan := make(chan domain.FileEventDetails)
+	container := di.NewContainer(ctx, cfg, filenameChan, deleteChan)
 
 	rootPath, err := os.MkdirTemp("/tmp", "test-integration-api_v1_uploads-*")
 	if err != nil {
@@ -163,8 +165,9 @@ var _ = BeforeSuite(func() {
 		Expect(err).NotTo(HaveOccurred())
 	}
 
+	By("Starting the file system watcher for the solution archive storage")
 	go func() {
-		if err := testingSuite.container.GetFSSolutionArchiveStorage().Start(filenameCh); err != nil {
+		if err := testingSuite.container.GetFSSolutionArchiveStorage().Start(filenameChan); err != nil {
 			testingSuite.container.GetLogger().Error().Err(err).Msg("problem starting file system solution archive storage")
 		}
 	}()

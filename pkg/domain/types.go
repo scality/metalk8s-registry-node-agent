@@ -2,6 +2,13 @@ package domain
 
 import "io"
 
+type FileOrigin int
+
+const (
+	SolutionArchivesOrigin FileOrigin = iota + 1
+	SolutionsOrigin
+)
+
 type (
 	// SolutionArchive.
 	SolutionArchive struct {
@@ -40,6 +47,14 @@ type (
 		SolutionArchive *SolutionArchive
 		Meta            *PartMeta
 		Content         io.Reader
+	}
+
+	FileEventDetails struct {
+		FullPathName string
+		ObjectName   string
+		IsDir        bool
+		Origin       FileOrigin
+		EventType    string
 	}
 )
 

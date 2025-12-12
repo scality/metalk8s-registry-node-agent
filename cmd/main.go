@@ -52,6 +52,7 @@ import (
 	"github.com/scality/metalk8s-registry-node-agent/cmd/config"
 	"github.com/scality/metalk8s-registry-node-agent/internal/controller"
 	webhookv1alpha1 "github.com/scality/metalk8s-registry-node-agent/internal/webhook/v1alpha1"
+	"github.com/scality/metalk8s-registry-node-agent/pkg/domain"
 	"github.com/scality/metalk8s-registry-node-agent/pkg/infrastructure/di"
 	"github.com/scality/metalk8s-registry-node-agent/pkg/library"
 	// +kubebuilder:scaffold:imports
@@ -121,14 +122,15 @@ func main() {
 	))
 
 	// Initialize channels between Controller Manager and the HTTP server
-	filenameCh := make(chan string)
-	eventCh := make(chan event.GenericEvent)
+	filenameChan := make(chan domain.FileEventDetails)
+	reconcileChan := make(chan event.GenericEvent)
+	deleteChan := make(chan domain.FileEventDetails)
 
 	// Start API server
 	log.Printf("Starting %s:%s\n", config.ApplicationName, config.ApplicationVersion)
 
 	// Initialize the base context of the application.
-	// 	Every dependency will be able to use this context.
+	// Every dependency will be able to use this context.
 	ctx, cancel := context.WithTimeout(context.Background(), timeoutDurationInSecond*time.Second)
 	defer cancel()
 
@@ -138,7 +140,7 @@ func main() {
 		log.Fatalf("failed to load config: %v", err)
 	}
 	// Initialize the dependency container.
-	container := di.NewContainer(ctx, cfg, filenameCh)
+	container := di.NewContainer(ctx, cfg, filenameChan, deleteChan)
 
 	logger := container.GetLogger()
 
@@ -262,7 +264,7 @@ func main() {
 		NodeName:        nodeName,
 		DownloadBaseURL: downloadBaseURL,
 		Container:       container,
-		EventChan:       eventCh,
+		EventChan:       reconcileChan,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "NodeSolutionArchive")
 		os.Exit(1)
@@ -292,7 +294,7 @@ func main() {
 		f,
 	)
 	if err != nil {
-		setupLog.Error(err, "Failed to create field index for NodeSolutionArchive")
+		setupLog.Error(err, "failed to create field index for NodeSolutionArchive")
 		os.Exit(1)
 	}
 
@@ -314,7 +316,26 @@ func main() {
 		fLocal,
 	)
 	if err != nil {
-		setupLog.Error(err, "Failed to create field index for LocalNodeSolutionArchive")
+		setupLog.Error(err, "failed to create field index for LocalNodeSolutionArchive")
+		os.Exit(1)
+	}
+
+	// Create a field index for the NodeSolutionArchive object that match only the local node (without versioning)
+	fUnversionedLocal := func(rawObj client.Object) []string {
+		unversionedNamed := ""
+		if rawObj.(*metalk8sv1alpha1.NodeSolutionArchive).Spec.NodeName == nodeName {
+			unversionedNamed = rawObj.(*metalk8sv1alpha1.NodeSolutionArchive).Spec.Name
+		}
+		return []string{unversionedNamed}
+	}
+	err = mgr.GetFieldIndexer().IndexField(
+		context.Background(),
+		&metalk8sv1alpha1.NodeSolutionArchive{},
+		"LocalSolutionArchiveName",
+		fUnversionedLocal,
+	)
+	if err != nil {
+		setupLog.Error(err, "failed to create field index for LocalNodeSolutionArchive")
 		os.Exit(1)
 	}
 
@@ -324,11 +345,18 @@ func main() {
 		ctx,
 		logger,
 		mgr.GetClient(),
-		filenameCh,
-		eventCh,
-		nodeName,
+		filenameChan,
+		reconcileChan,
+		deleteChan,
 	)
 	go fileEventsListener.Listen()
+
+	// Start a garbage collector
+	// It will remove unused solutions archives
+	go func() {
+		setupLog.Info("starting garbage collector")
+		container.GetStorageSolutionArchiveCleaner().Run()
+	}()
 
 	if metricsCertWatcher != nil {
 		setupLog.Info("Adding metrics certificate watcher to manager")
@@ -409,13 +437,22 @@ func main() {
 	}()
 
 	// Start the watcher for the file system solution archive storage
-	if err := container.GetFSSolutionArchiveStorage().Start(filenameCh); err != nil {
+	if err := container.GetFSSolutionArchiveStorage().Start(filenameChan); err != nil {
 		setupLog.Error(err, "problem starting file system solution archive storage")
 		os.Exit(1)
 	}
 
 	// Wait for a signal to shut down the server and important services.
 	<-sigCh
+
+	setupLog.V(1).Info("closing channels")
+	close(filenameChan)
+	setupLog.V(1).Info("channel filename closed")
+	close(reconcileChan)
+	setupLog.V(1).Info("channel reconcile closed")
+	close(deleteChan)
+	setupLog.V(1).Info("channel delete closed")
+	setupLog.V(1).Info("channels closed")
 
 	// Stop the watcher for the file system solution archive storage
 	if err := container.GetFSSolutionArchiveStorage().Stop(); err != nil {

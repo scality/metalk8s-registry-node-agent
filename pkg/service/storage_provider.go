@@ -48,7 +48,7 @@ type StorageProvider interface {
 	Init() error
 
 	// Start starts the watcher on the storage provider.
-	Start(filenameCh chan string) error
+	Start(filenameChan chan domain.FileEventDetails) error
 
 	// Stop stops the watcher on the storage provider.
 	Stop() error
@@ -158,4 +158,10 @@ type StorageProvider interface {
 
 	// UnmountFile unmounts a file from the storage.
 	UnmountFile(mountPoint string) error
+
+	// AddWatchFileOrDirectory adds a file or directory to the watcher.
+	AddWatchFileOrDirectory(path string) error
+
+	// RemoveWatchFileOrDirectory removes a file or directory from the watcher.
+	RemoveWatchFileOrDirectory(path string) error
 }

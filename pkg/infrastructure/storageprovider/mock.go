@@ -70,11 +70,11 @@ func (f *MockFileSystem) Init() error {
 	return nil
 }
 
-func (f *MockFileSystem) Start(filenameCh chan string) error {
+func (f *MockFileSystem) Start(filenameChan chan domain.FileEventDetails) error {
 	f.Lock()
 	defer f.Unlock()
 
-	return f.startWatchFiles(filenameCh)
+	return f.startWatchFiles(filenameChan)
 }
 
 func (f *MockFileSystem) Stop() error {
@@ -335,7 +335,7 @@ func (f *MockFileSystem) consolidateMultipartFile(
 	return nil
 }
 
-func (f *MockFileSystem) startWatchFiles(_ chan string) error {
+func (f *MockFileSystem) startWatchFiles(_ chan domain.FileEventDetails) error {
 	return nil
 }
 
@@ -343,5 +343,13 @@ func (f *MockFileSystem) startWatchFiles(_ chan string) error {
 func (f *MockFileSystem) stopWatchFiles() error {
 	defer f.Wait()
 	f.watcher.Close()
+	return nil
+}
+
+func (f *MockFileSystem) AddWatchFileOrDirectory(path string) error {
+	return nil
+}
+
+func (f *MockFileSystem) RemoveWatchFileOrDirectory(path string) error {
 	return nil
 }
