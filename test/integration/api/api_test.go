@@ -80,6 +80,7 @@ var _ = BeforeSuite(func() {
 	}
 	container.ExternTLSConfig = fakeTLSConfig
 	container.InternTLSConfig = fakeTLSConfig
+	container.InternTLSClientConfig = utils.GenerateFakeTLSClientConfig(fakeTLSConfig)
 
 	rootPath, err := os.MkdirTemp("/tmp", "test-integration-api_v1_uploads-*")
 	if err != nil {
@@ -87,7 +88,8 @@ var _ = BeforeSuite(func() {
 	}
 
 	// External HTTP Client creation
-	externHTTPClient := utils.GetHTTPExternClient()
+	externTLSClientConfig := utils.GenerateFakeTLSClientConfig(fakeTLSConfig)
+	externHTTPClient := utils.GetHTTPExternClient(externTLSClientConfig)
 	externClientWithResponse, err := utils.GetGeneratedHTTPExternClient(cfg.Extern.Addr, cfg.RootExternAPIPath, externHTTPClient)
 	if err != nil {
 		container.GetLogger().Fatal().Err(err).Msg("failed to create generated http client")
