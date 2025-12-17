@@ -36,11 +36,24 @@ type (
 	}
 
 	Extern struct {
-		Addr string `env:"ADDR, default=:5001"`
+		Addr      string    `env:"ADDR, default=:5001"`
+		ServerTLS ServerTLS `env:",prefix=SERVER_TLS_"`
 	}
 
 	Intern struct {
-		Addr string `env:"ADDR, default=:5002"`
+		Addr      string    `env:"ADDR, default=:5002"`
+		ServerTLS ServerTLS `env:",prefix=SERVER_TLS_"`
+		ClientTLS ClientTLS `env:",prefix=CLIENT_TLS_"`
+	}
+
+	ServerTLS struct {
+		// identical for Intern and Extern
+		CertFilePath string `env:"CERT_FILE_PATH"`
+		KeyFilePath  string `env:"KEY_FILE_PATH"`
+	}
+
+	ClientTLS struct {
+		CACertFilePath string `env:"CA_CERT_FILE_PATH"`
 	}
 )
 

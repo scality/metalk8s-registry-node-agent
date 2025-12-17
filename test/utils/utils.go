@@ -19,12 +19,19 @@ package utils
 import (
 	"bufio"
 	"bytes"
+	"crypto/rand"
+	"crypto/rsa"
 	"crypto/tls"
+	"crypto/x509"
+	"crypto/x509/pkix"
 	"fmt"
+	"math/big"
+	"net"
 	"net/http"
 	"os"
 	"os/exec"
 	"strings"
+	"time"
 
 	. "github.com/onsi/ginkgo/v2" // nolint:revive,staticcheck
 	"github.com/scality/metalk8s-registry-node-agent/pkg/presentation/http/extern"
@@ -270,7 +277,53 @@ func GetGeneratedHTTPExternClient(
 	addr string, apiPath string, httpClient *http.Client,
 ) (*extern.ClientWithResponses, error) {
 	return extern.NewClientWithResponses(
-		"http://localhost"+addr+apiPath,
+		"https://localhost"+addr+apiPath,
 		extern.WithHTTPClient(httpClient),
 	)
+}
+
+// generateFakeTLSConfig creates a *tls.Config with a new,
+// self-signed certificate and private key generated in memory.
+func GenerateFakeTLSConfig() (*tls.Config, error) {
+	// 1. Generate a new private key
+	privKey, err := rsa.GenerateKey(rand.Reader, 2048)
+	if err != nil {
+		return nil, err
+	}
+
+	// 2. Create a certificate template
+	template := x509.Certificate{
+		SerialNumber: big.NewInt(1), // Simple serial number
+		Subject: pkix.Name{
+			Organization: []string{"My Fake Corp"},
+		},
+		NotBefore: time.Now(),
+		NotAfter:  time.Now().Add(time.Hour * 24 * 365), // Valid for 1 year
+
+		KeyUsage:    x509.KeyUsageKeyEncipherment | x509.KeyUsageDigitalSignature,
+		ExtKeyUsage: []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth}, // Use for server auth
+
+		// Add IP addresses and DNS names the certificate should be valid for.
+		// "localhost" is common for testing.
+		IPAddresses: []net.IP{net.ParseIP("127.0.0.1")},
+		DNSNames:    []string{"localhost"},
+	}
+
+	// 3. Create the self-signed certificate
+	// We use the same template as the parent and child, and the same private key to sign it.
+	certDER, err := x509.CreateCertificate(rand.Reader, &template, &template, &privKey.PublicKey, privKey)
+	if err != nil {
+		return nil, err
+	}
+
+	// 4. Create a tls.Certificate struct
+	tlsCert := tls.Certificate{
+		Certificate: [][]byte{certDER}, // The DER-encoded certificate
+		PrivateKey:  privKey,           // The private key
+	}
+
+	// 5. Return the tls.Config
+	return &tls.Config{
+		Certificates: []tls.Certificate{tlsCert},
+	}, nil
 }

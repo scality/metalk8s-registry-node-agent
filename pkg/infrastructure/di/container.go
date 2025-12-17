@@ -2,6 +2,7 @@ package di
 
 import (
 	"context"
+	"crypto/tls"
 	"net/http"
 
 	"github.com/rs/zerolog"
@@ -42,6 +43,8 @@ type Container struct {
 	httpInternServer          *http.Server
 	httpInternClient          *http.Client
 	generatedHTTPInternClient *intern.ClientWithResponses
+	ExternTLSConfig           *tls.Config
+	InternTLSConfig           *tls.Config
 	rootExternAPIPath         string
 	rootInternAPIPath         string
 

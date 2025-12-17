@@ -65,7 +65,7 @@ var (
 
 const (
 	timeoutDurationInSecond = 5
-	downloadBaseURLFormat   = "http://%s:%s%s/downloads/"
+	downloadBaseURLFormat   = "https://%s:%s%s/downloads/"
 )
 
 func init() {
@@ -395,7 +395,7 @@ func main() {
 		logger.Info().Msg("http external server starting")
 
 		// Start the HTTP server.
-		serveErr := httpExternServer.ListenAndServe()
+		serveErr := httpExternServer.ListenAndServeTLS("", "")
 		if serveErr != nil {
 			sigCh <- syscall.SIGTERM // Triggers graceful shutdown
 
@@ -413,7 +413,7 @@ func main() {
 		logger.Info().Msg("http internal server starting")
 
 		// Start the HTTP server.
-		serveErr := httpInternalServer.ListenAndServe()
+		serveErr := httpInternalServer.ListenAndServeTLS("", "")
 		if serveErr != nil {
 			sigCh <- syscall.SIGTERM // Triggers graceful shutdown
 
