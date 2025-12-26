@@ -18,9 +18,19 @@ on:
         required: false
         default: false
         type: boolean
+    outputs:
+      image-name:
+        description: "The full image name with tag"
+        value: ${{ jobs.build.outputs.image-name }}
+      image-version:
+        description: "The version of the image"
+        value: ${{ jobs.build.outputs.image-version }}
 
 jobs:
   build:
+    outputs:
+      image-name: ${{ steps.tags.outputs.tags }}
+      image-version: ${{ steps.tags.outputs.version }}
     runs-on: ubuntu-24.04
     steps:
       - name: Checkout
