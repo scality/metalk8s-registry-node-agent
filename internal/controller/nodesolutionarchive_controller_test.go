@@ -50,15 +50,17 @@ var _ = Describe("NodeSolutionArchive Controller", func() {
 					},
 					// TODO(user): Specify other spec details if needed.
 					Spec: metalk8sv1alpha1.NodeSolutionArchiveSpec{
-						Name:     "my-new-solution",
-						Version:  "1.2.0",
-						NodeName: "node-1",
-						Validation: metalk8sv1alpha1.SolutionArchiveValidation{
-							Checksum: metalk8sv1alpha1.NodeSolutionArchiveChecksum{
-								Type:  "sha256",
-								Value: "123abc",
+						SolutionArchiveSpec: metalk8sv1alpha1.SolutionArchiveSpec{
+							Name:    "my-new-solution",
+							Version: "1.2.0",
+							Validation: metalk8sv1alpha1.SolutionArchiveValidation{
+								Checksum: metalk8sv1alpha1.SolutionArchiveChecksum{
+									Type:  "sha256",
+									Value: "123abc",
+								},
 							},
 						},
+						NodeName: "node-1",
 					},
 				}
 				Expect(k8sClient.Create(ctx, resource)).To(Succeed())

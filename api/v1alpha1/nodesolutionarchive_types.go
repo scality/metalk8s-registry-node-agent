@@ -22,7 +22,7 @@ import (
 	"k8s.io/utils/ptr"
 )
 
-type NodeSolutionArchiveChecksum struct {
+type SolutionArchiveChecksum struct {
 	// Type of digest
 	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
 	// +kubebuilder:validation:Enum:=sha256
@@ -35,11 +35,10 @@ type NodeSolutionArchiveChecksum struct {
 type SolutionArchiveValidation struct {
 	// Checksum of the SolutionArchive
 	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
-	Checksum NodeSolutionArchiveChecksum `json:"checksum"`
+	Checksum SolutionArchiveChecksum `json:"checksum"`
 }
 
-// NodeSolutionArchiveSpec defines the desired state of NodeSolutionArchive.
-type NodeSolutionArchiveSpec struct {
+type SolutionArchiveSpec struct {
 	// Name of the SolutionArchive
 	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
 	// +kubebuilder:validation:Pattern:=`^[a-zA-Z0-9][a-zA-Z0-9_\-\.]{1,98}[a-zA-Z0-9]$`
@@ -47,12 +46,17 @@ type NodeSolutionArchiveSpec struct {
 	// Version of the SolutionArchive
 	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
 	Version string `json:"version"`
-	// Name of the Node
-	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
-	NodeName string `json:"nodeName"`
 	// Validation details for the SolutionArchive
 	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
 	Validation SolutionArchiveValidation `json:"validation"`
+}
+
+// NodeSolutionArchiveSpec defines the desired state of NodeSolutionArchive.
+type NodeSolutionArchiveSpec struct {
+	SolutionArchiveSpec `json:",inline"`
+	// Name of the Node
+	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
+	NodeName string `json:"nodeName"`
 }
 
 // NodeSolutionArchiveStatus defines the observed state of NodeSolutionArchive.
