@@ -96,7 +96,6 @@ func (f *fakeClient) matchesFields(resource *metalk8sv1alpha1.NodeSolutionArchiv
 		if req.Field == "LocalSolutionArchiveName" {
 			return resource.Spec.Name == req.Value
 		}
-
 	}
 
 	return true
@@ -192,15 +191,17 @@ var _ = Describe("FileEvents", func() {
 					Name: "test-solution-archive",
 				},
 				Spec: metalk8sv1alpha1.NodeSolutionArchiveSpec{
-					Name:     "test-solution",
-					Version:  "1.0.0",
-					NodeName: "test-node",
-					Validation: metalk8sv1alpha1.SolutionArchiveValidation{
-						Checksum: metalk8sv1alpha1.NodeSolutionArchiveChecksum{
-							Type:  "sha256",
-							Value: "abc123",
+					SolutionArchiveSpec: metalk8sv1alpha1.SolutionArchiveSpec{
+						Name:    "test-solution",
+						Version: "1.0.0",
+						Validation: metalk8sv1alpha1.SolutionArchiveValidation{
+							Checksum: metalk8sv1alpha1.SolutionArchiveChecksum{
+								Type:  "sha256",
+								Value: "abc123",
+							},
 						},
 					},
+					NodeName: "test-node",
 				},
 			}
 			Expect(k8sClient.Create(testCtx, testResource)).To(Succeed())
@@ -212,15 +213,17 @@ var _ = Describe("FileEvents", func() {
 					DeletionTimestamp: &metav1.Time{Time: time.Now()},
 				},
 				Spec: metalk8sv1alpha1.NodeSolutionArchiveSpec{
-					Name:     "test-solution-under-deletion",
-					Version:  "1.0.1",
-					NodeName: "test-node",
-					Validation: metalk8sv1alpha1.SolutionArchiveValidation{
-						Checksum: metalk8sv1alpha1.NodeSolutionArchiveChecksum{
-							Type:  "sha256",
-							Value: "abc123",
+					SolutionArchiveSpec: metalk8sv1alpha1.SolutionArchiveSpec{
+						Name:    "test-solution-under-deletion",
+						Version: "1.0.1",
+						Validation: metalk8sv1alpha1.SolutionArchiveValidation{
+							Checksum: metalk8sv1alpha1.SolutionArchiveChecksum{
+								Type:  "sha256",
+								Value: "abc123",
+							},
 						},
 					},
+					NodeName: "test-node",
 				},
 			}
 			Expect(k8sClient.Create(testCtx, underDeletionTestResource)).To(Succeed())
@@ -707,15 +710,17 @@ var _ = Describe("FileEvents", func() {
 					DeletionTimestamp: &metav1.Time{Time: time.Now()},
 				},
 				Spec: metalk8sv1alpha1.NodeSolutionArchiveSpec{
-					Name:     "test-solution-under-deletion",
-					Version:  "1.0.0",
-					NodeName: "test-node",
-					Validation: metalk8sv1alpha1.SolutionArchiveValidation{
-						Checksum: metalk8sv1alpha1.NodeSolutionArchiveChecksum{
-							Type:  "sha256",
-							Value: "def456",
+					SolutionArchiveSpec: metalk8sv1alpha1.SolutionArchiveSpec{
+						Name:    "test-solution-under-deletion",
+						Version: "1.0.0",
+						Validation: metalk8sv1alpha1.SolutionArchiveValidation{
+							Checksum: metalk8sv1alpha1.SolutionArchiveChecksum{
+								Type:  "sha256",
+								Value: "def456",
+							},
 						},
 					},
+					NodeName: "test-node",
 				},
 				Status: metalk8sv1alpha1.NodeSolutionArchiveStatus{
 					Available: ptr.To(true),
@@ -730,15 +735,17 @@ var _ = Describe("FileEvents", func() {
 					DeletionTimestamp: &metav1.Time{Time: time.Now()},
 				},
 				Spec: metalk8sv1alpha1.NodeSolutionArchiveSpec{
-					Name:     "test-solution-under-deletion",
-					Version:  "2.0.0",
-					NodeName: "test-node",
-					Validation: metalk8sv1alpha1.SolutionArchiveValidation{
-						Checksum: metalk8sv1alpha1.NodeSolutionArchiveChecksum{
-							Type:  "sha256",
-							Value: "abc123",
+					SolutionArchiveSpec: metalk8sv1alpha1.SolutionArchiveSpec{
+						Name:    "test-solution-under-deletion",
+						Version: "2.0.0",
+						Validation: metalk8sv1alpha1.SolutionArchiveValidation{
+							Checksum: metalk8sv1alpha1.SolutionArchiveChecksum{
+								Type:  "sha256",
+								Value: "abc123",
+							},
 						},
 					},
+					NodeName: "test-node",
 				},
 				Status: metalk8sv1alpha1.NodeSolutionArchiveStatus{
 					Available: ptr.To(true),
@@ -752,15 +759,17 @@ var _ = Describe("FileEvents", func() {
 					Name: "test-solution-mixed-valid1",
 				},
 				Spec: metalk8sv1alpha1.NodeSolutionArchiveSpec{
-					Name:     "test-solution-mixed",
-					Version:  "1.0.0",
-					NodeName: "test-node",
-					Validation: metalk8sv1alpha1.SolutionArchiveValidation{
-						Checksum: metalk8sv1alpha1.NodeSolutionArchiveChecksum{
-							Type:  "sha256",
-							Value: "abc123",
+					SolutionArchiveSpec: metalk8sv1alpha1.SolutionArchiveSpec{
+						Name:    "test-solution-mixed",
+						Version: "1.0.0",
+						Validation: metalk8sv1alpha1.SolutionArchiveValidation{
+							Checksum: metalk8sv1alpha1.SolutionArchiveChecksum{
+								Type:  "sha256",
+								Value: "abc123",
+							},
 						},
 					},
+					NodeName: "test-node",
 				},
 				Status: metalk8sv1alpha1.NodeSolutionArchiveStatus{
 					Available: ptr.To(true),
@@ -775,15 +784,17 @@ var _ = Describe("FileEvents", func() {
 					DeletionTimestamp: &metav1.Time{Time: time.Now()},
 				},
 				Spec: metalk8sv1alpha1.NodeSolutionArchiveSpec{
-					Name:     "test-solution-mixed",
-					Version:  "2.0.0",
-					NodeName: "test-node",
-					Validation: metalk8sv1alpha1.SolutionArchiveValidation{
-						Checksum: metalk8sv1alpha1.NodeSolutionArchiveChecksum{
-							Type:  "sha256",
-							Value: "def456",
+					SolutionArchiveSpec: metalk8sv1alpha1.SolutionArchiveSpec{
+						Name:    "test-solution-mixed",
+						Version: "2.0.0",
+						Validation: metalk8sv1alpha1.SolutionArchiveValidation{
+							Checksum: metalk8sv1alpha1.SolutionArchiveChecksum{
+								Type:  "sha256",
+								Value: "def456",
+							},
 						},
 					},
+					NodeName: "test-node",
 				},
 				Status: metalk8sv1alpha1.NodeSolutionArchiveStatus{
 					Available: ptr.To(true),
@@ -797,15 +808,17 @@ var _ = Describe("FileEvents", func() {
 					Name: "test-solution-mixed-valid2",
 				},
 				Spec: metalk8sv1alpha1.NodeSolutionArchiveSpec{
-					Name:     "test-solution-mixed",
-					Version:  "3.0.0",
-					NodeName: "test-node",
-					Validation: metalk8sv1alpha1.SolutionArchiveValidation{
-						Checksum: metalk8sv1alpha1.NodeSolutionArchiveChecksum{
-							Type:  "sha256",
-							Value: "abc123",
+					SolutionArchiveSpec: metalk8sv1alpha1.SolutionArchiveSpec{
+						Name:    "test-solution-mixed",
+						Version: "3.0.0",
+						Validation: metalk8sv1alpha1.SolutionArchiveValidation{
+							Checksum: metalk8sv1alpha1.SolutionArchiveChecksum{
+								Type:  "sha256",
+								Value: "abc123",
+							},
 						},
 					},
+					NodeName: "test-node",
 				},
 				Status: metalk8sv1alpha1.NodeSolutionArchiveStatus{
 					Available: ptr.To(true),

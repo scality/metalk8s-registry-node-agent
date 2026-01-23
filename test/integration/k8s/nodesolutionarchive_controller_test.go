@@ -54,15 +54,17 @@ var _ = Describe("NodeSolutionArchive Controller", func() {
 
 			_, err := controllerutil.CreateOrUpdate(ctx, k8sClient, resource, func() error {
 				resource.Spec = metalk8sv1alpha1.NodeSolutionArchiveSpec{
-					Name:     "solution-1",
-					Version:  "1.2.0",
-					NodeName: nodeName,
-					Validation: metalk8sv1alpha1.SolutionArchiveValidation{
-						Checksum: metalk8sv1alpha1.NodeSolutionArchiveChecksum{
-							Type:  "sha256",
-							Value: "ce775a33b30ae640d521df1fad60868fa701707ffdc4d8b4ca7ab60edfd05c26",
+					SolutionArchiveSpec: metalk8sv1alpha1.SolutionArchiveSpec{
+						Name:    "solution-1",
+						Version: "1.2.0",
+						Validation: metalk8sv1alpha1.SolutionArchiveValidation{
+							Checksum: metalk8sv1alpha1.SolutionArchiveChecksum{
+								Type:  "sha256",
+								Value: "ce775a33b30ae640d521df1fad60868fa701707ffdc4d8b4ca7ab60edfd05c26",
+							},
 						},
 					},
+					NodeName: nodeName,
 				}
 				return nil
 			})
@@ -101,15 +103,17 @@ var _ = Describe("NodeSolutionArchive Controller", func() {
 
 			_, err := controllerutil.CreateOrUpdate(ctx, k8sClient, resource, func() error {
 				resource.Spec = metalk8sv1alpha1.NodeSolutionArchiveSpec{
-					Name:     "solution-2",
-					Version:  "4.2.1",
-					NodeName: nodeName,
-					Validation: metalk8sv1alpha1.SolutionArchiveValidation{
-						Checksum: metalk8sv1alpha1.NodeSolutionArchiveChecksum{
-							Type:  "sha256",
-							Value: "ce775a33b30ae640d521df1fad60868fa701707ffdc4d8b4ca7ab60edfd05c26",
+					SolutionArchiveSpec: metalk8sv1alpha1.SolutionArchiveSpec{
+						Name:    "solution-2",
+						Version: "4.2.1",
+						Validation: metalk8sv1alpha1.SolutionArchiveValidation{
+							Checksum: metalk8sv1alpha1.SolutionArchiveChecksum{
+								Type:  "sha256",
+								Value: "ce775a33b30ae640d521df1fad60868fa701707ffdc4d8b4ca7ab60edfd05c26",
+							},
 						},
 					},
+					NodeName: nodeName,
 				}
 				return nil
 			})
@@ -148,15 +152,17 @@ var _ = Describe("NodeSolutionArchive Controller", func() {
 
 			_, err := controllerutil.CreateOrUpdate(ctx, k8sClient, resource, func() error {
 				resource.Spec = metalk8sv1alpha1.NodeSolutionArchiveSpec{
-					Name:     "solution-2",
-					Version:  "4.2.1",
-					NodeName: nodeName,
-					Validation: metalk8sv1alpha1.SolutionArchiveValidation{
-						Checksum: metalk8sv1alpha1.NodeSolutionArchiveChecksum{
-							Type:  "sha256",
-							Value: "bad",
+					SolutionArchiveSpec: metalk8sv1alpha1.SolutionArchiveSpec{
+						Name:    "solution-2",
+						Version: "4.2.1",
+						Validation: metalk8sv1alpha1.SolutionArchiveValidation{
+							Checksum: metalk8sv1alpha1.SolutionArchiveChecksum{
+								Type:  "sha256",
+								Value: "bad",
+							},
 						},
 					},
+					NodeName: nodeName,
 				}
 				return nil
 			})
@@ -196,15 +202,17 @@ var _ = Describe("NodeSolutionArchive Controller", func() {
 			}
 			_, err := controllerutil.CreateOrUpdate(ctx, k8sClient, otherResource, func() error {
 				otherResource.Spec = metalk8sv1alpha1.NodeSolutionArchiveSpec{
-					Name:     "solution-3",
-					Version:  "4.2.1",
-					NodeName: "otherNodeName",
-					Validation: metalk8sv1alpha1.SolutionArchiveValidation{
-						Checksum: metalk8sv1alpha1.NodeSolutionArchiveChecksum{
-							Type:  "sha256",
-							Value: "95162a9fe88f9d11c7f7ef7dc20c2426814e188fd858b27adb5274d3689675af",
+					SolutionArchiveSpec: metalk8sv1alpha1.SolutionArchiveSpec{
+						Name:    "solution-3",
+						Version: "4.2.1",
+						Validation: metalk8sv1alpha1.SolutionArchiveValidation{
+							Checksum: metalk8sv1alpha1.SolutionArchiveChecksum{
+								Type:  "sha256",
+								Value: "95162a9fe88f9d11c7f7ef7dc20c2426814e188fd858b27adb5274d3689675af",
+							},
 						},
 					},
+					NodeName: "otherNodeName",
 				}
 
 				return nil
@@ -230,15 +238,17 @@ var _ = Describe("NodeSolutionArchive Controller", func() {
 
 			_, err = controllerutil.CreateOrUpdate(ctx, k8sClient, resource, func() error {
 				resource.Spec = metalk8sv1alpha1.NodeSolutionArchiveSpec{
-					Name:     "solution-3",
-					Version:  "4.2.1",
-					NodeName: nodeName,
-					Validation: metalk8sv1alpha1.SolutionArchiveValidation{
-						Checksum: metalk8sv1alpha1.NodeSolutionArchiveChecksum{
-							Type:  "sha256",
-							Value: "95162a9fe88f9d11c7f7ef7dc20c2426814e188fd858b27adb5274d3689675af",
+					SolutionArchiveSpec: metalk8sv1alpha1.SolutionArchiveSpec{
+						Name:    "solution-3",
+						Version: "4.2.1",
+						Validation: metalk8sv1alpha1.SolutionArchiveValidation{
+							Checksum: metalk8sv1alpha1.SolutionArchiveChecksum{
+								Type:  "sha256",
+								Value: "95162a9fe88f9d11c7f7ef7dc20c2426814e188fd858b27adb5274d3689675af",
+							},
 						},
 					},
+					NodeName: nodeName,
 				}
 				return nil
 			})
