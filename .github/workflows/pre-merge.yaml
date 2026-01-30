@@ -52,3 +52,12 @@ jobs:
   test-e2e:
     uses: ./.github/workflows/test-e2e.yml
     secrets: inherit
+
+  generate-sbom:
+    needs: build
+    uses: ./.github/workflows/generate-sbom.yaml
+    secrets: inherit
+    with:
+      image-name: ${{ needs.build.outputs.image-name }}
+      image-version: ${{ needs.build.outputs.image-version }}
+      upload-sbom: true

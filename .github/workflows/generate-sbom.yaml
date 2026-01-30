@@ -1,0 +1,77 @@
+name: Generate SBOM
+
+on:
+  workflow_dispatch:
+    inputs:
+      image-name:
+        description: >-
+          Docker image name to use to generate sbom from
+        type: string
+        required: true
+      image-version:
+        description: >-
+          The version of the image to generate sbom from
+        type: string
+        required: false
+        default: ""
+      upload-sbom:
+        description: >-
+          Whether to upload the sbom to the repository
+        type: boolean
+        required: false
+        default: false
+  workflow_call:
+    inputs:
+      image-name:
+        description: >-
+          Docker image name to use to generate sbom from
+        type: string
+        required: true
+      image-version:
+        description: >-
+          The version of the image to generate sbom from
+        type: string
+        required: false
+        default: ""
+      upload-sbom:
+        description: >-
+          Whether to upload the sbom to the repository
+        type: boolean
+        required: false
+        default: false
+  
+jobs:
+  generate-sbom:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup Private Go Environment
+        uses: ./.github/actions/setup-go
+        with:
+          token: ${{ secrets.GIT_ACCESS_TOKEN }}
+
+      - name: Login to the registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Generate sbom for metalk8s-registry-node-agent
+        uses: scality/sbom@v2.1.3
+        with:
+          target: ${{ inputs.image-name }}
+          target_type: image
+          version: ${{ inputs.image-version }}
+          output_dir: /tmp
+          output_file: sbom.json
+
+      - name: Upload sbom to repository
+        if: inputs.upload-sbom == true
+        uses: scality/sbom-upload@v1.0.7
+        with:
+          url: ${{ vars.DEPENDENCY_TRACK_HOSTNAME }}
+          api-key: ${{ secrets.DEPENDENCYTRACK_APIKEY }}
+          project-sbom: /tmp/sbom.json
