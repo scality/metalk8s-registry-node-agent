@@ -72,3 +72,33 @@ jobs:
           cache-to: type=gha,mode=max,scope=metalk8s-registry-node-agent
           secrets: |
             GIT_AUTH_TOKEN=${{ secrets.GIT_ACCESS_TOKEN }}
+
+  upload-artifacts:
+    runs-on: ubuntu-24.04
+    needs: build
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          # NOTE: We fetch depth so that we can put the right `GIT` reference
+          fetch-depth: 0
+          ref: ${{ github.ref }}
+
+      - name: Setup Private Go Environment
+        uses: ./.github/actions/setup-go
+        with:
+          token: ${{ secrets.GIT_ACCESS_TOKEN }}
+
+      - name: Build manifest and CRDs
+        run: |
+          make build-installer IMG=$(echo "${{ needs.build.outputs.image-name }}" | cut -d',' -f1)
+          make build-crds
+
+      - name: Upload artifacts
+        uses: scality/action-artifacts@v4
+        with:
+          url: https://artifacts.scality.net
+          user: ${{ secrets.ARTIFACTS_USER }}
+          password: ${{ secrets.ARTIFACTS_PASSWORD }}
+          source: ./dist
+          method: upload
