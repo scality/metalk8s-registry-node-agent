@@ -73,5 +73,5 @@ jobs:
         uses: scality/sbom-upload@v1.0.7
         with:
           url: ${{ vars.DEPENDENCY_TRACK_HOSTNAME }}
-          api-key: ${{ secrets.DEPENDENCYTRACK_APIKEY }}
+          api-key: ${{ secrets.DEPENDENCY_TRACK_APIKEY }}
           project-sbom: /tmp/sbom.json
