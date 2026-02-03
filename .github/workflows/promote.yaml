@@ -26,6 +26,26 @@ jobs:
           # annotations content is not fetched
           # See: https://github.com/actions/checkout/issues/882
           ref: ${{ github.ref }}
+
+      - name: Get the artifacts name
+        uses: scality/action-artifacts@v4
+        id: artifacts
+        with:
+          method: setup
+          url: https://artifacts.scality.net
+          user: ${{ secrets.ARTIFACTS_USER }}
+          password: ${{ secrets.ARTIFACTS_PASSWORD }}
+
+      - name: Retrieve bundle.yaml from artifacts
+        run: >
+          curl --fail -LO -u ${{ secrets.ARTIFACTS_USER }}:${{ secrets.ARTIFACTS_PASSWORD }}
+          ${{ steps.artifacts.outputs.link }}/bundle.yaml
+
+      - name: Retrieve crds.yaml from artifacts
+        run: >
+          curl --fail -LO -u ${{ secrets.ARTIFACTS_USER }}:${{ secrets.ARTIFACTS_PASSWORD }}
+          ${{ steps.artifacts.outputs.link }}/crds.yaml
+      
       - uses: softprops/action-gh-release@v2
         with:
           name: MetalK8s Registry Node Agent ${{ github.ref_name }}
@@ -35,5 +55,8 @@ jobs:
           # e.g. v1.2.3-alpha.0
           prerelease: ${{ contains(github.ref_name, '-') }}
           draft: false
+          files: |
+            bundle.yaml
+            crds.yaml
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
