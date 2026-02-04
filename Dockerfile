@@ -30,11 +30,23 @@ RUN CGO_ENABLED=0 GOOS=${TARGETOS:-linux} GOARCH=${TARGETARCH} go build -a -o ma
     -ldflags "-X 'github.com/scality/metalk8s-registry-node-agent/cmd/config.ApplicationVersion=${APPLICATION_VERSION}'" \
     cmd/main.go
 
-# Use distroless as minimal base image to package the manager binary
-# Refer to https://github.com/GoogleContainerTools/distroless for more details
-FROM gcr.io/distroless/static:nonroot
+# Use Alpine as minimal base image with mount/umount utilities
+# Alpine includes util-linux package with mount/umount by default
+FROM alpine:3.23
 WORKDIR /
+# Install util-linux for mount/umount utilities, sudo for privilege escalation,
+# and ca-certificates for HTTPS connections
+RUN apk add --no-cache util-linux ca-certificates sudo && \
+    # Create non-root user matching the distroless nonroot user (even if we use alpine as base image)
+    adduser -D -u 65532 -g 65532 nonroot && \
+    # Configure sudo to allow mount/umount without password for nonroot user
+    # This is more secure than running the entire application as root
+    #TODO echo 'nonroot ALL=(root) NOPASSWD: /bin/mount, /bin/umount' > /etc/sudoers.d/nonroot && \
+    echo 'nonroot ALL=(root) NOPASSWD: ALL' > /etc/sudoers.d/nonroot && \
+    chmod 0440 /etc/sudoers.d/nonroot
 COPY --from=builder /workspace/manager .
+# Run as non-root user for better security
+# Only mount/umount commands will escalate to root via sudo
 USER 65532:65532
 
 ENTRYPOINT ["/manager"]

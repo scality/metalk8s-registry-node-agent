@@ -392,7 +392,7 @@ func main() {
 	httpExternServer := container.GetHTTPExternServer()
 
 	go func() {
-		logger.Info().Msg("http external server starting")
+		setupLog.Info("http external server starting")
 
 		// Start the HTTP server.
 		serveErr := httpExternServer.ListenAndServeTLS("", "")
@@ -401,16 +401,16 @@ func main() {
 
 			if !errors.Is(serveErr, http.ErrServerClosed) {
 				// Do not fatal here as it would break the shutdown process
-				logger.Error().Err(serveErr).Msg("http server failure during startup")
+				setupLog.Error(serveErr, "http server failure during startup")
 			}
 		}
 
-		logger.Info().Msg("http external server stopped")
+		setupLog.Info("http external server stopped")
 	}()
 
 	httpInternalServer := container.GetHTTPInternServer()
 	go func() {
-		logger.Info().Msg("http internal server starting")
+		setupLog.Info("http internal server starting")
 
 		// Start the HTTP server.
 		serveErr := httpInternalServer.ListenAndServeTLS("", "")
@@ -419,11 +419,11 @@ func main() {
 
 			if !errors.Is(serveErr, http.ErrServerClosed) {
 				// Do not fatal here as it would break the shutdown process
-				logger.Error().Err(serveErr).Msg("http server failure during startup")
+				setupLog.Error(serveErr, "http server failure during startup")
 			}
 		}
 
-		logger.Info().Msg("http internal server stopped")
+		setupLog.Info("http internal server stopped")
 	}()
 
 	go func() {
@@ -437,6 +437,7 @@ func main() {
 	}()
 
 	// Start the watcher for the file system solution archive storage
+	setupLog.Info("starting file system solution archive storage watcher")
 	if err := container.GetFSSolutionArchiveStorage().Start(filenameChan); err != nil {
 		setupLog.Error(err, "problem starting file system solution archive storage")
 		os.Exit(1)
