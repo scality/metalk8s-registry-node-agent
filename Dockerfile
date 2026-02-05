@@ -34,19 +34,14 @@ RUN CGO_ENABLED=0 GOOS=${TARGETOS:-linux} GOARCH=${TARGETARCH} go build -a -o ma
 # Alpine includes util-linux package with mount/umount by default
 FROM alpine:3.23
 WORKDIR /
-# Install util-linux for mount/umount utilities, sudo for privilege escalation,
+# Install util-linux for mount/umount utilities, libcap for capabilities
 # and ca-certificates for HTTPS connections
-RUN apk add --no-cache util-linux ca-certificates sudo && \
+RUN apk add --no-cache util-linux ca-certificates libcap && \
     # Create non-root user matching the distroless nonroot user (even if we use alpine as base image)
-    adduser -D -u 65532 -g 65532 nonroot && \
-    # Configure sudo to allow mount/umount without password for nonroot user
-    # This is more secure than running the entire application as root
-    #TODO echo 'nonroot ALL=(root) NOPASSWD: /bin/mount, /bin/umount' > /etc/sudoers.d/nonroot && \
-    echo 'nonroot ALL=(root) NOPASSWD: ALL' > /etc/sudoers.d/nonroot && \
-    chmod 0440 /etc/sudoers.d/nonroot
+    adduser -D -u 65532 -g 65532 nonroot
 COPY --from=builder /workspace/manager .
-# Run as non-root user for better security
-# Only mount/umount commands will escalate to root via sudo
+# capabilities required to create loop devices and mount/umount files
+RUN setcap 'cap_sys_admin,cap_mknod=+ep' /manager
 USER 65532:65532
 
 ENTRYPOINT ["/manager"]
