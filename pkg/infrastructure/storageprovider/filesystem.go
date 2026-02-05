@@ -10,7 +10,6 @@ import (
 
 	"io"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"regexp"
 	"slices"
@@ -458,14 +457,12 @@ func (f *FileSystem) UnmountFile(mountPoint string) error {
 		return errors.Stamp(err)
 	}
 	if err == nil {
-		cmd := exec.Command("sudo", "umount", mountPath)
-		output, err := cmd.CombinedOutput()
+		err := library.UnmountISO(mountPath)
 		if err != nil {
 			return errors.From(domain.ErrMountSolutionArchiveInternal).
 				WithIdentifier(500000).
 				WithDetail("unexpected error while unmounting the file").
 				WithProperty("mount_path", mountPath).
-				WithDetail(string(output)).
 				CausedBy(err).
 				Throw()
 		}

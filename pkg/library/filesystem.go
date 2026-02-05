@@ -513,6 +513,36 @@ func MountISO(isoPath, mountPoint string) error {
 	return unix.Mount(loopPath, mountPoint, "iso9660", unix.MS_RDONLY, "")
 }
 
+// UnmountISO unmounts the ISO file from the given mount point.
+func UnmountISO(mountPoint string) error {
+	// Retrieve loop device from a mountPoint
+	loopDevice, err := GetLoopDeviceForMount(mountPoint)
+	if err != nil {
+		return err
+	}
+
+	// Unmount the ISO
+	err = unix.Unmount(mountPoint, 0)
+	if err != nil {
+		return err
+	}
+
+	// Sometimes, even if ISO is unmounted, the loop device remains attached.
+	// We need to clear the loop device file descriptor to avoid saturation.
+	f, err := os.Open(loopDevice)
+	if err != nil {
+		return err
+	}
+	defer f.Close() // nolint: errcheck // No error check on defer.
+
+	_, _, errno := unix.Syscall(unix.SYS_IOCTL, f.Fd(), 0x4C01, 0) // LOOP_CLR_FD
+	// unix.ENXIO means targeted loop device is already detached
+	if errno != 0 && errno != unix.ENXIO {
+		return errno
+	}
+	return nil
+}
+
 // GetBackingFile queries a loop device (e.g., "/dev/loop0")
 // and returns the path to its associated backing file (e.g., "/tmp/myimage.img").
 func GetBackingFile(loopDevice string) (string, error) {
