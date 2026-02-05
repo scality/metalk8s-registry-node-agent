@@ -427,15 +427,13 @@ func (f *FileSystem) MountFile(
 	}
 
 	if !isMounted {
-		cmd := exec.Command("sudo", "mount", "-o", "loop", filePath, mountPath)
-		output, err := cmd.CombinedOutput()
+		err := library.MountISO(filePath, mountPath)
 		if err != nil {
 			return errors.From(domain.ErrMountSolutionArchiveInternal).
 				WithIdentifier(500000).
 				WithDetail("unexpected error while mounting the file").
 				WithProperty("file_path", filePath).
 				WithProperty("mount_path", mountPath).
-				WithDetail(string(output)).
 				CausedBy(err).
 				Throw()
 		}

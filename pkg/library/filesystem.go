@@ -456,6 +456,63 @@ func IsMounted(filePath string, mountPath string) (bool, error) {
 		Throw()
 }
 
+// MountISO mounts the ISO file to the given mount point.
+func MountISO(isoPath, mountPoint string) error {
+	// 1. Get free loop device
+	ctrl, err := os.Open("/dev/loop-control")
+	if err != nil {
+		return err
+	}
+	defer ctrl.Close() // nolint: errcheck // No error check on defer.
+
+	loopNum, _, errno := unix.Syscall(unix.SYS_IOCTL, ctrl.Fd(), 0x4C82, 0) // LOOP_CTL_GET_FREE
+	if errno != 0 {
+		return err
+	}
+	loopPath := fmt.Sprintf("/dev/loop%d", loopNum)
+
+	// 2. Attach ISO with loop device
+	loop, err := os.OpenFile(loopPath, os.O_RDWR, 0)
+	if err != nil {
+		// ErrNotExist means targeted loop device does not exist
+		if errors.Is(err, os.ErrNotExist) {
+			// Create loop device with major=7, minor=loopNum
+			devNum := unix.Mkdev(7, uint32(loopNum))
+			err = unix.Mknod(loopPath, unix.S_IFBLK|0660, int(devNum))
+			if err != nil {
+				return err
+			}
+			// Set ownership to root:disk (GID 6 is the disk group)
+			diskGid := 6
+			err = unix.Chown(loopPath, 0, diskGid)
+			if err != nil {
+				return err
+			}
+		} else {
+			return err
+		}
+	}
+	defer loop.Close() // nolint: errcheck // No error check on defer.
+
+	iso, err := os.Open(isoPath)
+	if err != nil {
+		return err
+	}
+	defer iso.Close() // nolint: errcheck // No error check on defer.
+
+	_, _, errno = unix.Syscall(unix.SYS_IOCTL, loop.Fd(), 0x4C00, iso.Fd()) // LOOP_SET_FD
+	if errno != 0 {
+		return errno
+	}
+
+	// 3. Mount
+	err = os.MkdirAll(mountPoint, 0755)
+	if err != nil {
+		return err
+	}
+	return unix.Mount(loopPath, mountPoint, "iso9660", unix.MS_RDONLY, "")
+}
+
 // GetBackingFile queries a loop device (e.g., "/dev/loop0")
 // and returns the path to its associated backing file (e.g., "/tmp/myimage.img").
 func GetBackingFile(loopDevice string) (string, error) {
