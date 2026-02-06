@@ -8,7 +8,7 @@ metadata:
   name: system
 ---
 apiVersion: apps/v1
-kind: DaemonSet
+kind: StatefulSet
 metadata:
   name: controller-manager
   namespace: system
@@ -17,6 +17,7 @@ metadata:
     app.kubernetes.io/name: metalk8s-registry-node-agent
     app.kubernetes.io/managed-by: kustomize
 spec:
+  replicas: 2
   selector:
     matchLabels:
       control-plane: controller-manager
@@ -29,33 +30,23 @@ spec:
         control-plane: controller-manager
         app.kubernetes.io/name: metalk8s-registry-node-agent
     spec:
-      # TODO(user): Uncomment the following code to configure the nodeAffinity expression
-      # according to the platforms which are supported by your solution.
-      # It is considered best practice to support multiple architectures. You can
-      # build your manager image using the makefile target docker-buildx.
-      # affinity:
-      #   nodeAffinity:
-      #     requiredDuringSchedulingIgnoredDuringExecution:
-      #       nodeSelectorTerms:
-      #         - matchExpressions:
-      #           - key: kubernetes.io/arch
-      #             operator: In
-      #             values:
-      #               - amd64
-      #               - arm64
-      #               - ppc64le
-      #               - s390x
-      #           - key: kubernetes.io/os
-      #             operator: In
-      #             values:
-      #               - linux
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchLabels:
+                app.kubernetes.io/name: metalk8s-registry-node-agent
+                control-plane: controller-manager
+            topologyKey: kubernetes.io/hostname
       nodeSelector:
         node-role.kubernetes.io/registry: ""
       securityContext:
-        # Projects are configured by default to adhere to the "restricted" Pod Security Standards.
-        # This ensures that deployments meet the highest security requirements for Kubernetes.
-        # For more details, see: https://kubernetes.io/docs/concepts/security/pod-security-standards/#restricted
+        # We decided to run as non-root user for security reason
+        # A nonroot user with these UID/GID is created in the Dockerfile
         runAsNonRoot: true
+        runAsUser: 65532  # Run as non-root user (nonroot)
+        runAsGroup: 65532
+        fsGroup: 65532    # Set filesystem group ownership
         seccompProfile:
           type: RuntimeDefault
       containers:
@@ -65,7 +56,15 @@ spec:
           - --health-probe-bind-address=:8081
         image: controller:latest
         name: manager
-        ports: []
+        ports:
+        - containerPort: 5001
+          hostPort: 5001
+          name: tcp-upload
+          protocol: TCP
+        - containerPort: 5002
+          hostPort: 5002
+          name: tcp-download
+          protocol: TCP
         env:
         - name: NODE_NAME
           valueFrom:
@@ -77,11 +76,26 @@ spec:
             fieldRef:
               apiVersion: v1
               fieldPath: status.hostIP
+        - name: EXTERN_SERVER_TLS_CERT_FILE_PATH
+          value: "/certs/server/external/tls.crt"
+        - name: EXTERN_SERVER_TLS_KEY_FILE_PATH
+          value: "/certs/server/external/tls.key"
+        - name: EXTERN_SERVER_AUTHN_CA_CERT_FILE_PATH
+          value: "/certs/client/external/ca.crt"
+        - name: INTERN_SERVER_TLS_CERT_FILE_PATH
+          value: "/certs/server/internal/tls.crt"
+        - name: INTERN_SERVER_TLS_KEY_FILE_PATH
+          value: "/certs/server/internal/tls.key"
+        - name: INTERN_SERVER_AUTHN_CA_CERT_FILE_PATH
+          value: "/certs/client/internal/ca.crt"
+        - name: INTERN_CLIENT_TLS_CA_CERT_FILE_PATH
+          value: "/certs/server/internal/ca.crt"
+        - name: INTERN_CLIENT_AUTHN_CERT_FILE_PATH
+          value: "/certs/client/internal/tls.crt"
+        - name: INTERN_CLIENT_AUTHN_KEY_FILE_PATH
+          value: "/certs/client/internal/tls.key"
         securityContext:
-          allowPrivilegeEscalation: false
-          capabilities:
-            drop:
-            - "ALL"
+          privileged: true # Required for mount/unmount operations
         livenessProbe:
           httpGet:
             path: /healthz
@@ -94,23 +108,54 @@ spec:
             port: 8081
           initialDelaySeconds: 5
           periodSeconds: 10
-        # TODO(user): Configure the resources accordingly based on the project requirements.
-        # More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
         resources:
           limits:
             cpu: 500m
-            memory: 128Mi
+            memory: 2Gi
           requests:
             cpu: 10m
-            memory: 64Mi
+            memory: 256Mi
         volumeMounts:
         - mountPath: /archives
           name: metalk8s-registry-node-agent-archives
           readOnly: false
+          mountPropagation: Bidirectional
+        - mountPath: /solutions
+          name: metalk8s-registry-node-agent-solutions
+          readOnly: false
+          mountPropagation: Bidirectional
+        - name: tls-server-extern-certs
+          mountPath: "/certs/server/external"
+          readOnly: true
+        - name: tls-client-extern-certs
+          mountPath: "/certs/client/external"
+          readOnly: true
+        - name: tls-server-intern-certs
+          mountPath: "/certs/server/internal"
+          readOnly: true
+        - name: tls-client-intern-certs
+          mountPath: "/certs/client/internal"
+          readOnly: true
       volumes:
       - name: metalk8s-registry-node-agent-archives
         hostPath:
           path: /srv/scality/metalk8s/archives
-          type: DirectoryOrCreate
+          type: Directory
+      - name: metalk8s-registry-node-agent-solutions
+        hostPath:
+          path: /srv/scality/metalk8s/solutions
+          type: Directory
+      - name: tls-server-extern-certs
+        secret:
+          secretName: tls-server-extern-certs
+      - name: tls-client-extern-certs
+        secret:
+          secretName: tls-client-extern-certs
+      - name: tls-server-intern-certs
+        secret:
+          secretName: tls-server-intern-certs
+      - name: tls-client-intern-certs
+        secret:
+          secretName: tls-client-intern-certs
       serviceAccountName: controller-manager
       terminationGracePeriodSeconds: 10

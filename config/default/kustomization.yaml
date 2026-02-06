@@ -1,5 +1,5 @@
 # Adds namespace to all resources.
-namespace: metalk8s-registry-node-agent-system
+namespace: metalk8s-registry
 
 # Value of this field is prepended to the
 # names of all resources, e.g. a deployment named
@@ -39,7 +39,7 @@ patches:
 # More info: https://book.kubebuilder.io/reference/metrics
 - path: manager_metrics_patch.yaml
   target:
-    kind: Deployment
+    kind: StatefulSet
 
 # Uncomment the patches line if you enable Metrics and CertManager
 # [METRICS-WITH-CERTS] To enable metrics protected with certManager, uncomment the following line.
@@ -52,7 +52,7 @@ patches:
 # crd/kustomization.yaml
 - path: manager_webhook_patch.yaml
   target:
-    kind: DaemonSet
+    kind: StatefulSet
 
 # [CERTMANAGER] To enable cert-manager, uncomment all sections with 'CERTMANAGER' prefix.
 # Uncomment the following replacements to add the cert-manager CA injection annotations
