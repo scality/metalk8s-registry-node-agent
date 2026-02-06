@@ -49,6 +49,8 @@ spec:
         fsGroup: 65532    # Set filesystem group ownership
         seccompProfile:
           type: RuntimeDefault
+        supplementalGroups:
+        - 6
       containers:
       - command:
         - /manager
