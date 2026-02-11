@@ -18,6 +18,7 @@ import (
 
 	"github.com/fsnotify/fsnotify"
 	"github.com/rs/zerolog"
+	"golang.org/x/sys/unix"
 
 	"github.com/scality/go-errors"
 	"github.com/scality/metalk8s-registry-node-agent/pkg/domain"
@@ -428,6 +429,18 @@ func (f *FileSystem) MountFile(
 	if !isMounted {
 		err := library.MountISO(filePath, mountPath)
 		if err != nil {
+			if errors.Is(err, unix.EINVAL) {
+				// The archive file is not a valid ISO file and is therefore deleted.
+				err := f.DeleteFile(fileName)
+				if err != nil {
+					return errors.Stamp(err)
+				}
+				return errors.From(domain.ErrMountSolutionArchiveInvalidISO).
+					WithIdentifier(400000).
+					WithProperty("file_path", filePath).
+					Throw()
+			}
+
 			return errors.From(domain.ErrMountSolutionArchiveInternal).
 				WithIdentifier(500000).
 				WithDetail("unexpected error while mounting the file").

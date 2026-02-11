@@ -33,6 +33,15 @@ func (uc *MountSolutionArchive) Execute(solutionArchive *domain.SolutionArchive)
 
 	err := uc.solutionArchiveMounter.MountSolutionArchive(solutionArchive)
 	if err != nil {
+		if errors.Is(err,
+			errors.
+				Intercept(domain.ErrMountSolutionArchiveInvalidISO).
+				WithIdentifier(400000).
+				Throw()) {
+			return errors.Intercept(err).
+				WithDetail("file deleted").
+				Throw()
+		}
 		return errors.Intercept(err).
 			WithDetail("failed to mount solution archive").
 			Throw()
