@@ -60,7 +60,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Generate sbom for metalk8s-registry-node-agent
-        uses: scality/sbom@v2.1.3
+        uses: scality/sbom@v2.1.4
         with:
           target: ${{ inputs.image-name }}
           target_type: image
