@@ -46,6 +46,7 @@ var (
 	ErrMountSolutionArchiveInternal       error = errors.New("Internal Error")
 	ErrMountSolutionArchiveIncorrectMount error = errors.New("Incorrect Mount Point")
 	ErrMountSolutionArchiveNotEmptyDir    error = errors.New("Not Empty Directory")
+	ErrMountSolutionArchiveInvalidISO     error = errors.New("Invalid ISO File")
 )
 
 var (
