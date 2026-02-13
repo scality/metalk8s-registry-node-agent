@@ -467,7 +467,7 @@ func MountISO(isoPath, mountPoint string) error {
 
 	loopNum, _, errno := unix.Syscall(unix.SYS_IOCTL, ctrl.Fd(), 0x4C82, 0) // LOOP_CTL_GET_FREE
 	if errno != 0 {
-		return err
+		return errno
 	}
 	loopPath := fmt.Sprintf("/dev/loop%d", loopNum)
 
