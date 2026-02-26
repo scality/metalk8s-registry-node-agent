@@ -64,7 +64,6 @@ spec:
           name: tcp-upload
           protocol: TCP
         - containerPort: 5002
-          hostPort: 5002
           name: tcp-download
           protocol: TCP
         env:
