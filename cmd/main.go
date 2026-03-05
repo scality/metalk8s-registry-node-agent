@@ -83,7 +83,7 @@ func main() {
 
 	// Get the node IP from the environment variable
 	// to expose the download API URL
-	nodeIP := os.Getenv("NODE_IP")
+	downloadHost := os.Getenv("DOWNLOAD_HOST")
 
 	var metricsAddr string
 	var metricsCertPath, metricsCertName, metricsCertKey string
@@ -257,7 +257,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	downloadBaseURL := fmt.Sprintf(downloadBaseURLFormat, nodeIP, cfg.Intern.Addr[1:], cfg.RootInternAPIPath)
+	downloadBaseURL := fmt.Sprintf(downloadBaseURLFormat, downloadHost, cfg.Intern.Addr[1:], cfg.RootInternAPIPath)
 	if err := (&controller.NodeSolutionArchiveReconciler{
 		Client:          mgr.GetClient(),
 		Scheme:          mgr.GetScheme(),

@@ -45,7 +45,7 @@ The agent can be configured using environment variables:
 | `NODE_NAME` | Node name for which the controller listens for events | none |
 | `EXTERN_ADDR` | HTTP server address for upload feature | `:5001` |
 | `INTERN_ADDR` | HTTP server address for download between nodes | `:5002` |
-| `NODE_IP` | Node IP on which to expose the download API | none |
+| `DOWNLOAD_HOST` | Node IP on which to expose the download API | none |
 | `EXTERN_SERVER_TLS_CERT_FILE_PATH` | Path to TLS Certificate for upload endpoint | none |
 | `EXTERN_SERVER_TLS_KEY_FILE_PATH` | Path to TLS Key for upload endpoint | none |
 | `EXTERN_SERVER_AUTHN_CA_CERT_FILE_PATH` | Path to CA Certificate for mTLS on upload endpoint | none |
