@@ -72,7 +72,7 @@ spec:
             fieldRef:
               apiVersion: v1
               fieldPath: spec.nodeName
-        - name: NODE_IP
+        - name: DOWNLOAD_HOST
           valueFrom:
             fieldRef:
               apiVersion: v1
