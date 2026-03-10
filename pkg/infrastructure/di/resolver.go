@@ -22,6 +22,7 @@ func (c *Container) getHTTPInternResolver() intern.StrictServerInterface {
 	if c.internResolver == nil {
 		c.internResolver = resolver.NewInternRoot(
 			c.getDownloadSolutionArchiveHandler(),
+			c.getDescribeSolutionArchiveHandler(),
 		)
 	}
 

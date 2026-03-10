@@ -9,6 +9,7 @@ import (
 
 	"github.com/scality/metalk8s-registry-node-agent/cmd/config"
 	"github.com/scality/metalk8s-registry-node-agent/pkg/domain"
+	"github.com/scality/metalk8s-registry-node-agent/pkg/infrastructure/archivedescriber"
 	"github.com/scality/metalk8s-registry-node-agent/pkg/infrastructure/archivedownloader"
 	"github.com/scality/metalk8s-registry-node-agent/pkg/infrastructure/archivemounter"
 	"github.com/scality/metalk8s-registry-node-agent/pkg/infrastructure/archiveremover"
@@ -53,6 +54,7 @@ type Container struct {
 
 	uploadPartHandler              *handler.UploadPart
 	downloadSolutionArchiveHandler *handler.DownloadSolutionArchive
+	describeSolutionArchiveHandler *handler.DescribeSolutionArchive
 
 	externResolver extern.StrictServerInterface
 	internResolver intern.StrictServerInterface
@@ -67,6 +69,7 @@ type Container struct {
 	storageExternalSolutionArchiveGetter *externalsolutionarchivegetter.Storage
 	storageSolutionArchiveMounter        *archivemounter.Storage
 	storageSolutionArchiveUnmounter      *archiveunmounter.Storage
+	storageSolutionArchiveDescriber      *archivedescriber.Storage
 	solutionArchiveCleaner               *solutionarchivecleaner.FileSystem
 
 	uploadPartUseCase                 *usecase.UploadPart
@@ -78,6 +81,7 @@ type Container struct {
 	validateSolutionArchiveUseCase    *usecase.ValidateSolutionArchive
 	downloadSolutionArchiveUseCase    *usecase.DownloadSolutionArchive
 	getExternalSolutionArchiveUseCase *usecase.GetExternalSolutionArchive
+	describeSolutionArchiveUseCase    *usecase.DescribeSolutionArchive
 }
 
 func NewContainer(

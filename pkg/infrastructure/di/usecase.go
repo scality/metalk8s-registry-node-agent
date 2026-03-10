@@ -65,6 +65,16 @@ func (c *Container) GetDownloadSolutionArchiveUseCase() *usecase.DownloadSolutio
 	return c.downloadSolutionArchiveUseCase
 }
 
+func (c *Container) GetDescribeSolutionArchiveUseCase() *usecase.DescribeSolutionArchive {
+	if c.describeSolutionArchiveUseCase == nil {
+		c.describeSolutionArchiveUseCase = usecase.NewDescribeSolutionArchive(
+			c.GetLogger(),
+			c.getStorageSolutionArchiveDescriber(),
+		)
+	}
+	return c.describeSolutionArchiveUseCase
+}
+
 func (c *Container) GetGetExternalSolutionArchiveUseCase() *usecase.GetExternalSolutionArchive {
 	if c.getExternalSolutionArchiveUseCase == nil {
 		c.getExternalSolutionArchiveUseCase = usecase.NewGetExternalSolutionArchive(
