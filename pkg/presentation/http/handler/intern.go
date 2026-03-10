@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/rs/zerolog"
 	"github.com/scality/go-errors"
 	"github.com/scality/metalk8s-registry-node-agent/pkg/domain"
 	"github.com/scality/metalk8s-registry-node-agent/pkg/presentation/http/intern"
@@ -35,12 +36,38 @@ func fillSolutionArchiveFromDownloadSolutionArchiveRequestObject(
 	return nil
 }
 
-// fillProblemDetailsFromAPIErrorsError fills the ProblemDetails object from the apierrors.Error object.
-func (h *DownloadSolutionArchive) fillProblemDetailsFromAPIErrorsError(
+// fillSolutionArchiveFromDescribeSolutionArchiveRequestObject fills the Solution Archive object
+// from the DescribeSolutionArchiveRequestObject object.
+func fillSolutionArchiveFromDescribeSolutionArchiveRequestObject(
+	dst *domain.SolutionArchive,
+	src *intern.DescribeSolutionArchiveRequestObject,
+) error {
+	if src.SolutionArchive == "" {
+		return errors.From(domain.ErrHandlerMissingRequestParameter).
+			WithDetail("parameter 'solution-archive' is missing").
+			Throw()
+	}
+
+	if src.Version == "" {
+		return errors.From(domain.ErrHandlerMissingRequestParameter).
+			WithDetail("parameter 'version' is missing").
+			Throw()
+	}
+
+	dst.Name = src.SolutionArchive
+	dst.Version = src.Version
+
+	return nil
+}
+
+// fillInternProblemDetailsFromAPIErrorsError fills the ProblemDetails object from the apierrors.Error object.
+func fillInternProblemDetailsFromAPIErrorsError(
+	logger *zerolog.Logger,
 	dst *intern.ProblemDetails,
 	src *errors.Error,
+	logMsg string,
 ) {
-	h.logger.Error().Err(src).Msg("Downloads API error")
+	logger.Error().Err(src).Msg(logMsg)
 
 	status := src.Identifier / 1000 // nolint: gosec // TODO: Refactor this in the "polishing" sprint.
 	code := fmt.Sprintf("%d", src.Identifier)
@@ -69,6 +96,20 @@ func (h *DownloadSolutionArchive) fillProblemDetailsFromAPIErrorsError(
 
 		dst.Errors = &errs
 	}
+}
+
+func (h *DownloadSolutionArchive) fillProblemDetailsFromAPIErrorsError(
+	dst *intern.ProblemDetails,
+	src *errors.Error,
+) {
+	fillInternProblemDetailsFromAPIErrorsError(h.logger, dst, src, "Downloads API error")
+}
+
+func (h *DescribeSolutionArchive) fillProblemDetailsFromAPIErrorsError(
+	dst *intern.ProblemDetails,
+	src *errors.Error,
+) {
+	fillInternProblemDetailsFromAPIErrorsError(h.logger, dst, src, "Describe API error")
 }
 
 // fillInternErrorDetailsFromPropertiesMap fills the ErrorDetail slice from a map[string]any.

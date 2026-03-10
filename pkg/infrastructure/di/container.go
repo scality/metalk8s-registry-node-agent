@@ -57,6 +57,7 @@ type Container struct {
 
 	uploadPartHandler              *handler.UploadPart
 	downloadSolutionArchiveHandler *handler.DownloadSolutionArchive
+	describeSolutionArchiveHandler *handler.DescribeSolutionArchive
 
 	externResolver extern.StrictServerInterface
 	internResolver intern.StrictServerInterface
@@ -73,6 +74,7 @@ type Container struct {
 	downloadSolutionArchiveUseCase    *usecase.DownloadSolutionArchive
 	getExternalSolutionArchiveUseCase *usecase.GetExternalSolutionArchive
 	cleanArchivesUseCase              *usecase.CleanArchive
+	describeSolutionArchiveUseCase    *usecase.DescribeSolutionArchive
 }
 
 func NewContainer(

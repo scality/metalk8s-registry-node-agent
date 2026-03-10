@@ -158,10 +158,25 @@ func WithRequestEditorFn(fn RequestEditorFn) ClientOption {
 type ClientInterface interface {
 	// DownloadSolutionArchive request
 	DownloadSolutionArchive(ctx context.Context, solutionArchive string, version string, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// DescribeSolutionArchive request
+	DescribeSolutionArchive(ctx context.Context, solutionArchive string, version string, reqEditors ...RequestEditorFn) (*http.Response, error)
 }
 
 func (c *Client) DownloadSolutionArchive(ctx context.Context, solutionArchive string, version string, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewDownloadSolutionArchiveRequest(c.Server, solutionArchive, version)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) DescribeSolutionArchive(ctx context.Context, solutionArchive string, version string, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewDescribeSolutionArchiveRequest(c.Server, solutionArchive, version)
 	if err != nil {
 		return nil, err
 	}
@@ -206,6 +221,47 @@ func NewDownloadSolutionArchiveRequest(server string, solutionArchive string, ve
 	}
 
 	req, err := http.NewRequest("GET", queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewDescribeSolutionArchiveRequest generates requests for DescribeSolutionArchive
+func NewDescribeSolutionArchiveRequest(server string, solutionArchive string, version string) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "solutionArchive", runtime.ParamLocationPath, solutionArchive)
+	if err != nil {
+		return nil, err
+	}
+
+	var pathParam1 string
+
+	pathParam1, err = runtime.StyleParamWithLocation("simple", false, "version", runtime.ParamLocationPath, version)
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/downloads/%s/%s", pathParam0, pathParam1)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("HEAD", queryURL.String(), nil)
 	if err != nil {
 		return nil, err
 	}
@@ -258,6 +314,9 @@ func WithBaseURL(baseURL string) ClientOption {
 type ClientWithResponsesInterface interface {
 	// DownloadSolutionArchiveWithResponse request
 	DownloadSolutionArchiveWithResponse(ctx context.Context, solutionArchive string, version string, reqEditors ...RequestEditorFn) (*DownloadSolutionArchiveResponse, error)
+
+	// DescribeSolutionArchiveWithResponse request
+	DescribeSolutionArchiveWithResponse(ctx context.Context, solutionArchive string, version string, reqEditors ...RequestEditorFn) (*DescribeSolutionArchiveResponse, error)
 }
 
 type DownloadSolutionArchiveResponse struct {
@@ -286,6 +345,32 @@ func (r DownloadSolutionArchiveResponse) StatusCode() int {
 	return 0
 }
 
+type DescribeSolutionArchiveResponse struct {
+	Body                      []byte
+	HTTPResponse              *http.Response
+	ApplicationproblemJSON400 *BadRequest
+	ApplicationproblemJSON401 *Unauthorized
+	ApplicationproblemJSON403 *Forbidden
+	ApplicationproblemJSON404 *NotFound
+	ApplicationproblemJSON500 *ServerError
+}
+
+// Status returns HTTPResponse.Status
+func (r DescribeSolutionArchiveResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r DescribeSolutionArchiveResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
 // DownloadSolutionArchiveWithResponse request returning *DownloadSolutionArchiveResponse
 func (c *ClientWithResponses) DownloadSolutionArchiveWithResponse(ctx context.Context, solutionArchive string, version string, reqEditors ...RequestEditorFn) (*DownloadSolutionArchiveResponse, error) {
 	rsp, err := c.DownloadSolutionArchive(ctx, solutionArchive, version, reqEditors...)
@@ -293,6 +378,15 @@ func (c *ClientWithResponses) DownloadSolutionArchiveWithResponse(ctx context.Co
 		return nil, err
 	}
 	return ParseDownloadSolutionArchiveResponse(rsp)
+}
+
+// DescribeSolutionArchiveWithResponse request returning *DescribeSolutionArchiveResponse
+func (c *ClientWithResponses) DescribeSolutionArchiveWithResponse(ctx context.Context, solutionArchive string, version string, reqEditors ...RequestEditorFn) (*DescribeSolutionArchiveResponse, error) {
+	rsp, err := c.DescribeSolutionArchive(ctx, solutionArchive, version, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseDescribeSolutionArchiveResponse(rsp)
 }
 
 // ParseDownloadSolutionArchiveResponse parses an HTTP response from a DownloadSolutionArchiveWithResponse call
@@ -349,11 +443,68 @@ func ParseDownloadSolutionArchiveResponse(rsp *http.Response) (*DownloadSolution
 	return response, nil
 }
 
+// ParseDescribeSolutionArchiveResponse parses an HTTP response from a DescribeSolutionArchiveWithResponse call
+func ParseDescribeSolutionArchiveResponse(rsp *http.Response) (*DescribeSolutionArchiveResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &DescribeSolutionArchiveResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest BadRequest
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.ApplicationproblemJSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Unauthorized
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.ApplicationproblemJSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Forbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.ApplicationproblemJSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest NotFound
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.ApplicationproblemJSON404 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest ServerError
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.ApplicationproblemJSON500 = &dest
+
+	}
+
+	return response, nil
+}
+
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
 	// Download the solution archive.
 	// (GET /downloads/{solutionArchive}/{version})
 	DownloadSolutionArchive(w http.ResponseWriter, r *http.Request, solutionArchive string, version string)
+	// Describe the solution archive.
+	// (HEAD /downloads/{solutionArchive}/{version})
+	DescribeSolutionArchive(w http.ResponseWriter, r *http.Request, solutionArchive string, version string)
 }
 
 // ServerInterfaceWrapper converts contexts to parameters.
@@ -390,6 +541,40 @@ func (siw *ServerInterfaceWrapper) DownloadSolutionArchive(w http.ResponseWriter
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.DownloadSolutionArchive(w, r, solutionArchive, version)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DescribeSolutionArchive operation middleware
+func (siw *ServerInterfaceWrapper) DescribeSolutionArchive(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "solutionArchive" -------------
+	var solutionArchive string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "solutionArchive", r.PathValue("solutionArchive"), &solutionArchive, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "solutionArchive", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "version" -------------
+	var version string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "version", r.PathValue("version"), &version, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "version", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DescribeSolutionArchive(w, r, solutionArchive, version)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -520,6 +705,7 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	}
 
 	m.HandleFunc("GET "+options.BaseURL+"/downloads/{solutionArchive}/{version}", wrapper.DownloadSolutionArchive)
+	m.HandleFunc("HEAD "+options.BaseURL+"/downloads/{solutionArchive}/{version}", wrapper.DescribeSolutionArchive)
 
 	return m
 }
@@ -617,11 +803,92 @@ func (response DownloadSolutionArchive500ApplicationProblemPlusJSONResponse) Vis
 	return json.NewEncoder(w).Encode(response)
 }
 
+type DescribeSolutionArchiveRequestObject struct {
+	SolutionArchive string `json:"solutionArchive"`
+	Version         string `json:"version"`
+}
+
+type DescribeSolutionArchiveResponseObject interface {
+	VisitDescribeSolutionArchiveResponse(w http.ResponseWriter) error
+}
+
+type DescribeSolutionArchive200ResponseHeaders struct {
+	ContentLength int64
+}
+
+type DescribeSolutionArchive200Response struct {
+	Headers DescribeSolutionArchive200ResponseHeaders
+}
+
+func (response DescribeSolutionArchive200Response) VisitDescribeSolutionArchiveResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Length", fmt.Sprint(response.Headers.ContentLength))
+	w.WriteHeader(200)
+	return nil
+}
+
+type DescribeSolutionArchive400ApplicationProblemPlusJSONResponse struct {
+	BadRequestApplicationProblemPlusJSONResponse
+}
+
+func (response DescribeSolutionArchive400ApplicationProblemPlusJSONResponse) VisitDescribeSolutionArchiveResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(400)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type DescribeSolutionArchive401ApplicationProblemPlusJSONResponse struct {
+	UnauthorizedApplicationProblemPlusJSONResponse
+}
+
+func (response DescribeSolutionArchive401ApplicationProblemPlusJSONResponse) VisitDescribeSolutionArchiveResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(401)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type DescribeSolutionArchive403ApplicationProblemPlusJSONResponse struct {
+	ForbiddenApplicationProblemPlusJSONResponse
+}
+
+func (response DescribeSolutionArchive403ApplicationProblemPlusJSONResponse) VisitDescribeSolutionArchiveResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(403)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type DescribeSolutionArchive404ApplicationProblemPlusJSONResponse struct {
+	NotFoundApplicationProblemPlusJSONResponse
+}
+
+func (response DescribeSolutionArchive404ApplicationProblemPlusJSONResponse) VisitDescribeSolutionArchiveResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(404)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type DescribeSolutionArchive500ApplicationProblemPlusJSONResponse struct {
+	ServerErrorApplicationProblemPlusJSONResponse
+}
+
+func (response DescribeSolutionArchive500ApplicationProblemPlusJSONResponse) VisitDescribeSolutionArchiveResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(500)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
 // StrictServerInterface represents all server handlers.
 type StrictServerInterface interface {
 	// Download the solution archive.
 	// (GET /downloads/{solutionArchive}/{version})
 	DownloadSolutionArchive(ctx context.Context, request DownloadSolutionArchiveRequestObject) (DownloadSolutionArchiveResponseObject, error)
+	// Describe the solution archive.
+	// (HEAD /downloads/{solutionArchive}/{version})
+	DescribeSolutionArchive(ctx context.Context, request DescribeSolutionArchiveRequestObject) (DescribeSolutionArchiveResponseObject, error)
 }
 
 type StrictHandlerFunc = strictnethttp.StrictHTTPHandlerFunc
@@ -680,47 +947,76 @@ func (sh *strictHandler) DownloadSolutionArchive(w http.ResponseWriter, r *http.
 	}
 }
 
+// DescribeSolutionArchive operation middleware
+func (sh *strictHandler) DescribeSolutionArchive(w http.ResponseWriter, r *http.Request, solutionArchive string, version string) {
+	var request DescribeSolutionArchiveRequestObject
+
+	request.SolutionArchive = solutionArchive
+	request.Version = version
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.DescribeSolutionArchive(ctx, request.(DescribeSolutionArchiveRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "DescribeSolutionArchive")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(DescribeSolutionArchiveResponseObject); ok {
+		if err := validResponse.VisitDescribeSolutionArchiveResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
 // Base64 encoded, gzipped, json marshaled Swagger object
 var swaggerSpec = []string{
 
-	"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",
+	"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",
+	"SjIAAA==",
 }
 
 // GetSwagger returns the content of the embedded swagger specification file

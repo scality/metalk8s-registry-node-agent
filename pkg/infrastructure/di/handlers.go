@@ -23,3 +23,13 @@ func (c *Container) getDownloadSolutionArchiveHandler() *handler.DownloadSolutio
 	}
 	return c.downloadSolutionArchiveHandler
 }
+
+func (c *Container) getDescribeSolutionArchiveHandler() *handler.DescribeSolutionArchive {
+	if c.describeSolutionArchiveHandler == nil {
+		c.describeSolutionArchiveHandler = handler.NewDescribeSolutionArchive(
+			c.GetLogger(),
+			c.GetDescribeSolutionArchiveUseCase(),
+		)
+	}
+	return c.describeSolutionArchiveHandler
+}

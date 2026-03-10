@@ -1,4 +1,4 @@
-//nolint:lll
+//nolint:lll,dupl // normal to have handlers very similar
 package handler
 
 import (
