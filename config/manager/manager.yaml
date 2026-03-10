@@ -137,6 +137,10 @@ spec:
         - name: tls-client-intern-certs
           mountPath: "/certs/client/internal"
           readOnly: true
+        - name: devices
+          mountPath: "/devices"
+          readOnly: false
+          mountPropagation: Bidirectional
       volumes:
       - name: metalk8s-registry-node-agent-archives
         hostPath:
@@ -158,5 +162,9 @@ spec:
       - name: tls-client-intern-certs
         secret:
           secretName: tls-client-intern-certs
+      - name: devices
+        hostPath:
+          path: /dev/metalk8s-registry
+          type: Directory
       serviceAccountName: controller-manager
       terminationGracePeriodSeconds: 10
