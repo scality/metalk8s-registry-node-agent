@@ -102,7 +102,7 @@ var _ = BeforeSuite(func() {
 	filenameChan := make(chan domain.FileEventDetails)
 	deleteChan := make(chan domain.FileEventDetails)
 	eventChan := make(chan event.GenericEvent)
-	container := di.NewContainer(ctx, &config.Environment{}, filenameChan, deleteChan)
+	container := di.NewContainer(ctx, &config.Environment{ChunkSizeMB: 10}, filenameChan, deleteChan)
 	container.GetMockFSSolutionArchiveStorage()
 	container.GetMockFileSystemBucketManager()
 	container.GetMockFileSystemArchiveRemover()

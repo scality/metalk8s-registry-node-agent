@@ -116,6 +116,14 @@ func (f *MockFileSystem) GetFile(
 	return io.ReadCloser(nil), nil
 }
 
+func (f *MockFileSystem) GetPart(
+	fileName string,
+	start int64,
+	end int64,
+) (io.ReadCloser, error) {
+	return io.ReadCloser(nil), nil
+}
+
 func (f *MockFileSystem) DeleteFile(
 	fileName string,
 ) error {

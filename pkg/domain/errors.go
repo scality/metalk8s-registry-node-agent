@@ -9,6 +9,7 @@ var (
 	ErrNotFound              error = errors.New("Not Found Error")
 	ErrInternal              error = errors.New("Internal Error")
 	ErrConflict              error = errors.New("Conflict Error")
+	ErrBadRequest            error = errors.New("Bad Request Error")
 	ErrBusinessRuleViolation error = errors.New("Business Rule Violation Error")
 )
 

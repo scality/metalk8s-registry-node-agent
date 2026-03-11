@@ -41,8 +41,8 @@ func (uc *DescribeSolutionArchive) Execute(
 		Any("solution_archive", solutionArchive).
 		Msg("Describing solution archive")
 
-	uc.archiveLocker.Lock(solutionArchive)
-	defer uc.archiveLocker.Unlock(solutionArchive)
+	uc.archiveLocker.RLock(solutionArchive)
+	defer uc.archiveLocker.RUnlock(solutionArchive)
 
 	// List all solution archives in the storage
 	// matching solutionArchiveStorageNamePattern

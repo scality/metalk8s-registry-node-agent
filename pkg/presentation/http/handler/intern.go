@@ -14,7 +14,7 @@ import (
 // fillSolutionArchiveFromDownloadSolutionArchiveRequestObject fills the Solution Archive object
 // from the DownloadSolutionArchiveRequestObject object.
 func fillSolutionArchiveFromDownloadSolutionArchiveRequestObject(
-	dst *domain.SolutionArchive,
+	dst *domain.Part,
 	src *intern.DownloadSolutionArchiveRequestObject,
 ) error {
 
@@ -29,9 +29,32 @@ func fillSolutionArchiveFromDownloadSolutionArchiveRequestObject(
 			WithDetail("parameter 'version' is missing").
 			Throw()
 	}
+	if src.Params.XSha256Checksum == "" {
+		return errors.From(domain.ErrHandlerMissingRequestHeader).
+			WithDetail("header 'X-Sha256-checksum' is missing").
+			Throw()
+	}
+	if src.Params.Range == "" {
+		return errors.From(domain.ErrHandlerMissingRequestHeader).
+			WithDetail("header 'Range' is missing").
+			Throw()
+	}
+	start, end, _, err := parseRange(src.Params.Range)
+	if err != nil {
+		return errors.Stamp(err)
+	}
 
-	dst.Name = src.SolutionArchive
-	dst.Version = src.Version
+	solutionArchive := &domain.SolutionArchive{
+		Name:    src.SolutionArchive,
+		Version: src.Version,
+		Hash:    src.Params.XSha256Checksum,
+	}
+
+	dst.SolutionArchive = solutionArchive
+	dst.Meta = &domain.PartMeta{
+		Start: start,
+		End:   end,
+	}
 
 	return nil
 }

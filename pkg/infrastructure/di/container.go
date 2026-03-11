@@ -38,6 +38,7 @@ type Container struct {
 	InternTLSClientConfig     *tls.Config
 	rootExternAPIPath         string
 	rootInternAPIPath         string
+	chunkSize                 int64
 
 	solutionArchiveStorage service.StorageProvider
 	bucketManager          service.BucketManager
@@ -90,5 +91,6 @@ func NewContainer(
 		deleteChan:        deleteChan,
 		rootExternAPIPath: cfg.RootExternAPIPath,
 		rootInternAPIPath: cfg.RootInternAPIPath,
+		chunkSize:         cfg.ChunkSizeMB * 1024 * 1024,
 	}
 }

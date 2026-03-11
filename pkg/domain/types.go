@@ -19,8 +19,9 @@ type (
 	}
 
 	SolutionArchiveFile struct {
-		File io.ReadCloser `json:"file"`
-		Size int64         `json:"size"`
+		File          io.ReadCloser `json:"file"`
+		Size          int64         `json:"size"`
+		ContentLength int64         `json:"content_length"`
 	}
 
 	// SessionStatus.
