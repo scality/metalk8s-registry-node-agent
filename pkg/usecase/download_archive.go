@@ -28,20 +28,20 @@ func NewDownloadSolutionArchive(
 }
 
 func (uc *DownloadSolutionArchive) Execute(
-	solutionArchive *domain.SolutionArchive,
+	solutionArchivePart *domain.Part,
 ) (*domain.SolutionArchiveFile, error) {
 	uc.logger.Debug().
-		Any("solution_archive", solutionArchive).
-		Msg("Downloading solution archive")
+		Any("solution_archive_part", solutionArchivePart).
+		Msg("Downloading solution archive chunk")
 
-	solutionArchiveFile, err := uc.solutionArchiveGetter.DownloadSolutionArchive(solutionArchive)
+	solutionArchiveFile, err := uc.solutionArchiveGetter.DownloadSolutionArchive(solutionArchivePart)
 	if err != nil {
 		return nil, errors.Intercept(err).
-			WithDetail("failed to download solution archive").
+			WithDetail("failed to download solution archive chunk").
 			Throw()
 	}
 
-	uc.logger.Debug().Any("solution_archive", solutionArchive).Msg("Solution archive downloaded")
+	uc.logger.Debug().Any("solution_archive_part", solutionArchivePart).Msg("Solution archive chunk downloaded")
 
 	return solutionArchiveFile, nil
 }

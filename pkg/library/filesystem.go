@@ -246,6 +246,53 @@ func GetFile(
 	return file, nil
 }
 
+// GetPart returns the content of the part.
+func GetPart(
+	filePath string,
+	start int64,
+	end int64,
+) (io.ReadCloser, error) {
+	if end < start {
+		return nil, errors.From(domain.ErrBadRequest).
+			WithIdentifier(400000).
+			WithDetail("end is less than start").
+			WithProperty("file_path", filePath).
+			WithProperty("end", end).
+			WithProperty("start", start).
+			Throw()
+	}
+	err := CheckFile(filePath)
+	if err != nil {
+		return nil, errors.From(domain.ErrNotFound).
+			WithIdentifier(404000).
+			WithDetail("file not found").
+			WithProperty("file_path", filePath).
+			CausedBy(err).
+			Throw()
+	}
+
+	file, err := os.Open(filePath)
+	if err != nil {
+		return nil, errors.From(domain.ErrInternal).
+			WithIdentifier(500000).
+			WithDetail("unexpected error while opening the file").
+			WithProperty("file_path", filePath).
+			CausedBy(err).
+			Throw()
+	}
+
+	// Stream the byte range via SectionReader (ReaderAt) instead of buffering the full part.
+	n := end - start + 1
+	sr := io.NewSectionReader(file, start, n)
+	return &struct {
+		io.Reader
+		io.Closer
+	}{
+		Reader: sr,
+		Closer: file,
+	}, nil
+}
+
 // deleteFile deletes the file.
 func DeleteFile(
 	filePath string,

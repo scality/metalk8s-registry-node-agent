@@ -23,6 +23,20 @@ paths:
           required: true
           schema:
             type: string
+        - name: X-Sha256-checksum
+          in: header
+          description: Sha256 of the solution archive
+          required: true
+          schema:
+            type: string
+        - name: Content-Range
+          in: header
+          description: >-
+            Range of the chunk to serve. Must respect the format `bytes <start-index>-<end-index>/<total-size-in-bytes>`
+          required: true
+          example: bytes 0-2/4
+          schema:
+            type: string
       responses:
         "200":
           description: successful operation

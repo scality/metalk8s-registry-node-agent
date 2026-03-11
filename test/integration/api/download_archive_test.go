@@ -7,6 +7,7 @@ import (
 	. "github.com/onsi/gomega"
 
 	"github.com/scality/metalk8s-registry-node-agent/pkg/domain"
+	"github.com/scality/metalk8s-registry-node-agent/pkg/presentation/http/intern"
 )
 
 var _ = Describe("Download Archive API", func() {
@@ -24,6 +25,10 @@ var _ = Describe("Download Archive API", func() {
 				context.TODO(),
 				"artesca-base",
 				solutionArchive.Version,
+				&intern.DownloadSolutionArchiveParams{
+					XSha256Checksum: solutionArchive.Hash,
+					ContentRange:    "bytes 0-2/30",
+				},
 			)
 			Expect(err).NotTo(HaveOccurred())
 
@@ -32,7 +37,7 @@ var _ = Describe("Download Archive API", func() {
 			Expect(resDl.Body).NotTo(BeNil())
 
 			By("verifying the downloaded content matches the original solution archive")
-			Expect(resDl.Body).To(Equal(solutionArchiveContent))
+			Expect(resDl.Body).To(Equal(solutionArchiveContent[0:3]))
 		})
 	})
 
@@ -43,6 +48,10 @@ var _ = Describe("Download Archive API", func() {
 				context.TODO(),
 				"non-existent-solution-archive",
 				"1.0.0",
+				&intern.DownloadSolutionArchiveParams{
+					XSha256Checksum: "sha",
+					ContentRange:    "bytes 0-2/4",
+				},
 			)
 			Expect(err).NotTo(HaveOccurred())
 

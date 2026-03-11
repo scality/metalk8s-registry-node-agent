@@ -33,7 +33,7 @@ func NewStorage(
 var _ service.SolutionArchiveDownloader = &Storage{}
 
 func (s *Storage) DownloadSolutionArchive(
-	solutionArchive *domain.SolutionArchive,
+	solutionArchivePart *domain.Part,
 ) (*domain.SolutionArchiveFile, error) {
 	s.store.Lock()
 	defer s.store.Unlock()
@@ -46,28 +46,41 @@ func (s *Storage) DownloadSolutionArchive(
 	}
 
 	// Check if the solution archive exists in the storage
-	if !library.SolutionArchiveExists(solutionArchive, fileNames) {
+	if !library.SolutionArchiveExists(solutionArchivePart.SolutionArchive, fileNames) {
 		return nil, errors.From(domain.ErrNotFound).
 			WithDetail("solution archive not found").
-			WithProperty("instance", fmt.Sprintf("%s/downloads/%s", s.rootAPIPath, solutionArchive.Name)).
-			WithProperty("solution_archive_name", solutionArchive.Name).
-			WithProperty("solution_archive_version", solutionArchive.Version).
+			WithProperty("instance", fmt.Sprintf("%s/downloads/%s", s.rootAPIPath, solutionArchivePart.SolutionArchive.Name)).
+			WithProperty("solution_archive_name", solutionArchivePart.SolutionArchive.Name).
+			WithProperty("solution_archive_version", solutionArchivePart.SolutionArchive.Version).
 			Throw()
 	}
 
-	solutionArchiveFileName := library.GenSolutionArchiveFileName(solutionArchive)
-	file, err := s.store.GetFile(solutionArchiveFileName)
+	solutionArchiveFileName := library.GenSolutionArchiveFileName(solutionArchivePart.SolutionArchive)
+	fileSize, err := s.store.GetSizeFromFileInfos(solutionArchiveFileName)
 	if err != nil {
 		return nil, errors.Stamp(err)
 	}
 
-	size, err := s.store.GetSizeFromFileInfos(solutionArchiveFileName)
+	start := solutionArchivePart.Meta.Start
+	end := solutionArchivePart.Meta.End
+	if start >= fileSize || end >= fileSize {
+		return nil, errors.From(domain.ErrHandlerInvalidRequestHeaderFormat).
+			WithIdentifier(400006).
+			WithDetail("requested byte range exceeds the solution archive size").
+			WithProperty("range_start", start).
+			WithProperty("range_end", end).
+			WithProperty("file_size_bytes", fileSize).
+			Throw()
+	}
+
+	// Retrieve the requested part of the solution archive from the storage
+	file, err := s.store.GetPart(solutionArchiveFileName, solutionArchivePart.Meta.Start, solutionArchivePart.Meta.End)
 	if err != nil {
 		return nil, errors.Stamp(err)
 	}
 
 	return &domain.SolutionArchiveFile{
 		File: file,
-		Size: size,
+		Size: solutionArchivePart.Meta.Size(),
 	}, nil
 }

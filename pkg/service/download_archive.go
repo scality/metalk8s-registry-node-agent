@@ -6,7 +6,7 @@ import (
 
 type (
 	SolutionArchiveDownloader interface {
-		DownloadSolutionArchive(*domain.SolutionArchive) (*domain.SolutionArchiveFile, error)
+		DownloadSolutionArchive(*domain.Part) (*domain.SolutionArchiveFile, error)
 	}
 
 	DownloadSolutionArchiveUseCase interface {

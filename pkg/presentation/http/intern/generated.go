@@ -83,6 +83,15 @@ type ServerError = ProblemDetails
 // Unauthorized defines model for Unauthorized.
 type Unauthorized = ProblemDetails
 
+// DownloadSolutionArchiveParams defines parameters for DownloadSolutionArchive.
+type DownloadSolutionArchiveParams struct {
+	// XSha256Checksum Sha256 of the solution archive
+	XSha256Checksum string `json:"X-Sha256-checksum"`
+
+	// ContentRange Range of the chunk to serve. Must respect the format `bytes <start-index>-<end-index>/<total-size-in-bytes>`
+	ContentRange string `json:"Content-Range"`
+}
+
 // RequestEditorFn  is the function signature for the RequestEditor callback function
 type RequestEditorFn func(ctx context.Context, req *http.Request) error
 
@@ -157,14 +166,14 @@ func WithRequestEditorFn(fn RequestEditorFn) ClientOption {
 // The interface specification for the client above.
 type ClientInterface interface {
 	// DownloadSolutionArchive request
-	DownloadSolutionArchive(ctx context.Context, solutionArchive string, version string, reqEditors ...RequestEditorFn) (*http.Response, error)
+	DownloadSolutionArchive(ctx context.Context, solutionArchive string, version string, params *DownloadSolutionArchiveParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// DescribeSolutionArchive request
 	DescribeSolutionArchive(ctx context.Context, solutionArchive string, version string, reqEditors ...RequestEditorFn) (*http.Response, error)
 }
 
-func (c *Client) DownloadSolutionArchive(ctx context.Context, solutionArchive string, version string, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewDownloadSolutionArchiveRequest(c.Server, solutionArchive, version)
+func (c *Client) DownloadSolutionArchive(ctx context.Context, solutionArchive string, version string, params *DownloadSolutionArchiveParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewDownloadSolutionArchiveRequest(c.Server, solutionArchive, version, params)
 	if err != nil {
 		return nil, err
 	}
@@ -188,7 +197,7 @@ func (c *Client) DescribeSolutionArchive(ctx context.Context, solutionArchive st
 }
 
 // NewDownloadSolutionArchiveRequest generates requests for DownloadSolutionArchive
-func NewDownloadSolutionArchiveRequest(server string, solutionArchive string, version string) (*http.Request, error) {
+func NewDownloadSolutionArchiveRequest(server string, solutionArchive string, version string, params *DownloadSolutionArchiveParams) (*http.Request, error) {
 	var err error
 
 	var pathParam0 string
@@ -223,6 +232,28 @@ func NewDownloadSolutionArchiveRequest(server string, solutionArchive string, ve
 	req, err := http.NewRequest("GET", queryURL.String(), nil)
 	if err != nil {
 		return nil, err
+	}
+
+	if params != nil {
+
+		var headerParam0 string
+
+		headerParam0, err = runtime.StyleParamWithLocation("simple", false, "X-Sha256-checksum", runtime.ParamLocationHeader, params.XSha256Checksum)
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Sha256-checksum", headerParam0)
+
+		var headerParam1 string
+
+		headerParam1, err = runtime.StyleParamWithLocation("simple", false, "Content-Range", runtime.ParamLocationHeader, params.ContentRange)
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("Content-Range", headerParam1)
+
 	}
 
 	return req, nil
@@ -313,7 +344,7 @@ func WithBaseURL(baseURL string) ClientOption {
 // ClientWithResponsesInterface is the interface specification for the client with responses above.
 type ClientWithResponsesInterface interface {
 	// DownloadSolutionArchiveWithResponse request
-	DownloadSolutionArchiveWithResponse(ctx context.Context, solutionArchive string, version string, reqEditors ...RequestEditorFn) (*DownloadSolutionArchiveResponse, error)
+	DownloadSolutionArchiveWithResponse(ctx context.Context, solutionArchive string, version string, params *DownloadSolutionArchiveParams, reqEditors ...RequestEditorFn) (*DownloadSolutionArchiveResponse, error)
 
 	// DescribeSolutionArchiveWithResponse request
 	DescribeSolutionArchiveWithResponse(ctx context.Context, solutionArchive string, version string, reqEditors ...RequestEditorFn) (*DescribeSolutionArchiveResponse, error)
@@ -372,8 +403,8 @@ func (r DescribeSolutionArchiveResponse) StatusCode() int {
 }
 
 // DownloadSolutionArchiveWithResponse request returning *DownloadSolutionArchiveResponse
-func (c *ClientWithResponses) DownloadSolutionArchiveWithResponse(ctx context.Context, solutionArchive string, version string, reqEditors ...RequestEditorFn) (*DownloadSolutionArchiveResponse, error) {
-	rsp, err := c.DownloadSolutionArchive(ctx, solutionArchive, version, reqEditors...)
+func (c *ClientWithResponses) DownloadSolutionArchiveWithResponse(ctx context.Context, solutionArchive string, version string, params *DownloadSolutionArchiveParams, reqEditors ...RequestEditorFn) (*DownloadSolutionArchiveResponse, error) {
+	rsp, err := c.DownloadSolutionArchive(ctx, solutionArchive, version, params, reqEditors...)
 	if err != nil {
 		return nil, err
 	}
@@ -501,7 +532,7 @@ func ParseDescribeSolutionArchiveResponse(rsp *http.Response) (*DescribeSolution
 type ServerInterface interface {
 	// Download the solution archive.
 	// (GET /downloads/{solutionArchive}/{version})
-	DownloadSolutionArchive(w http.ResponseWriter, r *http.Request, solutionArchive string, version string)
+	DownloadSolutionArchive(w http.ResponseWriter, r *http.Request, solutionArchive string, version string, params DownloadSolutionArchiveParams)
 	// Describe the solution archive.
 	// (HEAD /downloads/{solutionArchive}/{version})
 	DescribeSolutionArchive(w http.ResponseWriter, r *http.Request, solutionArchive string, version string)
@@ -539,8 +570,59 @@ func (siw *ServerInterfaceWrapper) DownloadSolutionArchive(w http.ResponseWriter
 		return
 	}
 
+	// Parameter object where we will unmarshal all parameters from the context
+	var params DownloadSolutionArchiveParams
+
+	headers := r.Header
+
+	// ------------- Required header parameter "X-Sha256-checksum" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("X-Sha256-checksum")]; found {
+		var XSha256Checksum string
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "X-Sha256-checksum", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "X-Sha256-checksum", valueList[0], &XSha256Checksum, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "X-Sha256-checksum", Err: err})
+			return
+		}
+
+		params.XSha256Checksum = XSha256Checksum
+
+	} else {
+		err := fmt.Errorf("Header parameter X-Sha256-checksum is required, but not found")
+		siw.ErrorHandlerFunc(w, r, &RequiredHeaderError{ParamName: "X-Sha256-checksum", Err: err})
+		return
+	}
+
+	// ------------- Required header parameter "Content-Range" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("Content-Range")]; found {
+		var ContentRange string
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "Content-Range", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "Content-Range", valueList[0], &ContentRange, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "Content-Range", Err: err})
+			return
+		}
+
+		params.ContentRange = ContentRange
+
+	} else {
+		err := fmt.Errorf("Header parameter Content-Range is required, but not found")
+		siw.ErrorHandlerFunc(w, r, &RequiredHeaderError{ParamName: "Content-Range", Err: err})
+		return
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.DownloadSolutionArchive(w, r, solutionArchive, version)
+		siw.Handler.DownloadSolutionArchive(w, r, solutionArchive, version, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -723,6 +805,7 @@ type UnauthorizedApplicationProblemPlusJSONResponse ProblemDetails
 type DownloadSolutionArchiveRequestObject struct {
 	SolutionArchive string `json:"solutionArchive"`
 	Version         string `json:"version"`
+	Params          DownloadSolutionArchiveParams
 }
 
 type DownloadSolutionArchiveResponseObject interface {
@@ -921,11 +1004,12 @@ type strictHandler struct {
 }
 
 // DownloadSolutionArchive operation middleware
-func (sh *strictHandler) DownloadSolutionArchive(w http.ResponseWriter, r *http.Request, solutionArchive string, version string) {
+func (sh *strictHandler) DownloadSolutionArchive(w http.ResponseWriter, r *http.Request, solutionArchive string, version string, params DownloadSolutionArchiveParams) {
 	var request DownloadSolutionArchiveRequestObject
 
 	request.SolutionArchive = solutionArchive
 	request.Version = version
+	request.Params = params
 
 	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
 		return sh.ssi.DownloadSolutionArchive(ctx, request.(DownloadSolutionArchiveRequestObject))
@@ -977,46 +1061,48 @@ func (sh *strictHandler) DescribeSolutionArchive(w http.ResponseWriter, r *http.
 // Base64 encoded, gzipped, json marshaled Swagger object
 var swaggerSpec = []string{
 
-	"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",
-	"SjIAAA==",
+	"H4sIAAAAAAAC/+xaW3PbuBX+Kxi2D92pKNK2nDZ6czb2rNvG9STZtDOJZwSRRyLWJEADoG3Fo//eOQDv",
+	"InW1t56d7Ms6JHEu37kf6MkJRJIKDlwrZ/zkwCNN0hjM3zMhpywMgeM/7mmcAf4RgqYsdsbO5wiIBCUy",
+	"GQAJRBaHhAtNpvhUZ5JDSKgi2nx1l4HSQhKmzDc005GQ7DuEzsBRmupMOeORfzJwNNMxOGPnouQ9cPQi",
+	"xUd0KjI9nsaU3zrL5cBh/J7GLHSnIly4qRQpSL1wZ0ImVFtBVSBZqpngztj5CKkEBVxTfEDEjFAy8n3y",
+	"jobko5UPtUkFV0AeIpBAKEHSpCBNQgFW/BjuQdI5GOUCISUEmuSMBxVSgQhR7pHvu/7IGbSRszwNi0Bw",
+	"TRlXhJKExkgJwpLvsIGRX2F0aQEg75DEdSHlRSFHDlukdarGnpdKMY0hUa6EOVNaLoYqoVJPgcphIBJv",
+	"LZyb8HYfmI5ckFJI9UfDvtDqa833P2TKeDolqVBMs3sgjGuYg3QGTirwb+mMHe8uo1wzvXCWN6/ZiLXg",
+	"PtBueg28Oe/KqJZtj9X+tqXVeEm36TGG6I6x8yUX6FlQt1ptAP3ZA+cVGqArgM7sazK5wnieYGGoCA3J",
+	"dQxUAdK6ZyGQSSK4juLFhAhJJncZlRpkvJg0gu1PXkLlLWjG5z+LJMk4Cwxs3swIzoOdo/CF3SHH042A",
+	"hiCfs3IVlrKUCxhD8kBVleT67P6mz+6dmbLNikqagAa5MfIK0X+xBw/NeN1gboT7BQrXXQZygY6aUh1V",
+	"gKCLl7ANXx78rqirE8zPtF3CPsYIDQJI9eaQ+d3smDClGJ83w+qZbCbvMiYhJBMkPqlyGKIjEqY1hGS6",
+	"yHsOrrLEYtxpwrd9JkQHsDpgroPHFAJDt541e8PmQ36y8fXuMHeD2AvvC4THq4K6L0ialeyJ0wSWSBTp",
+	"o/TDZpuH7/sj5XczXTN2nsleE0ttUstk+5jqeEdT/fL583UrV22Mjebn+yPcwrEf4hcIj9cFd1985MXj",
+	"yRaJRmjsUkP+D4YrYX0ue5lybxtTLPiHGu5kR8P1dBtbx0qFx8GoV6TWAv8SQfN6jdAXQfZIJWZPjam8",
+	"1dmuyLy4XbnQ7kxkPFy3FTQHTYOa7wfRClxoYk/WdRhVOlzVPuhZ+imQ9yCt9/QLYL8iwAORYY2GEM2V",
+	"8dJg9nwlxmkdyk/29Hn+TY8kGa9tMTslweynFNHiFrhRXoFGJymn3B6sOnepDcyOKmF/5Y1laqewy4FT",
+	"hIyJuHc0zEPJOj7XwM2fNE3jYmrOveSvvynB25vhXAOcloth+aKcXv8sYWbG8Wqz7BWHNyyoBv2U/8N0",
+	"dF7mjL15NJJPN78vhSH3YJIP+f10D1ZjdWtUccuNaiexHQ3SM3eto72HLptn8Kpy1LHbyKCnOe4ktoPc",
+	"m4eiikUDoa0pt1uWbnJ7iLymU11hcl1vinaiXqsNvUQPEL67aTCFIIggoX0E7VvlXdsk9t6kZGVTYbPf",
+	"qFf3xi4EM3UjE6dSYD6HcEi+8W/8PJcZW5RJrTsxIy0yJbYQlN2KGuMx4pKvnQPhzV8OGgS9nyzty85d",
+	"rA207VmsS6HrOZn8dCgjQ6Tg0z0k7A5XMyDaWrTWYvsC1png+jQpvXt/ZUoS3k+k+K9bsarVPFS3Kii7",
+	"HWKV455OscowdwxMNhf12+k9epjG7fbapFR9+UKJp+tinGhBUpCIMNERUwRDI5+JeH7LY/vFIaJxJfRF",
+	"0ZTvAQavHV+LRdX9vxAWvUODUdO25udF97+HpqpJYa2yjWHjufXdckZZDpot/n5at4eVtWo3Pn5OtRsD",
+	"Ue7xrZmoxs8Ibgz1Pp+o2ruCM07E9DcItAmW/K4QHhESpvPyqzBcaFmTtXigMjSXjWfXl41NQF59mEXM",
+	"rgNWOBKlJabw/DrGLALCkOFrGhcySKJSCNiMBQTJoMaEhcA1m9kFhDGtoQGPGnkn9PFfwOc6wlG0nOIs",
+	"L2dZLSNW5ZlLyrOYSlJ7UWSIUgrLT0JMtc0srZ9XDNrriEFrk6EGhPLQE7K2G6zJPPLfvumQum8Pje7P",
+	"aQLYOulqm6gjajYsRnSbAcTMyt7id+Qfjzr4rdnttVn2XdIdLkNxK7Bqqn98+vcVubbvrRFKAzWu1ste",
+	"6kBhzNifL2XHXwsfuim/s7GDQp/3LOPOOKFS0kXJtgwqFD/AJED5ohZexeui50UxmYZEbUoe9ThfGtUu",
+	"7bEj368CwgiD71u5Zvy0XfTaoG+FBX5LKAsxlhHpMog10IRkPASpNOVhLXKnVOGAYKKMSSIeOEkF5mRG",
+	"Y6Lpo+AiMd5VNjgHxXiUJZS7EmhIp7HNcJTbXqDURYu8TQiCTErgQenquW22C1lYO6c1rJVvHhCboDNV",
+	"/vrxkkiYgZXGOrPNggxUM0H1S00uNUmoARP/hyVjwSAOySyTOgKsHLYLRTTYjIRQsgy3i9hirdaVMsy1",
+	"iP3A+skcOLZh1S5ZSDZnvKjmMyG3MEPxSw+HcX1ybIVkSZY449O3b3GM5vZfRzXXL35etixXfx21KRJS",
+	"D9ruorIkoXLRkoMgXYOuisopN4gonwOZSZHUNdCiX58BgccAUvMbPJJmMhXKzsSxCGjMvhvDbGcI+2Af",
+	"P2roVAc4k2z3RGnxXc2T9sckM7Eq43vxwGNBQ6JEnBlPpDKI2D0oA8sH0DT+59+VU61ttz9xD1JZLkdD",
+	"f+gjUCIFTlPmjJ2ToT88MfcEOjIu7IU5YeU9FaTPLOWl95TTWuKXczAdZDlWXIY1sT41j9ZvIoq7jLr+",
+	"V7XK2lYIKwB+gyI6A3uLMXbUCoPKAlpmUG86V6zVZv/FqrWbBAWuB3H+FNHj0zebGJfXmjnr/7r2nBtE",
+	"ENyqLDlMiI8maHMZgijjtxixJiMNifmlKpZj0yZHkE//ZDJdaFDkW+b7J4HSVGqX8RAezQNw7XPgYf2p",
+	"Z59qoWnsKvYdXMZdQ8e+nziDYupwxo5l4LvH3qgPiJ/tJOMaDXYC4aZ1pXHs+2tGIxFo0K7SEmhihsCS",
+	"bpkppoxTWftVRslpZYpRmRljZllczeQYlSMrQlfdLEX1alcv5sjR5iON8c8cOtl8qNqOmBOjzSfKDcJy",
+	"4Jxuo0p9FjdTm60z9eTWFRTDYjLoyD4G5yn8yD67+PwW3lmMYuZYEXRFSVzJaex7CWe1lJmxGAjjxET1",
+	"WrHr3c2bkbPawZiY+hEtZbTkXt8XLdW1t3X+TMa1y/zL6/Gp7x97NGXe/ZHnLG+W/wsAAP//EfWLQ9Qz",
+	"AAA=",
 }
 
 // GetSwagger returns the content of the embedded swagger specification file

@@ -35,13 +35,13 @@ func (h *DownloadSolutionArchive) DownloadSolutionArchive(
 	_ context.Context,
 	request intern.DownloadSolutionArchiveRequestObject,
 ) (intern.DownloadSolutionArchiveResponseObject, error) {
-	var solutionArchive domain.SolutionArchive
+	var solutionArchivePart domain.Part
 
-	if err := fillSolutionArchiveFromDownloadSolutionArchiveRequestObject(&solutionArchive, &request); err != nil {
+	if err := fillSolutionArchiveFromDownloadSolutionArchiveRequestObject(&solutionArchivePart, &request); err != nil {
 		return h.genDownloadSolutionArchiveResponseObjectFromError(errors.Stamp(err))
 	}
 
-	solutionArchiveFile, err := h.uc.Execute(&solutionArchive)
+	solutionArchiveFile, err := h.uc.Execute(&solutionArchivePart)
 	if err != nil {
 		return h.genDownloadSolutionArchiveResponseObjectFromError(errors.Stamp(err))
 	}

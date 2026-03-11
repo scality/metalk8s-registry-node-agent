@@ -33,6 +33,8 @@ type (
 
 		RootExternAPIPath string
 		RootInternAPIPath string
+
+		ChunkSizeMB int64 `env:"CHUNK_SIZE_MB, default=10"`
 	}
 
 	Extern struct {
