@@ -8,6 +8,8 @@ func (c *Container) getStorageExternalSolutionArchiveGetter() *externalsolutiona
 			c.GetFSSolutionArchiveStorage(),
 			c.GetLogger(),
 			c.getHTTPExternalDownloader(),
+			c.GetRootExternAPIPath(),
+			c.GetChunkSize(),
 		)
 	}
 
