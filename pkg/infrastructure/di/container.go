@@ -51,7 +51,6 @@ type Container struct {
 	multipartInspector     service.MultipartInspector
 	multipartRemover       service.MultipartRemover
 	multipartUploader      service.MultipartUploader
-	archiveSaver           service.ArchiveSaver
 
 	inMemoryArchiveLocker service.LockerUnlocker
 	inMemoryBucketLocker  service.LockerUnlocker

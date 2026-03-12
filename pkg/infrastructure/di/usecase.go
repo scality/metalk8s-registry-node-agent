@@ -100,9 +100,14 @@ func (c *Container) GetGetExternalSolutionArchiveUseCase() *usecase.GetExternalS
 		c.getExternalSolutionArchiveUseCase = usecase.NewGetExternalSolutionArchive(
 			c.GetLogger(),
 			c.getHTTPExternalDownloader(),
+			c.GetFileSystemBucketManager(),
 			c.GetFileSystemArchiveLister(),
-			c.GetFileSystemArchiveSaver(),
 			c.getInMemoryArchiveLocker(),
+			c.GetFileSystemMultipartUploader(),
+			c.GetFileSystemMultipartInspector(),
+			c.GetFileSystemMultipartRemover(),
+			c.GetRootExternAPIPath(),
+			c.GetChunkSize(),
 		)
 	}
 	return c.getExternalSolutionArchiveUseCase

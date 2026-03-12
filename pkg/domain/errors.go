@@ -39,8 +39,9 @@ var (
 )
 
 var (
-	ErrExternalDownloaderInternal error = errors.New("Internal Error")
-	ErrExternalDownloaderNotFound error = errors.New("Not Found Error")
+	ErrExternalDownloaderInternal      error = errors.New("Internal Error")
+	ErrExternalDownloaderNotFound      error = errors.New("Not Found Error")
+	ErrExternalDownloaderNotConforming error = errors.New("Not Conform Error")
 )
 
 var (

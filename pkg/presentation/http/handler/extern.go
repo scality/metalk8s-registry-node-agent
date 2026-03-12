@@ -92,7 +92,7 @@ func fillPartFromUploadChunkRequestObject(
 			Throw()
 	}
 
-	start, end, total, err := parseContentRange(src.Params.ContentRange)
+	start, end, total, err := ParseContentRange(src.Params.ContentRange)
 	if err != nil {
 		return errors.Stamp(err)
 	}

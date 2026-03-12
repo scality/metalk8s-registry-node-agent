@@ -56,10 +56,10 @@ func parseRange(
 	)
 }
 
-// parseContentRange() parses the Content-Range header and returns the start,
+// ParseContentRange() parses the Content-Range header and returns the start,
 // size and end values.
 // nolint:revive
-func parseContentRange(
+func ParseContentRange(
 	headerContentRange string,
 ) (int64, int64, int64, error) {
 	return parseContentHeader(

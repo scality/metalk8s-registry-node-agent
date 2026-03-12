@@ -48,7 +48,6 @@ var _ service.ArchiveLister = &MockFileSystem{}
 var _ service.MultipartInspector = &MockFileSystem{}
 var _ service.MultipartRemover = &MockFileSystem{}
 var _ service.MultipartUploader = &MockFileSystem{}
-var _ service.ArchiveSaver = &MockFileSystem{}
 
 func NewMockFileSystem(opts *MockFileOpts) *MockFileSystem {
 	return &MockFileSystem{

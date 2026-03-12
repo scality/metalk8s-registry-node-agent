@@ -117,7 +117,7 @@ func TestParseContentRange(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			start, end, total, err := parseContentRange(test.header)
+			start, end, total, err := ParseContentRange(test.header)
 			if (err != nil) != test.wantErr {
 				t.Errorf("parseContentRange() error = %v, wantErr %v", err, test.wantErr)
 			}
