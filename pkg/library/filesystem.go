@@ -398,7 +398,11 @@ func CompareSolutionArchiveMetas(
 		problems["problem_version_mismatch"] = fmt.Sprintf("%s != %s", a.Version, b.Version)
 	}
 
-	if a.Size != b.Size {
+	// When the controller (re)starts, it tests if information in SolutionArchive CR correspond to the stored one
+	// If a part has already been uploaded, the stored information will have a size.
+	// As the size is not included into the CR, the controller consider a size equal to 0 as a default value.
+	// So, the comparison failed need to test a.Size != 0 to allow this difference
+	if a.Size != b.Size && a.Size != 0 {
 		problems["problem_size_mismatch"] = fmt.Sprintf("%d != %d", a.Size, b.Size)
 	}
 
