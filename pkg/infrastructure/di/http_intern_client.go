@@ -53,12 +53,21 @@ func (c *Container) GetMockHTTPInternClient() *http.Client {
 		c.httpInternClient = &http.Client{
 			Transport: &mockInternRoundTripper{
 				fn: func(req *http.Request) (*http.Response, error) {
-					// Create and return a mock response
-					jsonResponse := `{"id": 1, "name": "Test User"}`
+					if req.Method == http.MethodHead {
+						header := make(http.Header)
+						header.Set("Content-Length", "1024")
+						return &http.Response{
+							StatusCode:    http.StatusOK,
+							Body:          io.NopCloser(bytes.NewBufferString("")),
+							Header:        header,
+							ContentLength: 1024,
+						}, nil
+					}
+					// Create and return a mock response for GET (download)
+					mockData := make([]byte, 1024)
 					return &http.Response{
 						StatusCode: http.StatusOK,
-						Body:       io.NopCloser(bytes.NewBufferString(jsonResponse)),
-						// Header:     make(http.Header), // Add headers if needed
+						Body:       io.NopCloser(bytes.NewReader(mockData)),
 					}, nil
 				},
 			},
