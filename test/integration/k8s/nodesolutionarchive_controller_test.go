@@ -223,7 +223,7 @@ var _ = Describe("NodeSolutionArchive Controller", func() {
 			By("updating its status to available")
 			otherResource.Status = metalk8sv1alpha1.NodeSolutionArchiveStatus{
 				Available: ptr.To(true),
-				URL:       "http://example.com:5002/api/v1/downloads/solution-3/4.2.1",
+				URL:       "https://example.com:5002/api/v1/downloads/solution-3/4.2.1",
 			}
 			err = k8sClient.Status().Update(ctx, otherResource)
 

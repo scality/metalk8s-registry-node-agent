@@ -373,4 +373,131 @@ var _ = Describe("Upload Part API", func() {
 			Expect(err).To(HaveOccurred())
 		})
 	})
+
+	Context("When uploading a chunk with an invalid Content-Range format", func() {
+		It("should return a 400 bad request error", func() {
+			solutionArchive := &domain.SolutionArchive{
+				Name:    "platform",
+				Version: "127.0.4-badrange",
+				Hash:    "sha",
+			}
+			_, err := testingSuite.container.GetInitializeSessionUseCase().Execute(solutionArchive)
+			Expect(err).NotTo(HaveOccurred())
+
+			By("sending a malformed Content-Range header")
+			resUpl, err := testingSuite.ExternClientWithResponse.UploadChunkWithBodyWithResponse(
+				context.TODO(),
+				"platform",
+				&extern.UploadChunkParams{
+					XTargetVersion:  "127.0.4-badrange",
+					XSha256Checksum: "sha",
+					ContentRange:    "not-a-valid-range",
+				},
+				"application/octet-stream",
+				bytes.NewReader([]byte("data")),
+			)
+			Expect(err).NotTo(HaveOccurred())
+
+			By("returning a documented http/400 response")
+			Expect(resUpl.HTTPResponse.StatusCode).To(Equal(400))
+			Expect(resUpl.ApplicationproblemJSON400).NotTo(BeNil())
+		})
+	})
+
+	Context("When uploading a chunk with start > end in Content-Range", func() {
+		It("should return a 400 bad request error", func() {
+			solutionArchive := &domain.SolutionArchive{
+				Name:    "platform",
+				Version: "127.0.4-invertedrange",
+				Hash:    "sha",
+			}
+			_, err := testingSuite.container.GetInitializeSessionUseCase().Execute(solutionArchive)
+			Expect(err).NotTo(HaveOccurred())
+
+			By("sending a Content-Range where start > end")
+			resUpl, err := testingSuite.ExternClientWithResponse.UploadChunkWithBodyWithResponse(
+				context.TODO(),
+				"platform",
+				&extern.UploadChunkParams{
+					XTargetVersion:  "127.0.4-invertedrange",
+					XSha256Checksum: "sha",
+					ContentRange:    "bytes 20-10/200",
+				},
+				"application/octet-stream",
+				bytes.NewReader([]byte("data")),
+			)
+			Expect(err).NotTo(HaveOccurred())
+
+			By("returning a documented http/400 response")
+			Expect(resUpl.HTTPResponse.StatusCode).To(Equal(400))
+			Expect(resUpl.ApplicationproblemJSON400).NotTo(BeNil())
+		})
+	})
+
+	Context("When uploading a chunk with a missing X-Target-Version header", func() {
+		It("should return a 400 bad request error", func() {
+			By("sending an upload without X-Target-Version")
+			resUpl, err := testingSuite.ExternClientWithResponse.UploadChunkWithBodyWithResponse(
+				context.TODO(),
+				"platform",
+				&extern.UploadChunkParams{
+					XTargetVersion:  "",
+					XSha256Checksum: "sha",
+					ContentRange:    "bytes 0-9/100",
+				},
+				"application/octet-stream",
+				bytes.NewReader([]byte("0123456789")),
+			)
+			Expect(err).NotTo(HaveOccurred())
+
+			By("returning a documented http/400 response")
+			Expect(resUpl.HTTPResponse.StatusCode).To(Equal(400))
+		})
+	})
+
+	Context("When uploading overlapping parts", func() {
+		It("should accept the overlapping upload and overwrite the overlap region", func() {
+			solutionArchive := &domain.SolutionArchive{
+				Name:    "platform",
+				Version: "127.0.4-overlap",
+				Hash:    "sha",
+			}
+			_, err := testingSuite.container.GetInitializeSessionUseCase().Execute(solutionArchive)
+			Expect(err).NotTo(HaveOccurred())
+
+			By("uploading a first chunk")
+			resUpl, err := testingSuite.ExternClientWithResponse.UploadChunkWithBodyWithResponse(
+				context.TODO(),
+				"platform",
+				&extern.UploadChunkParams{
+					XTargetVersion:  "127.0.4-overlap",
+					XSha256Checksum: "sha",
+					ContentRange:    "bytes 0-14/30",
+				},
+				"application/octet-stream",
+				bytes.NewReader([]byte("0123456789ABCDE")),
+			)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(resUpl.HTTPResponse.StatusCode).To(Equal(200))
+			Expect(*resUpl.JSON200.IsCompleted).To(BeFalse())
+
+			By("uploading an overlapping second chunk")
+			resUpl, err = testingSuite.ExternClientWithResponse.UploadChunkWithBodyWithResponse(
+				context.TODO(),
+				"platform",
+				&extern.UploadChunkParams{
+					XTargetVersion:  "127.0.4-overlap",
+					XSha256Checksum: "sha",
+					ContentRange:    "bytes 10-29/30",
+				},
+				"application/octet-stream",
+				bytes.NewReader([]byte("abcdefghijklmnopqrst")),
+			)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(resUpl.HTTPResponse.StatusCode).To(Equal(200))
+
+			By("having tracked both uploaded chunks")
+			Expect(*resUpl.JSON200.UploadedChunks).To(HaveLen(2))
+		})
+	})
 })

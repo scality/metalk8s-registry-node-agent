@@ -59,12 +59,12 @@ func (h *HTTP) Download(
 	}
 
 	// 2. Check for a successful status code
-	if resp.StatusCode != http.StatusOK {
+	if resp.StatusCode != http.StatusPartialContent {
 		_ = resp.Body.Close() // nolint: errcheck // Best-effort; body must be closed on error paths.
 		return nil, errors.From(domain.ErrExternalDownloaderNotFound).
 			WithIdentifier(404000).
 			WithDetail("solution archive not found").
-			WithProperty("status", resp.Status).
+			WithProperty("status", resp.StatusCode).
 			Throw()
 	}
 
