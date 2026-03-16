@@ -1,6 +1,9 @@
 package domain
 
-import "io"
+import (
+	"io"
+	"sort"
+)
 
 type FileOrigin int
 
@@ -77,4 +80,59 @@ func (sas *SolutionArchiveStatus) IsComplete() bool {
 
 func (pm *PartMeta) Size() int64 {
 	return (pm.End - pm.Start) + 1
+}
+
+// ContainsPart reports whether every byte in part's range [Start, End] is included
+// into the SolutionArchiveStatus
+func (sas *SolutionArchiveStatus) ContainsPart(part *PartMeta) bool {
+	if part == nil || sas == nil || sas.Parts == nil {
+		return false
+	}
+	partStart := part.Start
+	partEnd := part.End
+	if partStart > partEnd {
+		return false
+	}
+
+	// Collect intervals from stored parts
+	type interval struct{ start, end int64 }
+	var intervals []interval
+	for _, pm := range sas.Parts {
+		if pm != nil {
+			intervals = append(intervals, interval{pm.Start, pm.End})
+		}
+	}
+	if len(intervals) == 0 {
+		return false
+	}
+
+	// Sort by start, then merge overlapping or adjacent intervals
+	sort.Slice(intervals, func(i, j int) bool { return intervals[i].start < intervals[j].start })
+	merged := intervals[:1]
+	for i := 1; i < len(intervals); i++ {
+		last := &merged[len(merged)-1]
+		if intervals[i].start <= last.end+1 {
+			if intervals[i].end > last.end {
+				last.end = intervals[i].end
+			}
+		} else {
+			merged = append(merged, intervals[i])
+		}
+	}
+
+	// Check if [partStart, partEnd] is fully covered
+	remaining := partStart
+	for _, iv := range merged {
+		if remaining > partEnd {
+			return true
+		}
+		if iv.end < remaining {
+			continue
+		}
+		if iv.start > remaining {
+			return false // gap
+		}
+		remaining = iv.end + 1
+	}
+	return remaining > partEnd
 }
