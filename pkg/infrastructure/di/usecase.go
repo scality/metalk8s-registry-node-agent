@@ -103,6 +103,7 @@ func (c *Container) GetGetExternalSolutionArchiveUseCase() *usecase.GetExternalS
 			c.GetFileSystemBucketManager(),
 			c.GetFileSystemArchiveLister(),
 			c.getInMemoryArchiveLocker(),
+			c.getInMemoryBucketLocker(),
 			c.GetFileSystemMultipartUploader(),
 			c.GetFileSystemMultipartInspector(),
 			c.GetFileSystemMultipartRemover(),
