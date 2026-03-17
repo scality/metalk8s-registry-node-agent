@@ -160,10 +160,7 @@ func (r *NodeSolutionArchiveReconciler) Reconcile(ctx context.Context, req ctrl.
 		}
 		if otherSolutionArchiveAvailable {
 			log.V(1).Info("Getting external solution archive from another node", "url", urlToDownload)
-			err := r.Container.GetGetExternalSolutionArchiveUseCase().Execute(&domain.SolutionArchive{
-				Name:    nodeSolutionArchive.Spec.Name,
-				Version: nodeSolutionArchive.Spec.Version,
-			}, urlToDownload)
+			err := r.Container.GetGetExternalSolutionArchiveUseCase().Execute(solutionArchive, urlToDownload)
 			if err != nil {
 				// In some edge case, even if the solution archive is available on another node,
 				// it may not be possible to get it.
