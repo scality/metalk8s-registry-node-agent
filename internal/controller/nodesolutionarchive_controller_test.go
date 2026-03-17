@@ -53,7 +53,7 @@ var _ = Describe("NodeSolutionArchive Controller", func() {
 						SolutionArchiveSpec: metalk8sv1alpha1.SolutionArchiveSpec{
 							Name:    "my-new-solution",
 							Version: "1.2.0",
-							Validation: metalk8sv1alpha1.SolutionArchiveValidation{
+							Validation: &metalk8sv1alpha1.SolutionArchiveValidation{
 								Checksum: metalk8sv1alpha1.SolutionArchiveChecksum{
 									Type:  "sha256",
 									Value: "123abc",

@@ -70,7 +70,8 @@ spec:
                 - message: Value is immutable
                   rule: self == oldSelf
               validation:
-                description: Validation details for the SolutionArchive
+                description: Validation details for the SolutionArchive (optional,
+                  but immutable)
                 properties:
                   checksum:
                     description: Checksum of the SolutionArchive
@@ -99,9 +100,6 @@ spec:
                 required:
                 - checksum
                 type: object
-                x-kubernetes-validations:
-                - message: Value is immutable
-                  rule: self == oldSelf
               version:
                 description: Version of the SolutionArchive
                 type: string
@@ -111,9 +109,12 @@ spec:
             required:
             - name
             - nodeName
-            - validation
             - version
             type: object
+            x-kubernetes-validations:
+            - message: Validation cannot be updated
+              rule: (!has(self.validation) && !has(oldSelf.validation)) || ((has(self.validation)
+                && has(oldSelf.validation)) && (self.validation == oldSelf.validation))
           status:
             description: NodeSolutionArchiveStatus defines the observed state of NodeSolutionArchive.
             properties:
