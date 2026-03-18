@@ -9,6 +9,7 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"k8s.io/utils/ptr"
 
 	"github.com/scality/metalk8s-registry-node-agent/pkg/domain"
 	"github.com/scality/metalk8s-registry-node-agent/pkg/library"
@@ -45,7 +46,7 @@ var _ = Describe("Get External Solution Archive UseCase", func() {
 			target := &domain.SolutionArchive{
 				Name:    "downloaded-archive",
 				Version: "1.0.0",
-				Hash:    expectedHash,
+				Hash:    ptr.To(expectedHash),
 			}
 
 			By("initializing a session for the target archive")
@@ -91,7 +92,7 @@ var _ = Describe("Get External Solution Archive UseCase", func() {
 			target := &domain.SolutionArchive{
 				Name:    "no-session-archive",
 				Version: "1.0.0",
-				Hash:    fmt.Sprintf("%x", sha256.Sum256(solutionArchiveContent)),
+				Hash:    ptr.To(fmt.Sprintf("%x", sha256.Sum256(solutionArchiveContent))),
 			}
 
 			By("calling the use case without initializing a session beforehand")
@@ -109,12 +110,12 @@ var _ = Describe("Get External Solution Archive UseCase", func() {
 			sessionTarget := &domain.SolutionArchive{
 				Name:    "mismatch-archive",
 				Version: "1.0.0",
-				Hash:    "0000000000000000000000000000000000000000000000000000000000000000",
+				Hash:    ptr.To("0000000000000000000000000000000000000000000000000000000000000000"),
 			}
 			differentTarget := &domain.SolutionArchive{
 				Name:    "mismatch-archive",
 				Version: "1.0.0",
-				Hash:    "1111111111111111111111111111111111111111111111111111111111111111",
+				Hash:    ptr.To("1111111111111111111111111111111111111111111111111111111111111111"),
 			}
 
 			By("initializing a session with one hash")
@@ -136,7 +137,7 @@ var _ = Describe("Get External Solution Archive UseCase", func() {
 			target := &domain.SolutionArchive{
 				Name:    "missing-source-archive",
 				Version: "1.0.0",
-				Hash:    fmt.Sprintf("%x", sha256.Sum256(solutionArchiveContent)),
+				Hash:    ptr.To(fmt.Sprintf("%x", sha256.Sum256(solutionArchiveContent))),
 			}
 
 			By("initializing a session for the target archive")
@@ -158,7 +159,7 @@ var _ = Describe("Get External Solution Archive UseCase", func() {
 			target := &domain.SolutionArchive{
 				Name:    "bad-url-archive",
 				Version: "1.0.0",
-				Hash:    fmt.Sprintf("%x", sha256.Sum256(solutionArchiveContent)),
+				Hash:    ptr.To(fmt.Sprintf("%x", sha256.Sum256(solutionArchiveContent))),
 			}
 
 			By("initializing a session for the target archive")

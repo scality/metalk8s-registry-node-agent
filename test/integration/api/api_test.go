@@ -15,6 +15,7 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"k8s.io/utils/ptr"
 
 	"github.com/rs/zerolog"
 	"github.com/scality/metalk8s-registry-node-agent/cmd/config"
@@ -62,7 +63,7 @@ var (
 	solutionArchive        = &domain.SolutionArchive{
 		Name:    "artesca-base",
 		Version: "4.0.0-preview.1",
-		Hash:    fmt.Sprintf("%x", sha256.Sum256(solutionArchiveContent)),
+		Hash:    ptr.To(fmt.Sprintf("%x", sha256.Sum256(solutionArchiveContent))),
 	}
 
 	// In order to test the multipart download, we generate a random content solution archive
@@ -71,7 +72,7 @@ var (
 	solutionArchiveBigSize        = &domain.SolutionArchive{
 		Name:    "artesca-base",
 		Version: "4.0.0-preview.2",
-		Hash:    fmt.Sprintf("%x", sha256.Sum256(solutionArchiveContentBigSize)),
+		Hash:    ptr.To(fmt.Sprintf("%x", sha256.Sum256(solutionArchiveContentBigSize))),
 	}
 )
 
