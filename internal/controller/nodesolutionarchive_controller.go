@@ -128,7 +128,9 @@ func (r *NodeSolutionArchiveReconciler) Reconcile(ctx context.Context, req ctrl.
 	solutionArchive := &domain.SolutionArchive{
 		Name:    nodeSolutionArchive.Spec.Name,
 		Version: nodeSolutionArchive.Spec.Version,
-		Hash:    nodeSolutionArchive.Spec.Validation.Checksum.Value,
+	}
+	if nodeSolutionArchive.Spec.Validation != nil {
+		solutionArchive.Hash = &nodeSolutionArchive.Spec.Validation.Checksum.Value
 	}
 	log.V(1).Info("Initializing session, if needed")
 	_, err := r.Container.GetInitializeSessionUseCase().Execute(solutionArchive)
@@ -176,7 +178,8 @@ func (r *NodeSolutionArchiveReconciler) Reconcile(ctx context.Context, req ctrl.
 		}
 	}
 
-	// 5. Checksum validation of the solution archive
+	// 5. Validation of the solution archive
+	//    A solution archive file exists and is valid (Checksum if provided)
 	log.V(1).Info("Checking if the solution archive is valid")
 	isValid, err := r.isValidSolutionArchive(nodeSolutionArchive)
 	if err != nil {
@@ -237,7 +240,6 @@ func (r *NodeSolutionArchiveReconciler) deleteSolutionArchiveResources(nodeSolut
 	solutionArchive := &domain.SolutionArchive{
 		Name:    nodeSolutionArchive.Spec.Name,
 		Version: nodeSolutionArchive.Spec.Version,
-		Hash:    nodeSolutionArchive.Spec.Validation.Checksum.Value,
 	}
 
 	err := r.Container.GetUnmountSolutionArchiveUseCase().Execute(solutionArchive)
@@ -264,7 +266,9 @@ func (r *NodeSolutionArchiveReconciler) isValidSolutionArchive(nodeSolutionArchi
 	solutionArchive := &domain.SolutionArchive{
 		Name:    nodeSolutionArchive.Spec.Name,
 		Version: nodeSolutionArchive.Spec.Version,
-		Hash:    nodeSolutionArchive.Spec.Validation.Checksum.Value,
+	}
+	if nodeSolutionArchive.Spec.Validation != nil {
+		solutionArchive.Hash = &nodeSolutionArchive.Spec.Validation.Checksum.Value
 	}
 	return r.Container.GetValidateSolutionArchiveUseCase().Execute(solutionArchive)
 }

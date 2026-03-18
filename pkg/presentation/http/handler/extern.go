@@ -55,7 +55,9 @@ func fillUploadChunkSuccessResponseFromSolutionArchiveStatus(
 	dst.Version = &src.SolutionArchive.Version
 	dst.Size = &size
 	dst.UploadedChunks = &uploadChuncks
-	dst.Sha256sum = &src.SolutionArchive.Hash
+	if src.SolutionArchive.Hash != nil {
+		dst.Sha256sum = src.SolutionArchive.Hash
+	}
 	dst.IsCompleted = &isCompleted
 }
 

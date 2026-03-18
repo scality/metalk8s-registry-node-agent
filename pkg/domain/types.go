@@ -15,10 +15,10 @@ const (
 type (
 	// SolutionArchive.
 	SolutionArchive struct {
-		Name    string `json:"name"`
-		Version string `json:"version"`
-		Size    int64  `json:"size"`
-		Hash    string `json:"hash"`
+		Name    string  `json:"name"`
+		Version string  `json:"version"`
+		Size    int64   `json:"size"`
+		Hash    *string `json:"hash,omitempty"`
 	}
 
 	SolutionArchiveFile struct {

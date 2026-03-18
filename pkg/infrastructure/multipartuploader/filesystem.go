@@ -288,26 +288,28 @@ func (f *FileSystem) consolidateMultipartFile(
 		solutionArchive.Name,
 	)
 
-	// Calculate the SHA256 hash of the recipient file
-	calculatedHash, err := library.HashFile(recipientFilePath)
-	if err != nil {
-		return errors.From(domain.ErrStorageProviderInternal).
-			WithIdentifier(500000).
-			WithDetail("unable to calculate the hash of the recipient file").
-			WithProperty("file_path", recipientFilePath).
-			CausedBy(err).
-			Throw()
-	}
+	// Validate the recipient integrity, if solution archive hash is set
+	if solutionArchive.Hash != nil {
+		calculatedHash, err := library.HashFile(recipientFilePath)
+		if err != nil {
+			return errors.From(domain.ErrStorageProviderInternal).
+				WithIdentifier(500000).
+				WithDetail("unable to calculate the hash of the recipient file").
+				WithProperty("file_path", recipientFilePath).
+				CausedBy(err).
+				Throw()
+		}
 
-	if calculatedHash != solutionArchive.Hash {
-		return errors.From(domain.ErrStorageProviderBusinessRuleViolation).
-			WithIdentifier(422001).
-			WithDetail("the hash of the recipient file does not match the solution archive metadata").
-			WithProperty("component", solutionArchive.Name).
-			WithProperty("version", solutionArchive.Version).
-			WithProperty("expected_hash", solutionArchive.Hash).
-			WithProperty("calculated_hash", calculatedHash).
-			Throw()
+		if calculatedHash != *solutionArchive.Hash {
+			return errors.From(domain.ErrStorageProviderBusinessRuleViolation).
+				WithIdentifier(422001).
+				WithDetail("the hash of the recipient file does not match the solution archive metadata").
+				WithProperty("component", solutionArchive.Name).
+				WithProperty("version", solutionArchive.Version).
+				WithProperty("expected_hash", *solutionArchive.Hash).
+				WithProperty("calculated_hash", calculatedHash).
+				Throw()
+		}
 	}
 
 	if err := os.Rename(recipientFilePath, baseFilePath); err != nil {

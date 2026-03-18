@@ -3,6 +3,8 @@ package domain
 
 import (
 	"testing"
+
+	"k8s.io/utils/ptr"
 )
 
 func TestSolutionArchiveStatus_ContainsPart_beginning(t *testing.T) {
@@ -11,7 +13,7 @@ func TestSolutionArchiveStatus_ContainsPart_beginning(t *testing.T) {
 			Name:    "metalk8s",
 			Version: "1.25.5",
 			Size:    4000,
-			Hash:    "4f55c3c729aa2982c78719f885df3652e02c60787e94fcaf2a222abf4d2de156",
+			Hash:    ptr.To("4f55c3c729aa2982c78719f885df3652e02c60787e94fcaf2a222abf4d2de156"),
 		},
 		Parts: map[int64]*PartMeta{
 			1000: {Start: 1000, End: 1999},
@@ -108,7 +110,7 @@ func TestSolutionArchiveStatus_ContainsPart_end(t *testing.T) {
 			Name:    "metalk8s",
 			Version: "1.25.5",
 			Size:    4000,
-			Hash:    "4f55c3c729aa2982c78719f885df3652e02c60787e94fcaf2a222abf4d2de156",
+			Hash:    ptr.To("4f55c3c729aa2982c78719f885df3652e02c60787e94fcaf2a222abf4d2de156"),
 		},
 		Parts: map[int64]*PartMeta{
 			3000: {Start: 0, End: 999},
@@ -200,7 +202,7 @@ func TestSolutionArchiveStatus_ContainsPart_middle(t *testing.T) {
 			Name:    "metalk8s",
 			Version: "1.25.5",
 			Size:    4000,
-			Hash:    "4f55c3c729aa2982c78719f885df3652e02c60787e94fcaf2a222abf4d2de156",
+			Hash:    ptr.To("4f55c3c729aa2982c78719f885df3652e02c60787e94fcaf2a222abf4d2de156"),
 		},
 		Parts: map[int64]*PartMeta{
 			3000: {Start: 0, End: 999},
