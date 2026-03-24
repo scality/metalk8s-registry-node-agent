@@ -51,6 +51,30 @@ spec:
           type: RuntimeDefault
         supplementalGroups:
         - 6
+      initContainers:
+      - command:
+        - /setup
+        name: setup
+        image: controller:latest
+        securityContext:
+          allowPrivilegeEscalation: false
+          runAsNonRoot: false
+          runAsUser: 0
+          runAsGroup: 0
+        resources:
+          limits:
+            cpu: 100m
+            memory: 64Mi
+          requests:
+            cpu: 10m
+            memory: 16Mi
+        volumeMounts:
+        - name: devices
+          mountPath: /devices
+        - name: metalk8s-registry-node-agent-archives
+          mountPath: /archives
+        - name: metalk8s-registry-node-agent-solutions
+          mountPath: /solutions
       containers:
       - command:
         - /manager
@@ -145,11 +169,11 @@ spec:
       - name: metalk8s-registry-node-agent-archives
         hostPath:
           path: /srv/scality/metalk8s/archives
-          type: Directory
+          type: DirectoryOrCreate
       - name: metalk8s-registry-node-agent-solutions
         hostPath:
           path: /srv/scality/metalk8s/solutions
-          type: Directory
+          type: DirectoryOrCreate
       - name: tls-server-extern-certs
         secret:
           secretName: tls-server-extern-certs
@@ -165,6 +189,6 @@ spec:
       - name: devices
         hostPath:
           path: /dev/metalk8s-registry
-          type: Directory
+          type: DirectoryOrCreate
       serviceAccountName: controller-manager
       terminationGracePeriodSeconds: 10
