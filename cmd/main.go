@@ -140,7 +140,7 @@ func main() {
 		log.Fatalf("failed to load config: %v", err)
 	}
 	// Initialize the dependency container.
-	container := di.NewContainer(ctx, cfg, filenameChan, deleteChan)
+	container := di.NewContainer(cfg, filenameChan, deleteChan)
 
 	logger := container.GetLogger()
 

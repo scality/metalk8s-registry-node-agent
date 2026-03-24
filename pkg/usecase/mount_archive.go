@@ -1,6 +1,8 @@
 package usecase
 
 import (
+	"sync"
+
 	"github.com/rs/zerolog"
 	"github.com/scality/go-errors"
 
@@ -10,19 +12,25 @@ import (
 )
 
 type MountSolutionArchive struct {
-	logger *zerolog.Logger
-	store  service.StorageProvider
+	logger      *zerolog.Logger
+	locker      sync.Locker
+	fileLister  service.FileLister
+	fileMounter service.FileMounter
 }
 
 func NewMountSolutionArchive(
 	logger *zerolog.Logger,
-	store service.StorageProvider,
+	locker sync.Locker,
+	fileLister service.FileLister,
+	fileMounter service.FileMounter,
 ) *MountSolutionArchive {
 	l := logger.With().Str("use_case", "mount_solution_archive").Logger()
 
 	return &MountSolutionArchive{
-		logger: &l,
-		store:  store,
+		logger:      &l,
+		locker:      locker,
+		fileLister:  fileLister,
+		fileMounter: fileMounter,
 	}
 }
 
@@ -31,19 +39,19 @@ func (uc *MountSolutionArchive) Execute(solutionArchive *domain.SolutionArchive)
 		Any("solution_archive", solutionArchive).
 		Msg("Mounting solution archive")
 
-	uc.store.Lock()
-	defer uc.store.Unlock()
+	uc.locker.Lock()
+	defer uc.locker.Unlock()
 
 	// List all solution archives in the storage
 	// matching solutionArchiveStorageNamePattern
-	fileNames, err := uc.store.ListFiles()
+	fileNames, err := uc.fileLister.ListFiles()
 	if err != nil {
 		return errors.Stamp(err)
 	}
 
 	// Check if the solution archive exists in the storage
 	if library.SolutionArchiveExists(solutionArchive, fileNames) {
-		err := uc.store.MountFile(library.GenSolutionArchiveFileName(solutionArchive),
+		err := uc.fileMounter.MountFile(library.GenSolutionArchiveFileName(solutionArchive),
 			library.GenSolutionDirName(solutionArchive))
 		if err != nil {
 			return errors.Stamp(err)
@@ -61,7 +69,7 @@ func (uc *MountSolutionArchive) Execute(solutionArchive *domain.SolutionArchive)
 			Throw()
 	}
 
-	err = uc.store.MountFile(library.GenSolutionArchiveFileName(solutionArchive),
+	err = uc.fileMounter.MountFile(library.GenSolutionArchiveFileName(solutionArchive),
 		library.GenSolutionDirName(solutionArchive))
 	if err != nil {
 		return errors.Stamp(err)

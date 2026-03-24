@@ -3,6 +3,7 @@ package usecase
 
 import (
 	"fmt"
+	"sync"
 
 	"github.com/rs/zerolog"
 	"github.com/scality/go-errors"
@@ -15,21 +16,24 @@ import (
 type DescribeSolutionArchive struct {
 	logger *zerolog.Logger
 
-	storageProvider service.StorageProvider
-	rootAPIPath     string
+	locker      sync.Locker
+	fileLister  service.FileLister
+	rootAPIPath string
 }
 
 func NewDescribeSolutionArchive(
 	logger *zerolog.Logger,
-	storageProvider service.StorageProvider,
+	locker sync.Locker,
+	fileLister service.FileLister,
 	rootAPIPath string,
 ) *DescribeSolutionArchive {
 	l := logger.With().Str("use_case", "describe_solution_archive").Logger()
 
 	return &DescribeSolutionArchive{
-		logger:          &l,
-		storageProvider: storageProvider,
-		rootAPIPath:     rootAPIPath,
+		logger:      &l,
+		locker:      locker,
+		fileLister:  fileLister,
+		rootAPIPath: rootAPIPath,
 	}
 }
 
@@ -40,12 +44,12 @@ func (uc *DescribeSolutionArchive) Execute(
 		Any("solution_archive", solutionArchive).
 		Msg("Describing solution archive")
 
-	uc.storageProvider.Lock()
-	defer uc.storageProvider.Unlock()
+	uc.locker.Lock()
+	defer uc.locker.Unlock()
 
 	// List all solution archives in the storage
 	// matching solutionArchiveStorageNamePattern
-	fileNames, err := uc.storageProvider.ListFiles()
+	fileNames, err := uc.fileLister.ListFiles()
 	if err != nil {
 		return 0, errors.Stamp(err)
 	}
@@ -61,7 +65,7 @@ func (uc *DescribeSolutionArchive) Execute(
 	}
 
 	solutionArchiveFileName := library.GenSolutionArchiveFileName(solutionArchive)
-	size, err := uc.storageProvider.GetSizeFromFileInfos(solutionArchiveFileName)
+	size, err := uc.fileLister.GetSizeFromFileInfos(solutionArchiveFileName)
 	if err != nil {
 		return 0, errors.Stamp(err)
 	}

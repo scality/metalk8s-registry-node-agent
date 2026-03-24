@@ -1,6 +1,8 @@
 package usecase
 
 import (
+	"sync"
+
 	"github.com/rs/zerolog"
 	"github.com/scality/go-errors"
 
@@ -10,19 +12,22 @@ import (
 )
 
 type UnmountSolutionArchive struct {
-	logger *zerolog.Logger
-	store  service.StorageProvider
+	logger      *zerolog.Logger
+	locker      sync.Locker
+	fileMounter service.FileMounter
 }
 
 func NewUnmountSolutionArchive(
 	logger *zerolog.Logger,
-	store service.StorageProvider,
+	locker sync.Locker,
+	fileMounter service.FileMounter,
 ) *UnmountSolutionArchive {
 	l := logger.With().Str("use_case", "unmount_solution_archive").Logger()
 
 	return &UnmountSolutionArchive{
-		logger: &l,
-		store:  store,
+		logger:      &l,
+		locker:      locker,
+		fileMounter: fileMounter,
 	}
 }
 
@@ -31,10 +36,10 @@ func (uc *UnmountSolutionArchive) Execute(solutionArchive *domain.SolutionArchiv
 		Any("solution_archive", solutionArchive).
 		Msg("Unmounting solution archive")
 
-	uc.store.Lock()
-	defer uc.store.Unlock()
+	uc.locker.Lock()
+	defer uc.locker.Unlock()
 
-	err := uc.store.UnmountFile(library.GenSolutionDirName(solutionArchive))
+	err := uc.fileMounter.UnmountFile(library.GenSolutionDirName(solutionArchive))
 	if err != nil {
 		return errors.Stamp(err)
 	}

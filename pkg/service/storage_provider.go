@@ -38,6 +38,15 @@ import (
 //
 // The responsibility for close all io objects is delegated to the caller.
 type StorageProvider interface {
+	FileReader
+	FileLister
+	FileRemover
+	FileMounter
+	FileWatcher
+	BucketManager
+	MultipartUploader
+	MultipartInspector
+
 	// RWLocker primitives:
 	Lock()
 	Unlock()
@@ -63,111 +72,7 @@ type StorageProvider interface {
 	// this method returns.
 	SaveFile(fileName string, content io.Reader, perm os.FileMode) error
 
-	// ListFiles lists all the flat files in the root location of the storage
-	// and returns their names.
-	ListFiles() ([]string, error)
-
-	// GetFile retrieves the content of a file from the root location in the
-	// storage based on its fileName.
-	//
-	// The caller should close the content reader as early as possible.
-	GetFile(fileName string) (io.ReadCloser, error)
-
-	// GetPart retrieves the part defined by start/end indexes of a file
-	// from the root location in the storage based on its fileName.
-	//
-	// The caller should close the content reader as early as possible.
-	GetPart(fileName string, start int64, end int64) (io.ReadCloser, error)
-
-	// DeleteFile deletes a file from the root location in the storage based on
-	// its fileName.
-	DeleteFile(fileName string) error
-
 	// HashFile calculates the hash of a file from the root location in the
 	// storage based on its fileName.
 	HashFile(fileName string) (string, error)
-
-	// CreateBucket creates a new bucket in the storage. The bucketName MUST be
-	// unique relative to the storage.
-	CreateBucket(bucketName string) error
-
-	// ListBuckets lists all the buckets in the storage and returns their
-	// bucketNames.
-	ListBuckets() ([]string, error)
-
-	// DeleteBucket deletes a bucket, and all its content, from the storage
-	// based on its bucketName.
-	DeleteBucket(bucketName string) error
-
-	// MoveFileToRoot moves a file from a bucket to the root location in the
-	// storage.
-	MoveFileToRoot(bucketName, fileName, newFileName string) error
-
-	// CreateMultipartFiles creates into a bucket:
-	// - a metadata file
-	// - a multipart file recipient
-	// - a parts synthesis file
-	CreateMultipartFiles(
-		bucketName string,
-		solutionArchiveMeta *domain.SolutionArchive,
-	) (*domain.SolutionArchiveStatus, error)
-
-	// GetMultipartFile retrieves the multipart file recipient from a given
-	// bucket and returns its SolutionArchiveMeta.
-	GetMultipartFile(bucketName string) (*domain.SolutionArchive, error)
-
-	// GetMultipartFileStatus retrieves the SolutionArchiveStatus of a multipart file
-	// recipient based on bucketName and solutionArchiveMeta.
-	GetMultipartFileStatus(
-		bucketName string,
-		solutionArchiveMeta *domain.SolutionArchive,
-	) (*domain.SolutionArchiveStatus, error)
-
-	// DeleteMultipartFile deletes a multipart file recipient from a bucket
-	// based in given bucketName and solutionArchiveMeta.
-	DeleteMultipartFile(bucketName string, solutionArchiveMeta *domain.SolutionArchive) error
-
-	// WritePartToMultipartFile properly writes the content of the given part
-	// into the multipart file recipient on the bucket indicated by the given
-	// bucketName.
-	WritePartToMultipartFile(bucketName string, part *domain.Part) (*domain.SolutionArchiveStatus, error)
-
-	// ConsolidateMultipartFile consolidates all the parts of a multipart file
-	// in a single flat file into the same bucket it is located.
-	//
-	// The resulting fileName is the solutionArchiveMeta.FileName appended with the
-	// solutionArchiveMeta.Version. The file extension is properly moved to the end.
-	// Since the multipart file is consolidated, the parts and all metadata
-	// associated are no more available.
-	//
-	// Also, it will o more appears in the ListMultipartFiles method, but in
-	// the ListFilesInBucket instead. That way its content becomes accessible.
-	//
-	// When supported by the storage backend, the perm parameter is used to set
-	// the file permissions.
-	ConsolidateMultipartFile(
-		bucketName string,
-		solutionArchiveMeta *domain.SolutionArchive,
-		perm os.FileMode,
-	) error
-
-	// GetHashFromFileInfos retrieves the hash of a file from the storage
-	// backend.
-	GetHashFromFileInfos(fileName string) (string, error)
-
-	// GetSizeFromFileInfos retrieves the size of a file from the storage
-	// backend.
-	GetSizeFromFileInfos(fileName string) (int64, error)
-
-	// MountFile mounts a file into the storage.
-	MountFile(fileName string, mountPoint string) error
-
-	// UnmountFile unmounts a file from the storage.
-	UnmountFile(mountPoint string) error
-
-	// AddWatchFileOrDirectory adds a file or directory to the watcher.
-	AddWatchFileOrDirectory(path string) error
-
-	// RemoveWatchFileOrDirectory removes a file or directory from the watcher.
-	RemoveWatchFileOrDirectory(path string) error
 }

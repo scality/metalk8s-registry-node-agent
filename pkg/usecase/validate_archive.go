@@ -1,6 +1,8 @@
 package usecase
 
 import (
+	"sync"
+
 	"github.com/rs/zerolog"
 	"github.com/scality/go-errors"
 
@@ -10,19 +12,25 @@ import (
 )
 
 type ValidateSolutionArchive struct {
-	logger *zerolog.Logger
-	store  service.StorageProvider
+	logger      *zerolog.Logger
+	locker      sync.Locker
+	fileLister  service.FileLister
+	fileRemover service.FileRemover
 }
 
 func NewValidateSolutionArchive(
 	logger *zerolog.Logger,
-	store service.StorageProvider,
+	locker sync.Locker,
+	fileLister service.FileLister,
+	fileRemover service.FileRemover,
 ) *ValidateSolutionArchive {
 	l := logger.With().Str("use_case", "validate_solution_archive").Logger()
 
 	return &ValidateSolutionArchive{
-		logger: &l,
-		store:  store,
+		logger:      &l,
+		locker:      locker,
+		fileLister:  fileLister,
+		fileRemover: fileRemover,
 	}
 }
 
@@ -31,12 +39,12 @@ func (uc *ValidateSolutionArchive) Execute(solutionArchive *domain.SolutionArchi
 		Any("solution_archive", solutionArchive).
 		Msg("Validating solution archive")
 
-	uc.store.Lock()
-	defer uc.store.Unlock()
+	uc.locker.Lock()
+	defer uc.locker.Unlock()
 
 	// List all solution archives in the storage
 	// matching solutionArchiveStorageNamePattern
-	fileNames, err := uc.store.ListFiles()
+	fileNames, err := uc.fileLister.ListFiles()
 	if err != nil {
 		return false, errors.Stamp(err)
 	}
@@ -46,12 +54,12 @@ func (uc *ValidateSolutionArchive) Execute(solutionArchive *domain.SolutionArchi
 		return false, nil
 	}
 
-	hash, err := uc.store.GetHashFromFileInfos(library.GenSolutionArchiveFileName(solutionArchive))
+	hash, err := uc.fileRemover.GetHashFromFileInfos(library.GenSolutionArchiveFileName(solutionArchive))
 	if err != nil {
 		return false, errors.Stamp(err)
 	}
 	if hash != solutionArchive.Hash {
-		err := uc.store.DeleteFile(library.GenSolutionArchiveFileName(solutionArchive))
+		err := uc.fileRemover.DeleteFile(library.GenSolutionArchiveFileName(solutionArchive))
 		if err != nil {
 			return false, errors.Stamp(err)
 		}

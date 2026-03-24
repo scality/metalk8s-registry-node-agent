@@ -1,7 +1,6 @@
 package di
 
 import (
-	"context"
 	"crypto/tls"
 	"net/http"
 
@@ -18,11 +17,6 @@ import (
 )
 
 type Container struct {
-	// This is the base context for the application, and is
-	// 	needed to sync shutdown of all dependencies.
-	// 	Required by DI pattern.
-	baseCtx context.Context //nolint:containedctx //
-
 	config *config.Environment
 
 	logger *zerolog.Logger
@@ -65,13 +59,11 @@ type Container struct {
 }
 
 func NewContainer(
-	ctx context.Context,
 	cfg *config.Environment,
 	filenameChan chan domain.FileEventDetails,
 	deleteChan chan domain.FileEventDetails,
 ) *Container {
 	return &Container{
-		baseCtx:           ctx,
 		config:            cfg,
 		filenameChan:      filenameChan,
 		deleteChan:        deleteChan,

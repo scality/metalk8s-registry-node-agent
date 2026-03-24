@@ -72,7 +72,7 @@ var _ = BeforeSuite(func() {
 	}
 	filenameChan := make(chan domain.FileEventDetails)
 	deleteChan := make(chan domain.FileEventDetails)
-	container := di.NewContainer(ctx, cfg, filenameChan, deleteChan)
+	container := di.NewContainer(cfg, filenameChan, deleteChan)
 
 	fakeTLSConfig, err := utils.GenerateFakeTLSConfig()
 	if err != nil {

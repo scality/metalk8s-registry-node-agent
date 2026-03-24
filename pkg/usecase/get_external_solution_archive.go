@@ -2,6 +2,7 @@ package usecase
 
 import (
 	"fmt"
+	"sync"
 
 	"github.com/rs/zerolog"
 	"github.com/scality/go-errors"
@@ -11,15 +12,23 @@ import (
 )
 
 type GetExternalSolutionArchive struct {
-	store              service.StorageProvider
 	logger             *zerolog.Logger
+	locker             sync.Locker
+	fileLister         service.FileLister
+	bucketManager      service.BucketManager
+	multipartUploader  service.MultipartUploader
+	multipartInspector service.MultipartInspector
 	externalDownloader service.ExternalDownloader
 	rootAPIPath        string
 	chunkSize          int64
 }
 
 func NewGetExternalSolutionArchive(
-	store service.StorageProvider,
+	locker sync.Locker,
+	fileLister service.FileLister,
+	bucketManager service.BucketManager,
+	multipartUploader service.MultipartUploader,
+	multipartInspector service.MultipartInspector,
 	logger *zerolog.Logger,
 	externalDownloader service.ExternalDownloader,
 	rootAPIPath string,
@@ -27,8 +36,12 @@ func NewGetExternalSolutionArchive(
 ) *GetExternalSolutionArchive {
 	l := logger.With().Str("use_case", "get_external_solution_archive").Logger()
 	return &GetExternalSolutionArchive{
-		store:              store,
 		logger:             &l,
+		locker:             locker,
+		fileLister:         fileLister,
+		bucketManager:      bucketManager,
+		multipartUploader:  multipartUploader,
+		multipartInspector: multipartInspector,
 		externalDownloader: externalDownloader,
 		rootAPIPath:        rootAPIPath,
 		chunkSize:          chunkSize,
@@ -41,12 +54,12 @@ func (uc *GetExternalSolutionArchive) Execute(solutionArchive *domain.SolutionAr
 		Str("download_url", downloadURL).
 		Msg("Getting external solution archive")
 
-	uc.store.Lock()
-	defer uc.store.Unlock()
+	uc.locker.Lock()
+	defer uc.locker.Unlock()
 
 	// List all solution archives in the storage
 	// matching solutionArchiveStorageNamePattern
-	fileNames, err := uc.store.ListFiles()
+	fileNames, err := uc.fileLister.ListFiles()
 	if err != nil {
 		return errors.Stamp(err)
 	}
@@ -63,7 +76,7 @@ func (uc *GetExternalSolutionArchive) Execute(solutionArchive *domain.SolutionAr
 	}
 
 	// List all the buckets
-	buckets, err := uc.store.ListBuckets()
+	buckets, err := uc.bucketManager.ListBuckets()
 	if err != nil {
 		return errors.Stamp(err)
 	}
@@ -77,7 +90,7 @@ func (uc *GetExternalSolutionArchive) Execute(solutionArchive *domain.SolutionAr
 	}
 
 	// Load the manifest from metadata file
-	solutionArchiveFromManifest, err := uc.store.GetMultipartFile(sessionBucket)
+	solutionArchiveFromManifest, err := uc.multipartInspector.GetMultipartFile(sessionBucket)
 	if err != nil {
 		return errors.Intercept(err).
 			WithProperty("instance", fmt.Sprintf("%s/downloads/%s", uc.rootAPIPath, solutionArchive.Name)).
@@ -90,7 +103,7 @@ func (uc *GetExternalSolutionArchive) Execute(solutionArchive *domain.SolutionAr
 	}
 
 	// Load the manifest from the session bucket
-	solutionArchiveStatus, err := uc.store.GetMultipartFileStatus(sessionBucket, solutionArchive)
+	solutionArchiveStatus, err := uc.multipartInspector.GetMultipartFileStatus(sessionBucket, solutionArchive)
 	if err != nil {
 		return errors.Stamp(err)
 	}
@@ -163,14 +176,14 @@ func (uc *GetExternalSolutionArchive) storePart(
 	if solutionArchiveFromManifest.Size == 0 {
 		solutionArchiveFromManifest.Size = part.SolutionArchive.Size
 
-		err := uc.store.DeleteMultipartFile(sessionBucket, solutionArchiveFromManifest)
+		err := uc.multipartInspector.DeleteMultipartFile(sessionBucket, solutionArchiveFromManifest)
 		if err != nil {
 			return nil, errors.Intercept(err).
 				WithProperty("instance", fmt.Sprintf("%s/downloads/%s", uc.rootAPIPath, part.SolutionArchive.Name)).
 				Throw()
 		}
 
-		_, err = uc.store.CreateMultipartFiles(sessionBucket, solutionArchiveFromManifest)
+		_, err = uc.multipartUploader.CreateMultipartFiles(sessionBucket, solutionArchiveFromManifest)
 		if err != nil {
 			return nil, errors.Intercept(err).
 				WithProperty("instance", fmt.Sprintf("%s/downloads/%s", uc.rootAPIPath, part.SolutionArchive.Name)).
@@ -180,7 +193,7 @@ func (uc *GetExternalSolutionArchive) storePart(
 
 	part.SolutionArchive = solutionArchiveFromManifest
 
-	solutionArchiveStatus, err := uc.store.WritePartToMultipartFile(sessionBucket, part)
+	solutionArchiveStatus, err := uc.multipartUploader.WritePartToMultipartFile(sessionBucket, part)
 	if err != nil {
 		return nil, errors.Intercept(err).
 			WithProperty("instance", fmt.Sprintf("%s/downloads/%s", uc.rootAPIPath, part.SolutionArchive.Name)).
@@ -195,16 +208,16 @@ func (uc *GetExternalSolutionArchive) storePart(
 	// move it to the storage root location and then
 	// remove the bucket.
 	cleanUpCorrupted := func() {
-		if err := uc.store.DeleteMultipartFile(sessionBucket, part.SolutionArchive); err != nil {
+		if err := uc.multipartInspector.DeleteMultipartFile(sessionBucket, part.SolutionArchive); err != nil {
 			uc.logger.Error().Err(err).Any("solution archive", part.SolutionArchive).Msg("failed to delete multipart file")
 		}
 
-		if _, err := uc.store.CreateMultipartFiles(sessionBucket, part.SolutionArchive); err != nil {
+		if _, err := uc.multipartUploader.CreateMultipartFiles(sessionBucket, part.SolutionArchive); err != nil {
 			uc.logger.Error().Err(err).Any("solution archive", part.SolutionArchive).Msg("failed to create multipart file")
 		}
 	}
 
-	err = uc.store.ConsolidateMultipartFile(sessionBucket, part.SolutionArchive, library.FileSystemDefaultFileMode)
+	err = uc.multipartUploader.ConsolidateMultipartFile(sessionBucket, part.SolutionArchive, library.FileSystemDefaultFileMode)
 	if err != nil {
 		cleanUpCorrupted()
 
@@ -214,7 +227,7 @@ func (uc *GetExternalSolutionArchive) storePart(
 	}
 
 	solutionArchiveFileName := library.GenSolutionArchiveFileName(part.SolutionArchive)
-	err = uc.store.MoveFileToRoot(sessionBucket, part.SolutionArchive.Name, solutionArchiveFileName)
+	err = uc.multipartUploader.MoveFileToRoot(sessionBucket, part.SolutionArchive.Name, solutionArchiveFileName)
 	if err != nil {
 		cleanUpCorrupted()
 
@@ -222,7 +235,7 @@ func (uc *GetExternalSolutionArchive) storePart(
 			WithProperty("instance", fmt.Sprintf("%s/downloads/%s", uc.rootAPIPath, part.SolutionArchive.Name)).
 			Throw()
 	}
-	err = uc.store.DeleteBucket(sessionBucket)
+	err = uc.bucketManager.DeleteBucket(sessionBucket)
 	if err != nil {
 		return nil, errors.Intercept(err).
 			WithProperty("instance", fmt.Sprintf("%s/downloads/%s", uc.rootAPIPath, part.SolutionArchive.Name)).

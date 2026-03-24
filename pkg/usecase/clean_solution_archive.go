@@ -1,8 +1,8 @@
 package usecase
 
 import (
-	"context"
 	"os"
+	"sync"
 
 	"github.com/rs/zerolog"
 	"github.com/scality/go-errors"
@@ -12,24 +12,27 @@ import (
 )
 
 type CleanSolutionArchive struct {
-	ctx        context.Context
-	store      service.StorageProvider
-	logger     *zerolog.Logger
-	deleteChan chan domain.FileEventDetails
+	logger      *zerolog.Logger
+	locker      sync.Locker
+	fileMounter service.FileMounter
+	fileWatcher service.FileWatcher
+	deleteChan  chan domain.FileEventDetails
 }
 
 func NewCleanSolutionArchive(
-	ctx context.Context,
 	logger *zerolog.Logger,
-	store service.StorageProvider,
+	locker sync.Locker,
+	fileMounter service.FileMounter,
+	fileWatcher service.FileWatcher,
 	deleteChan chan domain.FileEventDetails,
 ) *CleanSolutionArchive {
 	l := logger.With().Str("use_case", "clean_solution_archive").Logger()
 	return &CleanSolutionArchive{
-		ctx:        ctx,
-		logger:     &l,
-		store:      store,
-		deleteChan: deleteChan,
+		logger:      &l,
+		locker:      locker,
+		fileMounter: fileMounter,
+		fileWatcher: fileWatcher,
+		deleteChan:  deleteChan,
 	}
 }
 
@@ -49,7 +52,7 @@ func (uc *CleanSolutionArchive) Execute() error {
 					Str("path", eventDetails.FullPathName).
 					Str("origin", "solution_archives").
 					Msg("failed to clean unused solution archive")
-				uc.store.AddWatchFileOrDirectory(eventDetails.FullPathName) // nolint: errcheck // was existing before
+				uc.fileWatcher.AddWatchFileOrDirectory(eventDetails.FullPathName) // nolint: errcheck // was existing before
 			}
 		case domain.SolutionsOrigin:
 			err := uc.cleanUnusedSolutions(eventDetails.FullPathName, eventDetails.IsDir)
@@ -59,7 +62,7 @@ func (uc *CleanSolutionArchive) Execute() error {
 					Str("path", eventDetails.FullPathName).
 					Str("origin", "solutions").
 					Msg("failed to clean unused solution")
-				uc.store.AddWatchFileOrDirectory(eventDetails.FullPathName) // nolint: errcheck // was existing before
+				uc.fileWatcher.AddWatchFileOrDirectory(eventDetails.FullPathName) // nolint: errcheck // was existing before
 			}
 		}
 	}
@@ -68,12 +71,12 @@ func (uc *CleanSolutionArchive) Execute() error {
 }
 
 func (uc *CleanSolutionArchive) cleanUnusedSolutions(path string, isDir bool) error {
-	uc.store.Lock()
-	defer uc.store.Unlock()
+	uc.locker.Lock()
+	defer uc.locker.Unlock()
 
 	if isDir {
 		// Unmount the solution
-		err := uc.store.UnmountFile(path)
+		err := uc.fileMounter.UnmountFile(path)
 		if err != nil {
 			uc.logger.Error().
 				Err(err).
@@ -117,8 +120,8 @@ func (uc *CleanSolutionArchive) cleanUnusedSolutions(path string, isDir bool) er
 
 // FIXME Not sure why this is here, should be in library
 func (uc *CleanSolutionArchive) cleanUnusedSolutionArchives(path string, isDir bool) error {
-	uc.store.Lock()
-	defer uc.store.Unlock()
+	uc.locker.Lock()
+	defer uc.locker.Unlock()
 
 	if isDir {
 		err := os.RemoveAll(path)
