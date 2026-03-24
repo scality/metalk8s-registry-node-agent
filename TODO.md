@@ -1,0 +1,3 @@
+- Remove obfuscation of usecases/implementation
+    - Migration from lots of implementation to lots of usecase using a meta implementation -> doing
+    - Second part will be breaking down the `StorageProvider` interface into manageable chunks, and moving the implementation in dedicated packages (That will help with the lock issue, aswell as testing)

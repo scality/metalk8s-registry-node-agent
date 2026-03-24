@@ -5,24 +5,24 @@ import (
 	"github.com/scality/go-errors"
 
 	"github.com/scality/metalk8s-registry-node-agent/pkg/domain"
+	"github.com/scality/metalk8s-registry-node-agent/pkg/library"
 	"github.com/scality/metalk8s-registry-node-agent/pkg/service"
 )
 
 type RemoveSolutionArchive struct {
 	logger *zerolog.Logger
-
-	solutionArchiveRemover service.SolutionArchiveRemover
+	store  service.StorageProvider
 }
 
 func NewRemoveSolutionArchive(
 	logger *zerolog.Logger,
-	solutionArchiveRemover service.SolutionArchiveRemover,
+	store service.StorageProvider,
 ) *RemoveSolutionArchive {
 	l := logger.With().Str("use_case", "remove_solution_archive").Logger()
 
 	return &RemoveSolutionArchive{
-		logger:                 &l,
-		solutionArchiveRemover: solutionArchiveRemover,
+		logger: &l,
+		store:  store,
 	}
 }
 
@@ -31,11 +31,22 @@ func (uc *RemoveSolutionArchive) Execute(solutionArchive *domain.SolutionArchive
 		Any("solution_archive", solutionArchive).
 		Msg("Removing solution archive")
 
-	err := uc.solutionArchiveRemover.RemoveSolutionArchive(solutionArchive)
+	uc.store.Lock()
+	defer uc.store.Unlock()
+
+	// List all solution archives in the storage
+	// matching solutionArchiveStorageNamePattern
+	fileNames, err := uc.store.ListFiles()
 	if err != nil {
-		return errors.Intercept(err).
-			WithDetail("failed to remove solution archive").
-			Throw()
+		return errors.Stamp(err)
+	}
+
+	// Check if the solution archive exists in the storage
+	if library.SolutionArchiveExists(solutionArchive, fileNames) {
+		err := uc.store.DeleteFile(library.GenSolutionArchiveFileName(solutionArchive))
+		if err != nil {
+			return errors.Stamp(err)
+		}
 	}
 
 	uc.logger.Debug().Any("solution_archive", solutionArchive).Msg("Solution archive removed")

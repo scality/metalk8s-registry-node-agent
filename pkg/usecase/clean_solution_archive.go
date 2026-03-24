@@ -1,4 +1,4 @@
-package solutionarchivecleaner
+package usecase
 
 import (
 	"context"
@@ -11,21 +11,21 @@ import (
 	"github.com/scality/metalk8s-registry-node-agent/pkg/service"
 )
 
-type FileSystem struct {
+type CleanSolutionArchive struct {
 	ctx        context.Context
 	store      service.StorageProvider
 	logger     *zerolog.Logger
 	deleteChan chan domain.FileEventDetails
 }
 
-func NewFileSystem(
+func NewCleanSolutionArchive(
 	ctx context.Context,
 	logger *zerolog.Logger,
 	store service.StorageProvider,
 	deleteChan chan domain.FileEventDetails,
-) *FileSystem {
-	l := logger.With().Str("infrastructure", "solution_archive_cleaner").Logger()
-	return &FileSystem{
+) *CleanSolutionArchive {
+	l := logger.With().Str("use_case", "clean_solution_archive").Logger()
+	return &CleanSolutionArchive{
 		ctx:        ctx,
 		logger:     &l,
 		store:      store,
@@ -33,42 +33,49 @@ func NewFileSystem(
 	}
 }
 
-func (cl *FileSystem) Run() {
-	for eventDetails := range cl.deleteChan {
+func (uc *CleanSolutionArchive) Execute() error {
+	for eventDetails := range uc.deleteChan {
 		switch eventDetails.Origin {
 		case domain.SolutionArchivesOrigin:
-			err := cl.cleanUnusedSolutionArchives(eventDetails.FullPathName, eventDetails.IsDir)
+			uc.logger.Debug().
+				Str("path", eventDetails.FullPathName).
+				Str("origin", "solution_archives").
+				Msg("cleaning unused solution archive")
+
+			err := uc.cleanUnusedSolutionArchives(eventDetails.FullPathName, eventDetails.IsDir)
 			if err != nil {
-				cl.logger.Error().
+				uc.logger.Error().
 					Err(err).
 					Str("path", eventDetails.FullPathName).
 					Str("origin", "solution_archives").
 					Msg("failed to clean unused solution archive")
-				cl.store.AddWatchFileOrDirectory(eventDetails.FullPathName) // nolint: errcheck // was existing before
+				uc.store.AddWatchFileOrDirectory(eventDetails.FullPathName) // nolint: errcheck // was existing before
 			}
 		case domain.SolutionsOrigin:
-			err := cl.cleanUnusedSolutions(eventDetails.FullPathName, eventDetails.IsDir)
+			err := uc.cleanUnusedSolutions(eventDetails.FullPathName, eventDetails.IsDir)
 			if err != nil {
-				cl.logger.Error().
+				uc.logger.Error().
 					Err(err).
 					Str("path", eventDetails.FullPathName).
 					Str("origin", "solutions").
 					Msg("failed to clean unused solution")
-				cl.store.AddWatchFileOrDirectory(eventDetails.FullPathName) // nolint: errcheck // was existing before
+				uc.store.AddWatchFileOrDirectory(eventDetails.FullPathName) // nolint: errcheck // was existing before
 			}
 		}
 	}
+
+	return nil
 }
 
-func (cl *FileSystem) cleanUnusedSolutions(path string, isDir bool) error {
-	cl.store.Lock()
-	defer cl.store.Unlock()
+func (uc *CleanSolutionArchive) cleanUnusedSolutions(path string, isDir bool) error {
+	uc.store.Lock()
+	defer uc.store.Unlock()
 
 	if isDir {
 		// Unmount the solution
-		err := cl.store.UnmountFile(path)
+		err := uc.store.UnmountFile(path)
 		if err != nil {
-			cl.logger.Error().
+			uc.logger.Error().
 				Err(err).
 				Str("mount_point", path).
 				Msg("failed to unmount unused solution")
@@ -85,7 +92,7 @@ func (cl *FileSystem) cleanUnusedSolutions(path string, isDir bool) error {
 				Throw()
 		}
 
-		cl.logger.Debug().
+		uc.logger.Debug().
 			Str("path", path).
 			Msg("finished to clean unused solution directory")
 
@@ -101,16 +108,17 @@ func (cl *FileSystem) cleanUnusedSolutions(path string, isDir bool) error {
 			Throw()
 	}
 
-	cl.logger.Debug().
+	uc.logger.Debug().
 		Str("path", path).
 		Msg("finished to clean unused solution")
 
 	return nil
 }
 
-func (cl *FileSystem) cleanUnusedSolutionArchives(path string, isDir bool) error {
-	cl.store.Lock()
-	defer cl.store.Unlock()
+// FIXME Not sure why this is here, should be in library
+func (uc *CleanSolutionArchive) cleanUnusedSolutionArchives(path string, isDir bool) error {
+	uc.store.Lock()
+	defer uc.store.Unlock()
 
 	if isDir {
 		err := os.RemoveAll(path)
@@ -122,7 +130,7 @@ func (cl *FileSystem) cleanUnusedSolutionArchives(path string, isDir bool) error
 				Throw()
 		}
 
-		cl.logger.Debug().
+		uc.logger.Debug().
 			Str("path", path).
 			Msg("finished to clean unused solution archive directory")
 
@@ -138,7 +146,7 @@ func (cl *FileSystem) cleanUnusedSolutionArchives(path string, isDir bool) error
 			Throw()
 	}
 
-	cl.logger.Debug().
+	uc.logger.Debug().
 		Str("path", path).
 		Msg("finished to clean unused solution archive")
 

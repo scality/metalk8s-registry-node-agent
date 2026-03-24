@@ -41,9 +41,9 @@ func (c *Container) GetHTTPExternServer() *http.Server {
 
 		// Use the middleware to check all requests
 		mainRouter.Handle(
-			c.GetRootExternAPIPath()+"/",
+			c.rootExternAPIPath+"/",
 			http.StripPrefix(
-				c.GetRootExternAPIPath(),
+				c.rootExternAPIPath,
 				middleware.OapiRequestValidatorWithOptions(swagger, validatorOptions)(apiRouter),
 			),
 		)

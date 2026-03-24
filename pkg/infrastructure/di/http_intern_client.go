@@ -24,7 +24,7 @@ func (c *Container) GetHTTPInternClient() *http.Client {
 func (c *Container) GetGeneratedHTTPInternClient() *intern.ClientWithResponses {
 	if c.generatedHTTPInternClient == nil {
 		client, err := intern.NewClientWithResponses(
-			"https://localhost"+c.config.Intern.Addr+c.GetRootInternAPIPath(),
+			"https://localhost"+c.config.Intern.Addr+c.rootInternAPIPath,
 			intern.WithHTTPClient(c.GetHTTPInternClient()),
 		)
 		if err != nil {
