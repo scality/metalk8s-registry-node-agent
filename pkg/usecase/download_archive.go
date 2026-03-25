@@ -3,7 +3,6 @@ package usecase
 
 import (
 	"fmt"
-	"sync"
 
 	"github.com/rs/zerolog"
 	"github.com/scality/go-errors"
@@ -15,7 +14,6 @@ import (
 
 type DownloadSolutionArchive struct {
 	logger *zerolog.Logger
-	locker sync.Locker
 
 	fileLister  service.FileLister
 	fileReader  service.FileReader
@@ -24,7 +22,6 @@ type DownloadSolutionArchive struct {
 
 func NewDownloadSolutionArchive(
 	logger *zerolog.Logger,
-	locker sync.Locker,
 	fileLister service.FileLister,
 	fileReader service.FileReader,
 	rootAPIPath string,
@@ -33,7 +30,6 @@ func NewDownloadSolutionArchive(
 
 	return &DownloadSolutionArchive{
 		logger:      &l,
-		locker:      locker,
 		fileLister:  fileLister,
 		fileReader:  fileReader,
 		rootAPIPath: rootAPIPath,
@@ -46,9 +42,6 @@ func (uc *DownloadSolutionArchive) Execute(
 	uc.logger.Debug().
 		Any("solution_archive_part", solutionArchivePart).
 		Msg("Downloading solution archive chunk")
-
-	uc.locker.Lock()
-	defer uc.locker.Unlock()
 
 	// List all solution archives in the storage
 	// matching solutionArchiveStorageNamePattern

@@ -2,7 +2,6 @@ package usecase
 
 import (
 	"os"
-	"sync"
 
 	"github.com/rs/zerolog"
 	"github.com/scality/go-errors"
@@ -13,7 +12,6 @@ import (
 
 type CleanSolutionArchive struct {
 	logger      *zerolog.Logger
-	locker      sync.Locker
 	fileMounter service.FileMounter
 	fileWatcher service.FileWatcher
 	deleteChan  chan domain.FileEventDetails
@@ -21,7 +19,6 @@ type CleanSolutionArchive struct {
 
 func NewCleanSolutionArchive(
 	logger *zerolog.Logger,
-	locker sync.Locker,
 	fileMounter service.FileMounter,
 	fileWatcher service.FileWatcher,
 	deleteChan chan domain.FileEventDetails,
@@ -29,7 +26,6 @@ func NewCleanSolutionArchive(
 	l := logger.With().Str("use_case", "clean_solution_archive").Logger()
 	return &CleanSolutionArchive{
 		logger:      &l,
-		locker:      locker,
 		fileMounter: fileMounter,
 		fileWatcher: fileWatcher,
 		deleteChan:  deleteChan,
@@ -71,9 +67,6 @@ func (uc *CleanSolutionArchive) Execute() error {
 }
 
 func (uc *CleanSolutionArchive) cleanUnusedSolutions(path string, isDir bool) error {
-	uc.locker.Lock()
-	defer uc.locker.Unlock()
-
 	if isDir {
 		// Unmount the solution
 		err := uc.fileMounter.UnmountFile(path)
@@ -120,9 +113,6 @@ func (uc *CleanSolutionArchive) cleanUnusedSolutions(path string, isDir bool) er
 
 // FIXME Not sure why this is here, should be in library
 func (uc *CleanSolutionArchive) cleanUnusedSolutionArchives(path string, isDir bool) error {
-	uc.locker.Lock()
-	defer uc.locker.Unlock()
-
 	if isDir {
 		err := os.RemoveAll(path)
 		if err != nil {

@@ -4,10 +4,11 @@ import "github.com/scality/metalk8s-registry-node-agent/pkg/infrastructure/bucke
 
 func (c *Container) GetFilesystemBucketManager() *bucketmanager.FileSystem {
 	if c.filesystemBucketManager == nil {
-		lifecycle := c.GetStorageLifecycle()
+		lifecycle := c.GetFilesystemStorageLifecycle()
 		c.filesystemBucketManager = bucketmanager.NewFileSystem(
 			c.GetLogger(),
 			lifecycle.SolutionArchivesLocation(),
+			c.getInMemoryBucketLocker(),
 		)
 	}
 

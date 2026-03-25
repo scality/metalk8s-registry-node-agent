@@ -2,7 +2,6 @@ package usecase
 
 import (
 	"fmt"
-	"sync"
 
 	"github.com/rs/zerolog"
 	"github.com/scality/go-errors"
@@ -13,7 +12,6 @@ import (
 
 type GetExternalSolutionArchive struct {
 	logger             *zerolog.Logger
-	locker             sync.Locker
 	fileLister         service.FileLister
 	bucketManager      service.BucketManager
 	multipartUploader  service.MultipartUploader
@@ -24,7 +22,6 @@ type GetExternalSolutionArchive struct {
 }
 
 func NewGetExternalSolutionArchive(
-	locker sync.Locker,
 	fileLister service.FileLister,
 	bucketManager service.BucketManager,
 	multipartUploader service.MultipartUploader,
@@ -37,7 +34,6 @@ func NewGetExternalSolutionArchive(
 	l := logger.With().Str("use_case", "get_external_solution_archive").Logger()
 	return &GetExternalSolutionArchive{
 		logger:             &l,
-		locker:             locker,
 		fileLister:         fileLister,
 		bucketManager:      bucketManager,
 		multipartUploader:  multipartUploader,
@@ -53,9 +49,6 @@ func (uc *GetExternalSolutionArchive) Execute(solutionArchive *domain.SolutionAr
 		Any("solution_archive", solutionArchive).
 		Str("download_url", downloadURL).
 		Msg("Getting external solution archive")
-
-	uc.locker.Lock()
-	defer uc.locker.Unlock()
 
 	// List all solution archives in the storage
 	// matching solutionArchiveStorageNamePattern

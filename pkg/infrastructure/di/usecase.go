@@ -7,7 +7,6 @@ func (c *Container) getUploadPartUseCase() *usecase.UploadPart {
 	if c.uploadPartUseCase == nil {
 		c.uploadPartUseCase = usecase.NewUploadPart(
 			c.GetLogger(),
-			&c.storageMu,
 			c.GetFilesystemBucketManager(),
 			c.GetFilesystemMultipartUploader(),
 			c.GetFilesystemMultipartInspector(),
@@ -22,7 +21,6 @@ func (c *Container) GetInitializeSessionUseCase() *usecase.InitializeSession {
 	if c.initializeSessionUseCase == nil {
 		c.initializeSessionUseCase = usecase.NewInitializeSession(
 			c.GetLogger(),
-			&c.storageMu,
 			c.GetFilesystemFileLister(),
 			c.GetFilesystemBucketManager(),
 			c.GetFilesystemMultipartUploader(),
@@ -37,7 +35,6 @@ func (c *Container) GetRemoveSolutionArchiveUseCase() *usecase.RemoveSolutionArc
 	if c.removeSolutionArchiveUseCase == nil {
 		c.removeSolutionArchiveUseCase = usecase.NewRemoveSolutionArchive(
 			c.GetLogger(),
-			&c.storageMu,
 			c.GetFilesystemFileLister(),
 			c.GetFilesystemFileRemover(),
 		)
@@ -49,7 +46,6 @@ func (c *Container) GetValidateSolutionArchiveUseCase() *usecase.ValidateSolutio
 	if c.validateSolutionArchiveUseCase == nil {
 		c.validateSolutionArchiveUseCase = usecase.NewValidateSolutionArchive(
 			c.GetLogger(),
-			&c.storageMu,
 			c.GetFilesystemFileLister(),
 			c.GetFilesystemFileRemover(),
 		)
@@ -61,7 +57,6 @@ func (c *Container) GetRemoveSessionUseCase() *usecase.RemoveSession {
 	if c.removeSessionUseCase == nil {
 		c.removeSessionUseCase = usecase.NewRemoveSession(
 			c.GetLogger(),
-			&c.storageMu,
 			c.GetFilesystemBucketManager(),
 		)
 	}
@@ -72,7 +67,6 @@ func (c *Container) GetDownloadSolutionArchiveUseCase() *usecase.DownloadSolutio
 	if c.downloadSolutionArchiveUseCase == nil {
 		c.downloadSolutionArchiveUseCase = usecase.NewDownloadSolutionArchive(
 			c.GetLogger(),
-			&c.storageMu,
 			c.GetFilesystemFileLister(),
 			c.GetFilesystemFileReader(),
 			c.rootInternAPIPath,
@@ -85,7 +79,6 @@ func (c *Container) GetDescribeSolutionArchiveUseCase() *usecase.DescribeSolutio
 	if c.describeSolutionArchiveUseCase == nil {
 		c.describeSolutionArchiveUseCase = usecase.NewDescribeSolutionArchive(
 			c.GetLogger(),
-			&c.storageMu,
 			c.GetFilesystemFileLister(),
 			c.rootInternAPIPath,
 		)
@@ -96,7 +89,6 @@ func (c *Container) GetDescribeSolutionArchiveUseCase() *usecase.DescribeSolutio
 func (c *Container) GetGetExternalSolutionArchiveUseCase() *usecase.GetExternalSolutionArchive {
 	if c.getExternalSolutionArchiveUseCase == nil {
 		c.getExternalSolutionArchiveUseCase = usecase.NewGetExternalSolutionArchive(
-			&c.storageMu,
 			c.GetFilesystemFileLister(),
 			c.GetFilesystemBucketManager(),
 			c.GetFilesystemMultipartUploader(),
@@ -115,7 +107,6 @@ func (c *Container) GetMountSolutionArchiveUseCase() *usecase.MountSolutionArchi
 	if c.mountSolutionArchiveUseCase == nil {
 		c.mountSolutionArchiveUseCase = usecase.NewMountSolutionArchive(
 			c.GetLogger(),
-			&c.storageMu,
 			c.GetFilesystemFileLister(),
 			c.GetFilesystemFileMounter(),
 		)
@@ -127,7 +118,6 @@ func (c *Container) GetUnmountSolutionArchiveUseCase() *usecase.UnmountSolutionA
 	if c.unmountSolutionArchiveUseCase == nil {
 		c.unmountSolutionArchiveUseCase = usecase.NewUnmountSolutionArchive(
 			c.GetLogger(),
-			&c.storageMu,
 			c.GetFilesystemFileMounter(),
 		)
 	}
@@ -138,7 +128,6 @@ func (c *Container) GetCleanSolutionArchiveUseCase() *usecase.CleanSolutionArchi
 	if c.cleanSolutionArchiveUseCase == nil {
 		c.cleanSolutionArchiveUseCase = usecase.NewCleanSolutionArchive(
 			c.GetLogger(),
-			&c.storageMu,
 			c.GetFilesystemFileMounter(),
 			c.GetFilesystemFileWatcher(),
 			c.deleteChan,

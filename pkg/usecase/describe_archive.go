@@ -3,7 +3,6 @@ package usecase
 
 import (
 	"fmt"
-	"sync"
 
 	"github.com/rs/zerolog"
 	"github.com/scality/go-errors"
@@ -16,14 +15,12 @@ import (
 type DescribeSolutionArchive struct {
 	logger *zerolog.Logger
 
-	locker      sync.Locker
 	fileLister  service.FileLister
 	rootAPIPath string
 }
 
 func NewDescribeSolutionArchive(
 	logger *zerolog.Logger,
-	locker sync.Locker,
 	fileLister service.FileLister,
 	rootAPIPath string,
 ) *DescribeSolutionArchive {
@@ -31,7 +28,6 @@ func NewDescribeSolutionArchive(
 
 	return &DescribeSolutionArchive{
 		logger:      &l,
-		locker:      locker,
 		fileLister:  fileLister,
 		rootAPIPath: rootAPIPath,
 	}
@@ -43,9 +39,6 @@ func (uc *DescribeSolutionArchive) Execute(
 	uc.logger.Debug().
 		Any("solution_archive", solutionArchive).
 		Msg("Describing solution archive")
-
-	uc.locker.Lock()
-	defer uc.locker.Unlock()
 
 	// List all solution archives in the storage
 	// matching solutionArchiveStorageNamePattern

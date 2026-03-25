@@ -4,6 +4,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 
 	"github.com/rs/zerolog"
 	"golang.org/x/sys/unix"
@@ -22,6 +23,7 @@ type FileSystem struct {
 	solutionsLocation        string
 	fileRemover              service.FileRemover
 	fileWatcher              service.FileWatcher
+	mountLocks               sync.Map
 }
 
 func NewFileSystem(
@@ -44,7 +46,17 @@ func NewFileSystem(
 	}
 }
 
+func (f *FileSystem) lockMountPoint(mountPoint string) func() {
+	val, _ := f.mountLocks.LoadOrStore(mountPoint, &sync.Mutex{})
+	mu := val.(*sync.Mutex)
+	mu.Lock()
+	return mu.Unlock
+}
+
 func (f *FileSystem) MountFile(fileName string, mountPoint string) error {
+	unlock := f.lockMountPoint(mountPoint)
+	defer unlock()
+
 	if err := library.EnforceNamingConventions(fileName); err != nil {
 		return errors.Stamp(err)
 	}
@@ -133,6 +145,9 @@ func (f *FileSystem) MountFile(fileName string, mountPoint string) error {
 }
 
 func (f *FileSystem) UnmountFile(mountPoint string) error {
+	unlock := f.lockMountPoint(mountPoint)
+	defer unlock()
+
 	mountPath := filepath.Join(f.solutionsLocation, mountPoint)
 	if err := library.CheckDir(mountPath); err != nil {
 		if !errors.Is(err, errors.Intercept(domain.ErrNotFound).WithIdentifier(404000).Throw()) {

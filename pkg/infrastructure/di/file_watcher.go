@@ -4,7 +4,7 @@ import "github.com/scality/metalk8s-registry-node-agent/pkg/infrastructure/filew
 
 func (c *Container) GetFilesystemFileWatcher() *filewatcher.FileSystem {
 	if c.filesystemFileWatcher == nil {
-		lifecycle := c.GetStorageLifecycle()
+		lifecycle := c.GetFilesystemStorageLifecycle()
 		c.filesystemFileWatcher = filewatcher.NewFileSystem(lifecycle.Watcher())
 	}
 

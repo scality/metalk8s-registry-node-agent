@@ -13,6 +13,7 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/scality/go-errors"
 	"github.com/scality/metalk8s-registry-node-agent/pkg/domain"
+	"github.com/scality/metalk8s-registry-node-agent/pkg/infrastructure/bucketlocker"
 	"github.com/scality/metalk8s-registry-node-agent/pkg/library"
 	"github.com/scality/metalk8s-registry-node-agent/pkg/service"
 )
@@ -22,11 +23,13 @@ var _ service.MultipartUploader = &FileSystem{}
 type FileSystem struct {
 	logger                   *zerolog.Logger
 	solutionArchivesLocation string
+	bucketLocker               *bucketlocker.InMemory
 }
 
 func NewFileSystem(
 	logger *zerolog.Logger,
 	solutionArchivesLocation string,
+	bucketLocker *bucketlocker.InMemory,
 ) *FileSystem {
 	l := logger.With().
 		Str("infrastructure", "multipart_uploader").
@@ -35,6 +38,7 @@ func NewFileSystem(
 	return &FileSystem{
 		logger:                   &l,
 		solutionArchivesLocation: solutionArchivesLocation,
+		bucketLocker:               bucketLocker,
 	}
 }
 
@@ -42,6 +46,9 @@ func (f *FileSystem) CreateMultipartFiles(
 	bucketName string,
 	solutionArchiveMeta *domain.SolutionArchive,
 ) (*domain.SolutionArchiveStatus, error) {
+	f.bucketLocker.Lock(bucketName)
+	defer f.bucketLocker.Unlock(bucketName)
+
 	if err := library.EnforceNamingConventions(solutionArchiveMeta.Name); err != nil {
 		return nil, errors.Stamp(err)
 	}
@@ -126,6 +133,9 @@ func (f *FileSystem) WritePartToMultipartFile(
 	bucketName string,
 	part *domain.Part,
 ) (*domain.SolutionArchiveStatus, error) {
+	f.bucketLocker.Lock(bucketName)
+	defer f.bucketLocker.Unlock(bucketName)
+
 	solutionArchiveStatus, err := f.getSolutionArchiveStatus(bucketName, part.SolutionArchive)
 	if err != nil {
 		return nil, errors.Stamp(err)
@@ -220,6 +230,9 @@ func (f *FileSystem) ConsolidateMultipartFile(
 	solutionArchiveMeta *domain.SolutionArchive,
 	perm os.FileMode,
 ) error {
+	f.bucketLocker.Lock(bucketName)
+	defer f.bucketLocker.Unlock(bucketName)
+
 	solutionArchiveStatus, err := f.getSolutionArchiveStatus(bucketName, solutionArchiveMeta)
 	if err != nil {
 		return err
@@ -314,6 +327,9 @@ func (f *FileSystem) ConsolidateMultipartFile(
 func (f *FileSystem) MoveFileToRoot(
 	bucketName, fileName, newFileName string,
 ) error {
+	f.bucketLocker.Lock(bucketName)
+	defer f.bucketLocker.Unlock(bucketName)
+
 	if err := library.EnforceNamingConventions(newFileName); err != nil {
 		return errors.Stamp(err)
 	}

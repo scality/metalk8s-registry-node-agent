@@ -4,10 +4,11 @@ import "github.com/scality/metalk8s-registry-node-agent/pkg/infrastructure/multi
 
 func (c *Container) GetFilesystemMultipartInspector() *multipartinspector.FileSystem {
 	if c.filesystemMultipartInspector == nil {
-		lifecycle := c.GetStorageLifecycle()
+		lifecycle := c.GetFilesystemStorageLifecycle()
 		c.filesystemMultipartInspector = multipartinspector.NewFileSystem(
 			c.GetLogger(),
 			lifecycle.SolutionArchivesLocation(),
+			c.getInMemoryBucketLocker(),
 		)
 	}
 

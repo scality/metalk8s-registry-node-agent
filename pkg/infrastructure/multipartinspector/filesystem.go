@@ -10,6 +10,7 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/scality/go-errors"
 	"github.com/scality/metalk8s-registry-node-agent/pkg/domain"
+	"github.com/scality/metalk8s-registry-node-agent/pkg/infrastructure/bucketlocker"
 	"github.com/scality/metalk8s-registry-node-agent/pkg/library"
 	"github.com/scality/metalk8s-registry-node-agent/pkg/service"
 )
@@ -19,11 +20,13 @@ var _ service.MultipartInspector = &FileSystem{}
 type FileSystem struct {
 	logger                   *zerolog.Logger
 	solutionArchivesLocation string
+	bucketLocker               *bucketlocker.InMemory
 }
 
 func NewFileSystem(
 	logger *zerolog.Logger,
 	solutionArchivesLocation string,
+	bucketLocker *bucketlocker.InMemory,
 ) *FileSystem {
 	l := logger.With().
 		Str("infrastructure", "multipart_inspector").
@@ -32,10 +35,14 @@ func NewFileSystem(
 	return &FileSystem{
 		logger:                   &l,
 		solutionArchivesLocation: solutionArchivesLocation,
+		bucketLocker:               bucketLocker,
 	}
 }
 
 func (f *FileSystem) GetMultipartFile(bucketName string) (*domain.SolutionArchive, error) {
+	f.bucketLocker.Lock(bucketName)
+	defer f.bucketLocker.Unlock(bucketName)
+
 	bucketPath := f.genBucketPath(bucketName)
 	if err := library.CheckDir(bucketPath); err != nil {
 		return nil, errors.Stamp(err)
@@ -53,6 +60,9 @@ func (f *FileSystem) GetMultipartFileStatus(
 	bucketName string,
 	solutionArchiveMeta *domain.SolutionArchive,
 ) (*domain.SolutionArchiveStatus, error) {
+	f.bucketLocker.Lock(bucketName)
+	defer f.bucketLocker.Unlock(bucketName)
+
 	return f.getSolutionArchiveStatus(bucketName, solutionArchiveMeta)
 }
 
@@ -60,6 +70,9 @@ func (f *FileSystem) DeleteMultipartFile(
 	bucketName string,
 	solutionArchiveMeta *domain.SolutionArchive,
 ) error {
+	f.bucketLocker.Lock(bucketName)
+	defer f.bucketLocker.Unlock(bucketName)
+
 	if err := library.CheckDir(f.genBucketPath(bucketName)); err != nil {
 		return errors.Stamp(err)
 	}

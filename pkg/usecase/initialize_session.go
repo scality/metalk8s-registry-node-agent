@@ -4,7 +4,6 @@ package usecase
 import (
 	"log"
 	"slices"
-	"sync"
 
 	"github.com/rs/zerolog"
 	"github.com/scality/go-errors"
@@ -16,7 +15,6 @@ import (
 
 type InitializeSession struct {
 	logger             *zerolog.Logger
-	locker             sync.Locker
 	fileLister         service.FileLister
 	bucketManager      service.BucketManager
 	multipartUploader  service.MultipartUploader
@@ -25,7 +23,6 @@ type InitializeSession struct {
 
 func NewInitializeSession(
 	logger *zerolog.Logger,
-	locker sync.Locker,
 	fileLister service.FileLister,
 	bucketManager service.BucketManager,
 	multipartUploader service.MultipartUploader,
@@ -35,7 +32,6 @@ func NewInitializeSession(
 
 	return &InitializeSession{
 		logger:             &l,
-		locker:             locker,
 		fileLister:         fileLister,
 		bucketManager:      bucketManager,
 		multipartUploader:  multipartUploader,
@@ -47,8 +43,6 @@ func (uc *InitializeSession) Execute(solutionArchive *domain.SolutionArchive) (*
 	uc.logger.Debug().
 		Any("solution_archive", solutionArchive).
 		Msg("Initializing session")
-	uc.locker.Lock()
-	defer uc.locker.Unlock()
 
 	// List all solution archives in the storage
 	// matching solutionArchiveStorageNamePattern

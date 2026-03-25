@@ -1,8 +1,6 @@
 package usecase
 
 import (
-	"sync"
-
 	"github.com/rs/zerolog"
 	"github.com/scality/go-errors"
 
@@ -13,20 +11,17 @@ import (
 
 type RemoveSession struct {
 	logger        *zerolog.Logger
-	locker        sync.Locker
 	bucketManager service.BucketManager
 }
 
 func NewRemoveSession(
 	logger *zerolog.Logger,
-	locker sync.Locker,
 	bucketManager service.BucketManager,
 ) *RemoveSession {
 	l := logger.With().Str("use_case", "remove_session").Logger()
 
 	return &RemoveSession{
 		logger:        &l,
-		locker:        locker,
 		bucketManager: bucketManager,
 	}
 }
@@ -35,9 +30,6 @@ func (uc *RemoveSession) Execute(solutionArchive *domain.SolutionArchive) error 
 	uc.logger.Debug().
 		Any("solution_archive", solutionArchive).
 		Msg("Removing session")
-
-	uc.locker.Lock()
-	defer uc.locker.Unlock()
 
 	// List all the buckets
 	buckets, err := uc.bucketManager.ListBuckets()

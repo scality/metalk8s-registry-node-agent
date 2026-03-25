@@ -7,6 +7,7 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/scality/go-errors"
 	"github.com/scality/metalk8s-registry-node-agent/pkg/domain"
+	"github.com/scality/metalk8s-registry-node-agent/pkg/infrastructure/bucketlocker"
 	"github.com/scality/metalk8s-registry-node-agent/pkg/library"
 	"github.com/scality/metalk8s-registry-node-agent/pkg/service"
 )
@@ -16,11 +17,13 @@ var _ service.BucketManager = &FileSystem{}
 type FileSystem struct {
 	logger                   *zerolog.Logger
 	solutionArchivesLocation string
+	bucketLocker               *bucketlocker.InMemory
 }
 
 func NewFileSystem(
 	logger *zerolog.Logger,
 	solutionArchivesLocation string,
+	bucketLocker *bucketlocker.InMemory,
 ) *FileSystem {
 	l := logger.With().
 		Str("infrastructure", "bucket_manager").
@@ -29,6 +32,7 @@ func NewFileSystem(
 	return &FileSystem{
 		logger:                   &l,
 		solutionArchivesLocation: solutionArchivesLocation,
+		bucketLocker:               bucketLocker,
 	}
 }
 
@@ -79,6 +83,9 @@ func (f *FileSystem) ListBuckets() ([]string, error) {
 }
 
 func (f *FileSystem) DeleteBucket(bucketName string) error {
+	f.bucketLocker.Lock(bucketName)
+	defer f.bucketLocker.Unlock(bucketName)
+
 	if err := library.EnforceNamingConventions(bucketName); err != nil {
 		return errors.Stamp(err)
 	}

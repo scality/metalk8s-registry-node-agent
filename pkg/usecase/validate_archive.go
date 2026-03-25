@@ -1,8 +1,6 @@
 package usecase
 
 import (
-	"sync"
-
 	"github.com/rs/zerolog"
 	"github.com/scality/go-errors"
 
@@ -13,14 +11,12 @@ import (
 
 type ValidateSolutionArchive struct {
 	logger      *zerolog.Logger
-	locker      sync.Locker
 	fileLister  service.FileLister
 	fileRemover service.FileRemover
 }
 
 func NewValidateSolutionArchive(
 	logger *zerolog.Logger,
-	locker sync.Locker,
 	fileLister service.FileLister,
 	fileRemover service.FileRemover,
 ) *ValidateSolutionArchive {
@@ -28,7 +24,6 @@ func NewValidateSolutionArchive(
 
 	return &ValidateSolutionArchive{
 		logger:      &l,
-		locker:      locker,
 		fileLister:  fileLister,
 		fileRemover: fileRemover,
 	}
@@ -38,9 +33,6 @@ func (uc *ValidateSolutionArchive) Execute(solutionArchive *domain.SolutionArchi
 	uc.logger.Debug().
 		Any("solution_archive", solutionArchive).
 		Msg("Validating solution archive")
-
-	uc.locker.Lock()
-	defer uc.locker.Unlock()
 
 	// List all solution archives in the storage
 	// matching solutionArchiveStorageNamePattern

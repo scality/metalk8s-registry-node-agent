@@ -10,9 +10,9 @@ const solutionArchiveStorageNamePattern = "^.{1,251}\\.iso$"
 
 var solutionArchiveStorageNameRegexp = regexp.MustCompile(solutionArchiveStorageNamePattern)
 
-func (c *Container) GetStorageLifecycle() *storageprovider.FileSystem {
-	if c.storageLifecycle == nil {
-		c.storageLifecycle = storageprovider.NewFileSystem(
+func (c *Container) GetFilesystemStorageLifecycle() *storageprovider.FileSystem {
+	if c.filesystemStorageLifecycle == nil {
+		c.filesystemStorageLifecycle = storageprovider.NewFileSystem(
 			&storageprovider.FileOpts{
 				SolutionArchivesLocation:   c.config.SolutionArchivesLocation,
 				SolutionsLocation:          c.config.SolutionsLocation,
@@ -21,7 +21,7 @@ func (c *Container) GetStorageLifecycle() *storageprovider.FileSystem {
 			},
 		)
 
-		err := c.storageLifecycle.Init()
+		err := c.filesystemStorageLifecycle.Init()
 		if err != nil {
 			c.GetLogger().Fatal().Err(err).Msg("could not initialize solution archives storage")
 		}
@@ -29,5 +29,5 @@ func (c *Container) GetStorageLifecycle() *storageprovider.FileSystem {
 		c.GetLogger().Info().Msg("solution archives storage initialized")
 	}
 
-	return c.storageLifecycle
+	return c.filesystemStorageLifecycle
 }

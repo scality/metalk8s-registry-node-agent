@@ -4,12 +4,11 @@ import (
 	"context"
 	"crypto/tls"
 	"net/http"
-	"sync"
-
 	"github.com/rs/zerolog"
 
 	"github.com/scality/metalk8s-registry-node-agent/cmd/config"
 	"github.com/scality/metalk8s-registry-node-agent/pkg/domain"
+	"github.com/scality/metalk8s-registry-node-agent/pkg/infrastructure/bucketlocker"
 	"github.com/scality/metalk8s-registry-node-agent/pkg/infrastructure/bucketmanager"
 	"github.com/scality/metalk8s-registry-node-agent/pkg/infrastructure/filelister"
 	"github.com/scality/metalk8s-registry-node-agent/pkg/infrastructure/filemounter"
@@ -46,8 +45,8 @@ type Container struct {
 	rootInternAPIPath         string
 	chunkSize                 int64
 
-	storageLifecycle *storageprovider.FileSystem
-	storageMu        sync.RWMutex
+	filesystemStorageLifecycle *storageprovider.FileSystem
+	inMemoryBucketLocker      *bucketlocker.InMemory
 
 	filesystemFileReader         *filereader.FileSystem
 	filesystemFileLister         *filelister.FileSystem

@@ -2,7 +2,6 @@ package usecase
 
 import (
 	"fmt"
-	"sync"
 
 	"github.com/rs/zerolog"
 	"github.com/scality/go-errors"
@@ -14,7 +13,6 @@ import (
 
 type UploadPart struct {
 	logger             *zerolog.Logger
-	locker             sync.Locker
 	bucketManager      service.BucketManager
 	multipartUploader  service.MultipartUploader
 	multipartInspector service.MultipartInspector
@@ -23,7 +21,6 @@ type UploadPart struct {
 
 func NewUploadPart(
 	logger *zerolog.Logger,
-	locker sync.Locker,
 	bucketManager service.BucketManager,
 	multipartUploader service.MultipartUploader,
 	multipartInspector service.MultipartInspector,
@@ -33,7 +30,6 @@ func NewUploadPart(
 
 	return &UploadPart{
 		logger:             &l,
-		locker:             locker,
 		bucketManager:      bucketManager,
 		multipartUploader:  multipartUploader,
 		multipartInspector: multipartInspector,
@@ -43,8 +39,6 @@ func NewUploadPart(
 
 func (uc *UploadPart) Execute(part *domain.Part) (*domain.SolutionArchiveStatus, error) {
 	uc.logger.Info().Msg("Uploading part")
-	uc.locker.Lock()
-	defer uc.locker.Unlock()
 
 	// List all the buckets
 	buckets, err := uc.bucketManager.ListBuckets()

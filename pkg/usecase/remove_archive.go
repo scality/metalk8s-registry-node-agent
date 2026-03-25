@@ -1,8 +1,6 @@
 package usecase
 
 import (
-	"sync"
-
 	"github.com/rs/zerolog"
 	"github.com/scality/go-errors"
 
@@ -13,14 +11,12 @@ import (
 
 type RemoveSolutionArchive struct {
 	logger      *zerolog.Logger
-	locker      sync.Locker
 	fileLister  service.FileLister
 	fileRemover service.FileRemover
 }
 
 func NewRemoveSolutionArchive(
 	logger *zerolog.Logger,
-	locker sync.Locker,
 	fileLister service.FileLister,
 	fileRemover service.FileRemover,
 ) *RemoveSolutionArchive {
@@ -28,7 +24,6 @@ func NewRemoveSolutionArchive(
 
 	return &RemoveSolutionArchive{
 		logger:      &l,
-		locker:      locker,
 		fileLister:  fileLister,
 		fileRemover: fileRemover,
 	}
@@ -38,9 +33,6 @@ func (uc *RemoveSolutionArchive) Execute(solutionArchive *domain.SolutionArchive
 	uc.logger.Debug().
 		Any("solution_archive", solutionArchive).
 		Msg("Removing solution archive")
-
-	uc.locker.Lock()
-	defer uc.locker.Unlock()
 
 	// List all solution archives in the storage
 	// matching solutionArchiveStorageNamePattern

@@ -4,7 +4,7 @@ import "github.com/scality/metalk8s-registry-node-agent/pkg/infrastructure/filem
 
 func (c *Container) GetFilesystemFileMounter() *filemounter.FileSystem {
 	if c.filesystemFileMounter == nil {
-		lifecycle := c.GetStorageLifecycle()
+		lifecycle := c.GetFilesystemStorageLifecycle()
 		c.filesystemFileMounter = filemounter.NewFileSystem(
 			c.GetLogger(),
 			lifecycle.SolutionArchivesLocation(),
