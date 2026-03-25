@@ -2,7 +2,6 @@
 package usecase
 
 import (
-	"log"
 	"slices"
 
 	"github.com/rs/zerolog"
@@ -80,7 +79,7 @@ func (uc *InitializeSession) Execute(solutionArchive *domain.SolutionArchive) (*
 
 	cleanup := func() {
 		if err := uc.bucketManager.DeleteBucket(bucketName); err != nil {
-			log.Println("Failed to delete the bucket", bucketName, err)
+			uc.logger.Error().Err(err).Str("bucket_name", bucketName).Msg("failed to delete the bucket")
 		}
 	}
 

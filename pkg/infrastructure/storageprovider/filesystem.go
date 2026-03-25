@@ -284,6 +284,8 @@ func (f *FileSystem) loadWatchedFileInfos() (watchedFilesMap, error) {
 		return nil, errors.Stamp(err)
 	}
 
+	defer watchedFileInfosFile.Close() //nolint:errcheck
+
 	jsonDecoder := json.NewDecoder(watchedFileInfosFile)
 	if err := jsonDecoder.Decode(&watchedFileMap); err != nil {
 		return nil, errors.From(domain.ErrStorageProviderInternal).

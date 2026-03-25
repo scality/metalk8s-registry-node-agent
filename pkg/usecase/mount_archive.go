@@ -34,22 +34,9 @@ func (uc *MountSolutionArchive) Execute(solutionArchive *domain.SolutionArchive)
 		Any("solution_archive", solutionArchive).
 		Msg("Mounting solution archive")
 
-	// List all solution archives in the storage
-	// matching solutionArchiveStorageNamePattern
 	fileNames, err := uc.fileLister.ListFiles()
 	if err != nil {
 		return errors.Stamp(err)
-	}
-
-	// Check if the solution archive exists in the storage
-	if library.SolutionArchiveExists(solutionArchive, fileNames) {
-		err := uc.fileMounter.MountFile(library.GenSolutionArchiveFileName(solutionArchive),
-			library.GenSolutionDirName(solutionArchive))
-		if err != nil {
-			return errors.Stamp(err)
-		}
-
-		return nil
 	}
 
 	if !library.SolutionArchiveExists(solutionArchive, fileNames) {

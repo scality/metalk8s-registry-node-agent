@@ -51,6 +51,7 @@ func (s *WatchedFileStore) GetSize(filename string) (int64, error) {
 	info, ok := s.infos[filename]
 	if !ok {
 		return 0, errors.From(domain.ErrStorageProviderNotFound).
+			WithIdentifier(404000).
 			WithDetail("file not found").
 			WithProperty("file_name", filename).
 			Throw()
