@@ -2,28 +2,21 @@ package storageprovider
 
 import (
 	"bytes"
-	"crypto/sha256"
-	"encoding/binary"
-	"encoding/hex"
 	"encoding/json"
-	"strings"
-
 	"io"
 	"os"
 	"path/filepath"
 	"regexp"
 	"slices"
+	"strings"
 	"sync"
-	"time"
 
 	"github.com/fsnotify/fsnotify"
 	"github.com/rs/zerolog"
-	"golang.org/x/sys/unix"
 
 	"github.com/scality/go-errors"
 	"github.com/scality/metalk8s-registry-node-agent/pkg/domain"
 	"github.com/scality/metalk8s-registry-node-agent/pkg/library"
-	"github.com/scality/metalk8s-registry-node-agent/pkg/service"
 )
 
 type (
@@ -36,7 +29,7 @@ type (
 		solutionArchivesLocation string
 		solutionsLocation        string
 		interestContentFilter    library.ContentFilter
-		watchedFileInfos         watchedFilesMap
+		watchedFileStore         *WatchedFileStore
 		watcher                  *fsnotify.Watcher
 	}
 
@@ -52,8 +45,6 @@ const (
 	controlDir = ".storageprovider"
 )
 
-var _ service.StorageProvider = &FileSystem{}
-
 func NewFileSystem(opts *FileOpts) *FileSystem {
 	l := opts.Logger.With().
 		Str("infrastructure", "storage_provider").
@@ -64,7 +55,28 @@ func NewFileSystem(opts *FileOpts) *FileSystem {
 		solutionArchivesLocation: opts.SolutionArchivesLocation,
 		solutionsLocation:        opts.SolutionsLocation,
 		interestContentFilter:    library.NewRegexNormalFileFilter(opts.InterestContentFilterRegex),
+		watchedFileStore:         NewWatchedFileStore(),
 	}
+}
+
+func (f *FileSystem) WatchedFileStore() *WatchedFileStore {
+	return f.watchedFileStore
+}
+
+func (f *FileSystem) Watcher() *fsnotify.Watcher {
+	return f.watcher
+}
+
+func (f *FileSystem) InterestContentFilter() library.ContentFilter {
+	return f.interestContentFilter
+}
+
+func (f *FileSystem) SolutionArchivesLocation() string {
+	return f.solutionArchivesLocation
+}
+
+func (f *FileSystem) SolutionsLocation() string {
+	return f.solutionsLocation
 }
 
 // Init initializes the storage provider.
@@ -137,467 +149,6 @@ func (f *FileSystem) SaveFile(
 		return errors.Stamp(err)
 	}
 
-	if err := f.saveFile(fileName, content, perm); err != nil {
-		return errors.Stamp(err)
-	}
-
-	return nil
-}
-
-// ListFiles lists all the flat files in the root location of the storage
-func (f *FileSystem) ListFiles() ([]string, error) {
-	return f.listFiles()
-}
-
-func (f *FileSystem) GetFile(
-	fileName string,
-) (io.ReadCloser, error) {
-	if err := library.EnforceNamingConventions(fileName); err != nil {
-		return nil, errors.Stamp(err)
-	}
-
-	file, err := f.getFile(fileName)
-	if err != nil {
-		return nil, errors.Stamp(err)
-	}
-
-	return file, nil
-}
-
-func (f *FileSystem) GetPart(
-	fileName string,
-	start int64,
-	end int64,
-) (io.ReadCloser, error) {
-	if err := library.EnforceNamingConventions(fileName); err != nil {
-		return nil, errors.Stamp(err)
-	}
-
-	file, err := f.getPart(fileName, start, end)
-	if err != nil {
-		return nil, errors.Stamp(err)
-	}
-
-	return file, nil
-}
-
-// DeleteFile deletes a file from the root location in the storage based on its fileName.
-func (f *FileSystem) DeleteFile(
-	fileName string,
-) error {
-	if err := library.EnforceNamingConventions(fileName); err != nil {
-		return errors.Stamp(err)
-	}
-
-	if err := f.deleteFile(fileName); err != nil {
-		return errors.Stamp(err)
-	}
-
-	return nil
-}
-
-// HashFile calculates the hash of a file from the root location in the storage based on its fileName.
-func (f *FileSystem) HashFile(
-	fileName string,
-) (string, error) {
-	if err := library.EnforceNamingConventions(fileName); err != nil {
-		return "", errors.Stamp(err)
-	}
-
-	hash, err := f.hashFile(fileName)
-	if err != nil {
-		return "", errors.Stamp(err)
-	}
-
-	return hash, nil
-}
-
-// CreateBucket creates a new bucket in the storage.
-func (f *FileSystem) CreateBucket(
-	bucketName string,
-) error {
-	if err := library.EnforceNamingConventions(bucketName); err != nil {
-		return errors.Stamp(err)
-	}
-
-	if err := f.createBucket(bucketName); err != nil {
-		return errors.Stamp(err)
-	}
-
-	return nil
-}
-
-// ListBuckets lists all the buckets in the storage and returns their bucketNames,
-// after having removed FileSystemBucketPrefix.
-func (f *FileSystem) ListBuckets() ([]string, error) {
-	return f.listBuckets()
-}
-
-func (f *FileSystem) DeleteBucket(
-	bucketName string,
-) error {
-	if err := library.EnforceNamingConventions(bucketName); err != nil {
-		return errors.Stamp(err)
-	}
-
-	if err := f.deleteBucket(bucketName); err != nil {
-		return errors.Stamp(err)
-	}
-
-	return nil
-}
-
-// MoveFileToRoot moves a file from a bucket to the root location in the storage.
-func (f *FileSystem) MoveFileToRoot(
-	bucketName, fileName, newFileName string,
-) error {
-	if err := library.EnforceNamingConventions(newFileName); err != nil {
-		return errors.Stamp(err)
-	}
-
-	if err := f.moveFileToRoot(bucketName, fileName, newFileName); err != nil {
-		return errors.Stamp(err)
-	}
-
-	return nil
-}
-
-// CreateMultipartFiles creates into a bucket: a metadata file, a multipart file recipient and a parts synthesis file.
-func (f *FileSystem) CreateMultipartFiles(
-	bucketName string,
-	solutionArchive *domain.SolutionArchive,
-) (*domain.SolutionArchiveStatus, error) {
-	if err := library.EnforceNamingConventions(solutionArchive.Name); err != nil {
-		return nil, errors.Stamp(err)
-	}
-	meta, err := f.createMultipartFiles(bucketName, solutionArchive)
-	if err != nil {
-		return nil, errors.Stamp(err)
-	}
-
-	return meta, nil
-}
-
-// GetMultipartFile retrieves the multipart file recipient from a given bucket
-// and returns its Solution Archive.
-func (f *FileSystem) GetMultipartFile(
-	bucketName string,
-) (*domain.SolutionArchive, error) {
-	meta, err := f.getMultipartFile(bucketName)
-	if err != nil {
-		return nil, errors.Stamp(err)
-	}
-
-	return meta, nil
-}
-
-// GetMultipartFileStatus retrieves the Solution Archive Status of a multipart file recipient
-// based on bucketName and solutionArchiveMeta.
-func (f *FileSystem) GetMultipartFileStatus(
-	bucketName string,
-	solutionArchiveMeta *domain.SolutionArchive,
-) (*domain.SolutionArchiveStatus, error) {
-	status, err := f.getSolutionArchiveStatus(bucketName, solutionArchiveMeta)
-	if err != nil {
-		return nil, errors.Stamp(err)
-	}
-
-	return status, nil
-}
-
-// DeleteMultipartFile deletes a multipart file recipient from a bucket based on bucketName and solutionArchiveMeta.
-func (f *FileSystem) DeleteMultipartFile(
-	bucketName string,
-	solutionArchiveMeta *domain.SolutionArchive,
-) error {
-	if err := f.deleteMultipartFile(bucketName, solutionArchiveMeta); err != nil {
-		return errors.Stamp(err)
-	}
-
-	return nil
-}
-
-// WritePartToMultipartFile writes the content of the given part into the multipart file recipient
-// on the bucket indicated by the given bucketName.
-func (f *FileSystem) WritePartToMultipartFile(bucketName string,
-	part *domain.Part,
-) (*domain.SolutionArchiveStatus, error) {
-	status, err := f.writePartToMultipartFile(bucketName, part)
-	if err != nil {
-		return nil, errors.Stamp(err)
-	}
-
-	return status, nil
-}
-
-// ConsolidateMultipartFile consolidates all the parts of a multipart file in a single flat file
-// into the same bucket it is located.
-func (f *FileSystem) ConsolidateMultipartFile(
-	bucketName string,
-	solutionArchiveMeta *domain.SolutionArchive,
-	perm os.FileMode,
-) error {
-	if err := f.consolidateMultipartFile(bucketName, solutionArchiveMeta, perm); err != nil {
-		return errors.Stamp(err)
-	}
-
-	return nil
-}
-
-// GetHashFromFileInfos retrieves the hash of a file from the storage backend.
-func (f *FileSystem) GetHashFromFileInfos(filename string) (string, error) {
-	if _, ok := f.watchedFileInfos[filename]; !ok {
-		return "", errors.From(domain.ErrStorageProviderNotFound).
-			WithIdentifier(404000).
-			WithDetail("file not found").
-			WithProperty("file_name", filename).
-			Throw()
-	}
-
-	return f.watchedFileInfos[filename].Hash, nil
-}
-
-// GetSizeFromFileInfos retrieves the size of a file from the storage backend.
-func (f *FileSystem) GetSizeFromFileInfos(filename string) (int64, error) {
-	if _, ok := f.watchedFileInfos[filename]; !ok {
-		return 0, errors.From(domain.ErrStorageProviderNotFound).
-			WithDetail("file not found").
-			WithProperty("file_name", filename).
-			Throw()
-	}
-
-	return f.watchedFileInfos[filename].Size, nil
-}
-
-// MountFile mounts the solution archive, identifed by its filename,
-// into the solution location.
-func (f *FileSystem) MountFile(
-	fileName string,
-	mountPoint string,
-) error {
-	if err := library.EnforceNamingConventions(fileName); err != nil {
-		return errors.Stamp(err)
-	}
-
-	filePath := filepath.Join(f.solutionArchivesLocation, fileName)
-	if err := library.CheckFile(filePath); err != nil {
-		return errors.Stamp(err)
-	}
-
-	mountPath := filepath.Join(f.solutionsLocation, mountPoint)
-	if err := library.CheckDir(mountPath); err != nil {
-		if !errors.Is(err, errors.Intercept(domain.ErrNotFound).WithIdentifier(404000).Throw()) {
-			return errors.Stamp(err)
-		}
-		if err := os.MkdirAll(mountPath, library.FileSystemDefaultDirMode); err != nil {
-			return errors.Stamp(err)
-		}
-	}
-
-	// Add a watcher for the solution path
-	solutionName := strings.Split(mountPoint, "/")[0]
-	solutionPath := filepath.Join(f.solutionsLocation, solutionName)
-	err := f.watcher.Add(solutionPath)
-	if err != nil {
-		return errors.From(domain.ErrStorageProviderInternal).
-			WithIdentifier(500000).
-			CausedBy(err).
-			WithDetail("failed to add solution path to watcher").
-			WithProperty("solution_path", solutionPath).
-			Throw()
-	}
-
-	// Add a watcher for the mount path
-	err = f.watcher.Add(mountPath)
-	if err != nil {
-		return errors.From(domain.ErrStorageProviderInternal).
-			WithIdentifier(500000).
-			CausedBy(err).
-			WithDetail("failed to add mount path to watcher").
-			WithProperty("mount_path", mountPath).
-			Throw()
-	}
-
-	// Check if the mount point is correct
-	// * No mount point found => False / No error
-	// * Correct mount point => True / No error
-	// * Other => False / Error
-	isMounted, err := library.IsMounted(filePath, mountPath)
-	if err != nil {
-		if errors.Is(err, domain.ErrMountSolutionArchiveIncorrectMount) {
-			// Unmount before mount again
-			err := f.UnmountFile(mountPoint)
-			if err != nil {
-				return errors.Stamp(err)
-			}
-		} else if errors.Is(err, domain.ErrMountSolutionArchiveNotEmptyDir) {
-			// Clean directory and create it again
-			if err := os.RemoveAll(mountPath); err != nil {
-				return errors.Stamp(err)
-			}
-			if err := os.MkdirAll(mountPath, library.FileSystemDefaultDirMode); err != nil {
-				return errors.Stamp(err)
-			}
-		} else {
-			return errors.Stamp(err)
-		}
-	}
-
-	if !isMounted {
-		err := library.MountISO(filePath, mountPath)
-		if err != nil {
-			if errors.Is(err, unix.EINVAL) {
-				// The archive file is not a valid ISO file and is therefore deleted.
-				err := f.DeleteFile(fileName)
-				if err != nil {
-					return errors.Stamp(err)
-				}
-				return errors.From(domain.ErrMountSolutionArchiveInvalidISO).
-					WithIdentifier(400000).
-					WithProperty("file_path", filePath).
-					Throw()
-			}
-
-			return errors.From(domain.ErrMountSolutionArchiveInternal).
-				WithIdentifier(500000).
-				WithDetail("unexpected error while mounting the file").
-				WithProperty("file_path", filePath).
-				WithProperty("mount_path", mountPath).
-				CausedBy(err).
-				Throw()
-		}
-	}
-
-	return nil
-}
-
-// UnmountFile unmounts a file from the storage.
-func (f *FileSystem) UnmountFile(mountPoint string) error {
-	mountPath := filepath.Join(f.solutionsLocation, mountPoint)
-	if err := library.CheckDir(mountPath); err != nil {
-		if !errors.Is(err, errors.Intercept(domain.ErrNotFound).WithIdentifier(404000).Throw()) {
-			return errors.Stamp(err)
-		}
-		return nil
-	}
-
-	_, err := library.GetLoopDeviceForMount(mountPath)
-	// In case of NotFound error, we want to delete the mount path.
-	if err != nil && !errors.Is(err, domain.ErrNotFound) {
-		return errors.Stamp(err)
-	}
-	if err == nil {
-		err := library.UnmountISO(mountPath)
-		if err != nil {
-			return errors.From(domain.ErrMountSolutionArchiveInternal).
-				WithIdentifier(500000).
-				WithDetail("unexpected error while unmounting the file").
-				WithProperty("mount_path", mountPath).
-				CausedBy(err).
-				Throw()
-		}
-	}
-
-	err = os.RemoveAll(mountPath)
-	if err != nil {
-		return errors.From(domain.ErrStorageProviderInternal).
-			WithIdentifier(500000).
-			CausedBy(err).
-			WithDetail("failed to remove the mount path").
-			WithProperty("mount_path", mountPath).
-			Throw()
-	}
-
-	return nil
-}
-
-// AddWatchFileOrDirectory adds a file or directory to the watcher.
-func (f *FileSystem) AddWatchFileOrDirectory(path string) error {
-	return f.watcher.Add(path)
-}
-
-// RemoveWatchFileOrDirectory removes a file or directory from the watcher.
-func (f *FileSystem) RemoveWatchFileOrDirectory(path string) error {
-	return f.watcher.Remove(path)
-}
-
-// Bucket handling methods
-
-func (f *FileSystem) genBucketPath(
-	bucketName string,
-) string {
-	return filepath.Join(f.solutionArchivesLocation, library.FileSystemBucketPrefix+bucketName)
-}
-
-func (f *FileSystem) createBucket(
-	bucketName string,
-) error {
-	bucketPath := f.genBucketPath(bucketName)
-	if err := library.CheckDir(bucketPath); err != nil &&
-		!errors.Is(err,
-			errors.Intercept(domain.ErrStorageProviderNotFound).
-				WithIdentifier(404000).
-				Throw()) {
-		return errors.Stamp(err)
-	}
-
-	if err := os.Mkdir(bucketPath, library.FileSystemDefaultDirMode); err != nil && !os.IsExist(err) {
-		return errors.From(domain.ErrStorageProviderInternal).
-			WithIdentifier(500000).
-			WithDetail("unable to create the bucket").
-			WithProperty("bucket_path", bucketPath).
-			CausedBy(err).
-			Throw()
-	}
-
-	return nil
-}
-
-func (f *FileSystem) listBuckets() ([]string, error) {
-	buckets, err := library.ListDirContentNames(f.solutionArchivesLocation, library.BucketFilter)
-	if err != nil {
-		return nil, errors.Stamp(err)
-	}
-
-	if len(buckets) == 0 {
-		return nil, errors.From(domain.ErrStorageProviderNotFound).
-			WithIdentifier(404000).
-			WithDetail("no buckets found").
-			Throw()
-	}
-
-	for i, bucket := range buckets {
-		buckets[i] = bucket[len(library.FileSystemBucketPrefix):]
-	}
-
-	return buckets, nil
-}
-
-func (f *FileSystem) deleteBucket(
-	bucketName string,
-) error {
-	bucketPath := f.genBucketPath(bucketName)
-	if err := library.CheckDir(bucketPath); err != nil {
-		return errors.Stamp(err)
-	}
-
-	if err := os.RemoveAll(bucketPath); err != nil {
-		return errors.From(domain.ErrStorageProviderInternal).
-			WithIdentifier(500000).
-			WithDetail("unable to delete the bucket").
-			WithProperty("bucket_path", bucketPath).
-			CausedBy(err).
-			Throw()
-	}
-
-	return nil
-}
-
-func (f *FileSystem) saveFile(
-	fileName string,
-	content io.Reader,
-	perm os.FileMode,
-) error {
 	filePath := filepath.Join(f.solutionArchivesLocation, fileName)
 	if err := library.CheckFile(filePath); err != nil && !errors.Is(err,
 		errors.Intercept(domain.ErrNotFound).WithIdentifier(404000).Throw()) {
@@ -611,72 +162,19 @@ func (f *FileSystem) saveFile(
 	return nil
 }
 
-func (f *FileSystem) listFiles() ([]string, error) {
-	files, err := library.ListDirContentNames(f.solutionArchivesLocation, f.interestContentFilter)
-	if err != nil {
-		return nil, errors.Stamp(err)
-	}
-
-	return files, nil
-}
-
-func (f *FileSystem) getFile(
-	fileName string,
-) (io.ReadCloser, error) {
-	filePath := filepath.Join(f.solutionArchivesLocation, fileName)
-	if err := library.CheckFile(filePath); err != nil {
-		return nil, errors.Stamp(err)
-	}
-
-	file, err := library.GetFile(filePath)
-	if err != nil {
-		return nil, errors.Stamp(err)
-	}
-
-	return file, nil
-}
-
-func (f *FileSystem) getPart(
-	fileName string,
-	start int64,
-	end int64,
-) (io.ReadCloser, error) {
-	filePath := filepath.Join(f.solutionArchivesLocation, fileName)
-	if err := library.CheckFile(filePath); err != nil {
-		return nil, errors.Stamp(err)
-	}
-
-	file, err := library.GetPart(filePath, start, end)
-	if err != nil {
-		return nil, errors.Stamp(err)
-	}
-
-	return file, nil
-}
-
-func (f *FileSystem) deleteFile(
-	fileName string,
-) error {
-	filePath := filepath.Join(f.solutionArchivesLocation, fileName)
-	if err := library.CheckFile(filePath); err != nil {
-		return errors.Stamp(err)
-	}
-
-	if err := library.DeleteFile(filePath); err != nil {
-		return errors.Stamp(err)
-	}
-
-	return nil
-}
-
-func (f *FileSystem) hashFile(
+func (f *FileSystem) HashFile(
 	fileName string,
 ) (string, error) {
-	if f.isFileInfoUpToDate(fileName) {
-		return f.watchedFileInfos[fileName].Hash, nil
+	if err := library.EnforceNamingConventions(fileName); err != nil {
+		return "", errors.Stamp(err)
 	}
 
 	filePath := filepath.Join(f.solutionArchivesLocation, fileName)
+	if f.watchedFileStore.IsUpToDate(fileName, filePath) {
+		hash, _ := f.watchedFileStore.GetHash(fileName)
+		return hash, nil
+	}
+
 	if err := library.CheckFile(filePath); err != nil {
 		return "", errors.Stamp(err)
 	}
@@ -689,667 +187,9 @@ func (f *FileSystem) hashFile(
 	return hash, nil
 }
 
-func (f *FileSystem) isFileInfoUpToDate(filename string) bool {
-	if f.watchedFileInfos == nil {
-		return false
-	}
+// --- watcher subsystem ---
 
-	storedFileInfo, ok := f.watchedFileInfos[filename]
-	if !ok {
-		return false
-	}
-
-	filePath := filepath.Join(f.solutionArchivesLocation, filename)
-
-	physicalFileInfo, err := os.Stat(filePath)
-	if err != nil {
-		f.logger.Error().Err(err).Msg("Failed to get file info.")
-
-		return false
-	}
-
-	if storedFileInfo.Size != physicalFileInfo.Size() {
-		return false
-	}
-
-	if storedFileInfo.LastChangedAt != physicalFileInfo.ModTime() {
-		return false
-	}
-
-	return true
-}
-
-func (f *FileSystem) genFileOnBucketPath(
-	bucketName,
-	fileName string,
-) string {
-	return filepath.Join(f.genBucketPath(bucketName), fileName)
-}
-
-func (f *FileSystem) moveFileToRoot(
-	bucketName, fileName, newFileName string,
-) error {
-	bucketPath := f.genBucketPath(bucketName)
-	if err := library.CheckDir(bucketPath); err != nil {
-		return errors.Stamp(err)
-	}
-
-	filePath := f.genFileOnBucketPath(bucketName, fileName)
-	if err := library.CheckFile(filePath); err != nil {
-		return errors.Stamp(err)
-	}
-
-	newFilePath := filepath.Join(f.solutionArchivesLocation, newFileName)
-	if err := os.Remove(newFilePath); err != nil && !os.IsNotExist(err) {
-		return errors.From(domain.ErrStorageProviderInternal).
-			WithIdentifier(500000).
-			WithDetail("unexpected error while moving the file to the root location").
-			WithProperty("current_file_path", filePath).
-			WithProperty("new_file_path", newFilePath).
-			WithProperty("while", "removing existing file from the root location").
-			CausedBy(err).
-			Throw()
-	}
-
-	if err := os.Rename(filePath, newFilePath); err != nil {
-		return errors.From(domain.ErrStorageProviderInternal).
-			WithIdentifier(500000).
-			WithDetail("unexpected error while moving the file to the root location").
-			WithProperty("current_file_path", filePath).
-			WithProperty("new_file_path", newFilePath).
-			WithProperty("while", "moving the file from bucket to root location").
-			CausedBy(err).
-			Throw()
-	}
-
-	return nil
-}
-
-// SPEC: The multipart file recipient is composed by three files: the
-// solution Archive metadata, the part index and the recipient
-
-// SPEC: The metadata file has the same name as the final solution Archive but
-// suffixed with ".meta"
-
-// SPEC: The metadata file stores the Solution Archive structure encoded as JSON
-
-// SPEC: The part index has the same name as the final solution Archive but suffixed
-// with ".parts"
-
-// SPEC: The part index must be created with an empty content
-
-// SPEC: The part index stores the PartMeta structures as binary
-// (pkg.go.dev/encoding/binary)
-
-// SPEC: The recipient has the same name as the final solution Archive but suffixed
-// with ".recipient"
-
-// filterOrphansMeta filters the orphaned SolutionArchiveMeta instances from the given
-// solutionArchiveMetas list and returns the filtered list.
-func (f *FileSystem) filterOrphansMeta(
-	bucketPath string,
-	solutionArchives []*domain.SolutionArchive,
-) []*domain.SolutionArchive {
-	filteredSolutionArchives := make([]*domain.SolutionArchive, 0, len(solutionArchives))
-
-	for _, solutionArchive := range solutionArchives {
-		if err := library.CheckFile(
-			filepath.Join(
-				bucketPath,
-				solutionArchive.Name+library.FileSystemMultipartPartsSuffix,
-			),
-		); err != nil {
-			f.logger.Warn().Err(err).Msg("The parts file is missing for the multipart file.")
-
-			continue
-		}
-
-		if err := library.CheckFile(
-			filepath.Join(
-				bucketPath,
-				solutionArchive.Name+library.FileSystemMultipartRecipientSuffix,
-			),
-		); err != nil {
-			f.logger.Warn().Err(err).Msg("The recipient file is missing for the multipart file.")
-
-			continue
-		}
-
-		filteredSolutionArchives = append(filteredSolutionArchives, solutionArchive)
-	}
-
-	return filteredSolutionArchives
-}
-
-// genBaseMultipartFilePath generates the base multipart file path for the
-// given bucket name and file name without apply any suffix.
-func (f *FileSystem) genBaseMultipartFilePath(bucketName, fileName string) string {
-	return filepath.Join(f.genBucketPath(bucketName), fileName)
-}
-
-// genMultipartMetaFilePath generates the multipart meta file path for the given
-// bucket name and file name.
-func (f *FileSystem) genMultipartMetaFilePath(bucketName, fileName string) string {
-	return f.genBaseMultipartFilePath(bucketName, fileName) + library.FileSystemMultipartMetaSuffix
-}
-
-// genMultipartPartsFilePath generates the multipart parts file path for the
-// given bucket name and file name.
-func (f *FileSystem) genMultipartPartsFilePath(bucketName, fileName string) string {
-	return f.genBaseMultipartFilePath(bucketName, fileName) + library.FileSystemMultipartPartsSuffix
-}
-
-// genMultipartRecipientFilePath generates the multipart recipient file path for
-// the given bucket name and file name.
-func (f *FileSystem) genMultipartRecipientFilePath(bucketName, fileName string) string {
-	return f.genBaseMultipartFilePath(bucketName, fileName) +
-		library.FileSystemMultipartRecipientSuffix
-}
-
-// genMultipartFilePaths generates the multipart file paths for the given bucket
-// name and file name.
-func (f *FileSystem) genMultipartFilePaths(
-	bucketName,
-	fileName string,
-) (metaFilePath, partsFilePath, recipientFilePath string) {
-	return f.genMultipartMetaFilePath(bucketName, fileName),
-		f.genMultipartPartsFilePath(bucketName, fileName),
-		f.genMultipartRecipientFilePath(bucketName, fileName)
-}
-
-// loadSolutionArchiveMeta loads the Solution Archive Meta instance from
-// the multipart meta file with the given file path.
-func loadSolutionArchiveMeta(meta *domain.SolutionArchive, filePath string) error {
-	metaFile, err := library.GetFile(filePath)
-	if err != nil {
-		return errors.Stamp(err)
-	}
-
-	defer metaFile.Close() // nolint: errcheck // No error check on defer.
-
-	if err := json.NewDecoder(metaFile).Decode(meta); err != nil {
-		return errors.From(domain.ErrStorageProviderInternal).
-			WithIdentifier(500000).
-			WithDetail("unable to load the metadata of the multipart file").
-			WithProperty("file_path", filePath).
-			WithProperty("while", "decoding the metadata from json").
-			CausedBy(err).
-			Throw()
-	}
-
-	return nil
-}
-
-// getSolutionArchiveMetaList returns the list of Solution Archive Meta instances
-// in the bucket with the given bucketPath.
-func (f *FileSystem) getSolutionArchiveMeta(bucketPath string) (*domain.SolutionArchive, error) {
-	metaFileNames, err := library.ListDirContentNames(bucketPath, library.MultipartMetaFilter)
-	if err != nil {
-		return nil, errors.Stamp(err)
-	}
-
-	solutionArchiveMetas := make([]*domain.SolutionArchive, 0, len(metaFileNames))
-
-	for _, metaFileName := range metaFileNames {
-		var solutionArchiveMeta domain.SolutionArchive
-
-		if err := loadSolutionArchiveMeta(&solutionArchiveMeta, filepath.Join(bucketPath, metaFileName)); err != nil {
-			return nil, errors.Stamp(err)
-		}
-
-		solutionArchiveMetas = append(solutionArchiveMetas, &solutionArchiveMeta)
-	}
-
-	solutionArchiveMetas = f.filterOrphansMeta(bucketPath, solutionArchiveMetas)
-	if len(solutionArchiveMetas) < 1 {
-		return nil, errors.From(domain.ErrStorageProviderNotFound).
-			WithIdentifier(404000).
-			WithDetail("no multipart files found in the bucket").
-			WithProperty("bucket_name", bucketPath).
-			Throw()
-	}
-	if len(solutionArchiveMetas) > 1 {
-		return nil, errors.From(domain.ErrStorageProviderInternal).
-			WithIdentifier(500000).
-			WithDetail("too many multipart files found in the bucket").
-			WithProperty("bucket_name", bucketPath).
-			Throw()
-	}
-
-	return solutionArchiveMetas[0], nil
-}
-
-func (f *FileSystem) createMultipartFiles(
-	bucketName string,
-	solutionArchiveMeta *domain.SolutionArchive,
-) (*domain.SolutionArchiveStatus, error) {
-	if err := library.CheckDir(f.genBucketPath(bucketName)); err != nil {
-		return nil, errors.Stamp(err)
-	}
-
-	metaFilePath, partsFilePath, recipientFilePath := f.genMultipartFilePaths(
-		bucketName,
-		solutionArchiveMeta.Name,
-	)
-
-	err := library.CheckFile(metaFilePath)
-	if err == nil {
-		solutionArchiveStatus, err := f.getSolutionArchiveStatus(bucketName, solutionArchiveMeta)
-		if err != nil {
-			return nil, errors.Stamp(err)
-		}
-
-		return solutionArchiveStatus, nil
-	}
-
-	if !errors.Is(err,
-		errors.Intercept(domain.ErrStorageProviderNotFound).
-			WithIdentifier(404000).
-			Throw()) {
-		return nil, errors.Stamp(err)
-	}
-
-	metaContentBytes, err := json.Marshal(solutionArchiveMeta)
-	if err != nil {
-		return nil, errors.From(domain.ErrStorageProviderInternal).
-			WithIdentifier(500000).
-			WithDetail("unable to save the solution archive metadata").
-			WithProperty("solution_archive", solutionArchiveMeta.Name).
-			WithProperty("version", solutionArchiveMeta.Version).
-			WithProperty("while", "marshalling the metadata to json format").
-			Throw()
-	}
-
-	cleanUp := func() {
-		os.Remove(metaFilePath)      // nolint: errcheck // No *PathError error possible.
-		os.Remove(partsFilePath)     // nolint: errcheck // No *PathError error possible.
-		os.Remove(recipientFilePath) // nolint: errcheck // No *PathError error possible.
-	}
-
-	if err := library.SaveFile(
-		metaFilePath,
-		bytes.NewReader(metaContentBytes),
-		library.FileSystemDefaultFileMode,
-	); err != nil {
-		cleanUp()
-
-		return nil, errors.Stamp(err)
-	}
-
-	if err := library.CreateEmptyFile(
-		partsFilePath,
-		0,
-		library.FileSystemDefaultFileMode,
-	); err != nil {
-		cleanUp()
-
-		return nil, errors.Stamp(err)
-	}
-
-	if err := library.CreateEmptyFile(
-		recipientFilePath,
-		solutionArchiveMeta.Size,
-		library.FileSystemDefaultFileMode,
-	); err != nil {
-		cleanUp()
-
-		return nil, errors.Stamp(err)
-	}
-
-	return &domain.SolutionArchiveStatus{
-		SolutionArchive: solutionArchiveMeta,
-		Parts:           make(map[int64]*domain.PartMeta),
-	}, nil
-}
-
-func (f *FileSystem) getMultipartFile(bucketName string) (*domain.SolutionArchive, error) {
-	bucketPath := f.genBucketPath(bucketName)
-	if err := library.CheckDir(bucketPath); err != nil {
-		return nil, errors.Stamp(err)
-	}
-
-	solutionArchiveMeta, err := f.getSolutionArchiveMeta(bucketPath)
-	if err != nil {
-		return nil, errors.Stamp(err)
-	}
-
-	return solutionArchiveMeta, nil
-}
-
-func (f *FileSystem) getSolutionArchiveStatus(
-	bucketName string,
-	solutionArchiveMeta *domain.SolutionArchive,
-) (*domain.SolutionArchiveStatus, error) {
-	if err := library.CheckDir(f.genBucketPath(bucketName)); err != nil {
-		return nil, errors.Stamp(err)
-	}
-
-	metaFilePath, partsFilePath, recipientFilePath := f.genMultipartFilePaths(
-		bucketName,
-		solutionArchiveMeta.Name,
-	)
-
-	if err := library.CheckFile(metaFilePath); err != nil {
-		return nil, errors.Stamp(err)
-	}
-
-	if err := library.CheckFile(partsFilePath); err != nil {
-		return nil, errors.Stamp(err)
-	}
-
-	if err := library.CheckFile(recipientFilePath); err != nil {
-		return nil, errors.Stamp(err)
-	}
-
-	metaFile, err := library.GetFile(metaFilePath)
-	if err != nil {
-		return nil, errors.Stamp(err)
-	}
-
-	defer metaFile.Close() // nolint: errcheck // No error check on defer.
-
-	partsFile, err := library.GetFile(partsFilePath)
-	if err != nil {
-		return nil, errors.Stamp(err)
-	}
-
-	defer partsFile.Close() // nolint: errcheck // No error check on defer.
-
-	var storedSolutionArchiveMeta domain.SolutionArchive
-	if err := json.NewDecoder(metaFile).Decode(&storedSolutionArchiveMeta); err != nil {
-		return nil, errors.From(domain.ErrStorageProviderInternal).
-			WithIdentifier(500000).
-			WithDetail("unable to load the metadata of the multipart file").
-			WithProperty("file_path", metaFilePath).
-			WithProperty("while", "decoding the metadata from json").
-			CausedBy(err).
-			Throw()
-	}
-
-	if err := library.CompareSolutionArchiveMetas(solutionArchiveMeta, &storedSolutionArchiveMeta); err != nil {
-		return nil, errors.Stamp(err)
-	}
-
-	partMetas := make(map[int64]*domain.PartMeta)
-	for {
-		var partMeta domain.PartMeta
-
-		err = binary.Read(partsFile, binary.LittleEndian, &partMeta)
-		if errors.Is(err, io.EOF) {
-			break
-		}
-
-		if err != nil {
-			return nil, errors.From(domain.ErrStorageProviderInternal).
-				WithIdentifier(500000).
-				WithDetail("unable to load the parts metadata of the multipart file").
-				WithProperty("file_path", partsFilePath).
-				WithProperty("while", "decoding the parts metadata from binary").
-				CausedBy(err).
-				Throw()
-		}
-
-		partMetas[partMeta.Start] = &partMeta
-	}
-
-	return &domain.SolutionArchiveStatus{
-		SolutionArchive: solutionArchiveMeta,
-		Parts:           partMetas,
-	}, nil
-}
-
-func (f *FileSystem) deleteMultipartFile(
-	bucketName string,
-	solutionArchiveMeta *domain.SolutionArchive,
-) error {
-	if err := library.CheckDir(f.genBucketPath(bucketName)); err != nil {
-		return errors.Stamp(err)
-	}
-
-	metaFilePath, partsFilePath, recipientFilePath := f.genMultipartFilePaths(
-		bucketName,
-		solutionArchiveMeta.Name,
-	)
-
-	if err := library.CheckFile(metaFilePath); err != nil {
-		return errors.Stamp(err)
-	}
-
-	if err := library.CheckFile(partsFilePath); err != nil {
-		return errors.Stamp(err)
-	}
-
-	if err := library.CheckFile(recipientFilePath); err != nil {
-		return errors.Stamp(err)
-	}
-
-	problems := make(map[string]any)
-
-	if err := os.Remove(metaFilePath); err != nil {
-		problems["problem_remove_meta_file"] = err
-	}
-
-	if err := os.Remove(partsFilePath); err != nil {
-		problems["problem_remove_parts_file"] = err
-	}
-
-	if err := os.Remove(recipientFilePath); err != nil {
-		problems["problem_remove_recipient_filer"] = err
-	}
-
-	if len(problems) > 0 {
-		return errors.From(domain.ErrStorageProviderInternal).
-			WithIdentifier(500000).
-			WithDetail("unable to delete the multipart file").
-			WithProperties(problems).
-			Throw()
-	}
-
-	return nil
-}
-
-func (f *FileSystem) writePartToMultipartFile(
-	bucketName string,
-	part *domain.Part,
-) (*domain.SolutionArchiveStatus, error) {
-	solutionArchiveStatus, err := f.getSolutionArchiveStatus(bucketName, part.SolutionArchive)
-	if err != nil {
-		return nil, errors.Stamp(err)
-	}
-
-	partsFilePath := f.genMultipartPartsFilePath(bucketName, part.SolutionArchive.Name)
-	recipientFilePath := f.genMultipartRecipientFilePath(bucketName, part.SolutionArchive.Name)
-
-	partsFile, err := os.OpenFile(partsFilePath, os.O_WRONLY, library.FileSystemDefaultFileMode)
-	if err != nil {
-		return nil, errors.From(domain.ErrStorageProviderInternal).
-			WithIdentifier(500000).
-			WithDetail("unable to open the parts file").
-			WithProperty("file_path", partsFilePath).
-			CausedBy(err).
-			Throw()
-	}
-
-	defer partsFile.Close() // nolint: errcheck // No error check on defer.
-
-	recipientFile, err := os.OpenFile(recipientFilePath, os.O_RDWR, library.FileSystemDefaultFileMode)
-	if err != nil {
-		return nil, errors.From(domain.ErrStorageProviderInternal).
-			WithIdentifier(500000).
-			WithDetail("unable to open the recipient file").
-			WithProperty("file_path", recipientFilePath).
-			CausedBy(err).
-			Throw()
-	}
-
-	defer recipientFile.Close() // nolint: errcheck // No error check on defer.
-
-	_, err = recipientFile.Seek(part.Meta.Start, io.SeekStart)
-	if err != nil {
-		return nil, errors.From(domain.ErrStorageProviderInternal).
-			WithIdentifier(500000).
-			WithDetail("unable to move to the start of the part in the recipient file").
-			WithProperty("file_path", recipientFilePath).
-			WithProperty("part_start", part.Meta.Start).
-			CausedBy(err).
-			Throw()
-	}
-
-	written, err := io.Copy(recipientFile, part.Content)
-	if err != nil {
-		return nil, errors.From(domain.ErrStorageProviderInternal).
-			WithIdentifier(500000).
-			WithDetail("unable to write the part to the recipient file").
-			WithProperty("file_path", recipientFilePath).
-			WithProperty("part_size", part.Meta.Size()).
-			CausedBy(err).
-			Throw()
-	}
-
-	if written != part.Meta.Size() {
-		return nil, errors.From(domain.ErrStorageProviderInternal).
-			WithIdentifier(500000).
-			WithDetail("the part was not fully written to the recipient file").
-			WithProperty("file_path", recipientFilePath).
-			WithProperty("part_size", part.Meta.Size()).
-			WithProperty("written", written).
-			Throw()
-	}
-
-	_, err = partsFile.Seek(0, io.SeekEnd)
-	if err != nil {
-		return nil, errors.From(domain.ErrStorageProviderInternal).
-			WithIdentifier(500000).
-			WithDetail("unable to move to the end of the parts file").
-			WithProperty("file_path", partsFilePath).
-			CausedBy(err).
-			Throw()
-	}
-
-	err = binary.Write(partsFile, binary.LittleEndian, part.Meta)
-	if err != nil {
-		return nil, errors.From(domain.ErrStorageProviderInternal).
-			WithIdentifier(500000).
-			WithDetail("unable to write the part metadata to the parts file").
-			WithProperty("file_path", partsFilePath).
-			CausedBy(err).
-			Throw()
-	}
-
-	solutionArchiveStatus.Parts[part.Meta.Start] = part.Meta
-
-	return solutionArchiveStatus, nil
-}
-
-func (f *FileSystem) consolidateMultipartFile(
-	bucketName string,
-	solutionArchiveMeta *domain.SolutionArchive,
-	perm os.FileMode,
-) error {
-	solutionArchiveStatus, err := f.getSolutionArchiveStatus(bucketName, solutionArchiveMeta)
-	if err != nil {
-		return err
-	}
-
-	if !solutionArchiveStatus.IsComplete() {
-		return errors.From(domain.ErrStorageProviderBusinessRuleViolation).
-			WithIdentifier(422001).
-			WithDetail("unable to consolidate multipart file because it is not complete").
-			WithProperty("bucket_name", bucketName).
-			WithProperty("solution_archive_name", solutionArchiveMeta.Name).
-			Throw()
-	}
-
-	baseFilePath := f.genBaseMultipartFilePath(bucketName, solutionArchiveMeta.Name)
-	metaFilePath, partsFilePath, recipientFilePath := f.genMultipartFilePaths(
-		bucketName,
-		solutionArchiveMeta.Name,
-	)
-
-	// Calculate the SHA256 hash of the recipient file
-	recipientFile, err := library.GetFile(recipientFilePath)
-	if err != nil {
-		return errors.Stamp(err)
-	}
-
-	defer recipientFile.Close() // nolint: errcheck // No error check on defer.
-
-	hasher := sha256.New()
-	if _, err := io.Copy(hasher, recipientFile); err != nil {
-		return errors.From(domain.ErrStorageProviderInternal).
-			WithIdentifier(500000).
-			WithDetail("unable to calculate the hash of the recipient file").
-			WithProperty("file_path", recipientFilePath).
-			CausedBy(err).
-			Throw()
-	}
-
-	calculedHash := hex.EncodeToString(hasher.Sum(nil))
-
-	if calculedHash != solutionArchiveMeta.Hash {
-		return errors.From(domain.ErrStorageProviderBusinessRuleViolation).
-			WithIdentifier(422001).
-			WithDetail("the hash of the recipient file does not match the solution archive metadata").
-			WithProperty("component", solutionArchiveMeta.Name).
-			WithProperty("version", solutionArchiveMeta.Version).
-			WithProperty("expected_hash", solutionArchiveMeta.Hash).
-			WithProperty("calculed_hash", calculedHash).
-			Throw()
-	}
-
-	if err := os.Rename(recipientFilePath, baseFilePath); err != nil {
-		return errors.From(domain.ErrStorageProviderInternal).
-			WithIdentifier(500000).
-			WithDetail("unable to rename the recipient file").
-			WithProperty("from", recipientFilePath).
-			WithProperty("to", baseFilePath).
-			CausedBy(err).
-			Throw()
-	}
-
-	if err := os.Chmod(baseFilePath, perm); err != nil {
-		return errors.From(domain.ErrStorageProviderInternal).
-			WithIdentifier(500000).
-			WithDetail("unable to change the permissions of the recipient file").
-			WithProperty("file_path", baseFilePath).
-			WithProperty("permissions", perm).
-			CausedBy(err).
-			Throw()
-	}
-
-	// Remove other files
-	problems := make(map[string]any)
-
-	if err := os.Remove(metaFilePath); err != nil {
-		problems["problem_remove_meta_file"] = err
-	}
-
-	if err := os.Remove(partsFilePath); err != nil {
-		problems["problem_remove_parts_file"] = err
-	}
-
-	if len(problems) > 0 {
-		return errors.From(domain.ErrStorageProviderInternal).
-			WithIdentifier(500000).
-			WithDetail("unable to clean up multipart file bundle").
-			WithProperties(problems).
-			Throw()
-	}
-
-	return nil
-}
-
-// ===================================== TO REFACTOR ========================================= //
-
-type (
-	watchedFileInfo struct {
-		Size          int64     `json:"size"`
-		LastChangedAt time.Time `json:"last_changed_at"`
-		Hash          string    `json:"hash"`
-	}
-
-	watchedFilesMap map[string]*watchedFileInfo
-)
+type watchedFilesMap = map[string]*WatchedFileInfo
 
 const watchedFilesInfoName = "watched_files_info.json"
 
@@ -1361,7 +201,7 @@ func (f *FileSystem) genWatchedFilesPath() string {
 	return filepath.Join(f.genControlDirPath(), watchedFilesInfoName)
 }
 
-func (f *FileSystem) genWatchedFileInfo(fileEntry os.DirEntry) (*watchedFileInfo, error) {
+func (f *FileSystem) genWatchedFileInfo(fileEntry os.DirEntry) (*WatchedFileInfo, error) {
 	filePath := filepath.Join(f.solutionArchivesLocation, fileEntry.Name())
 
 	hash, err := library.HashFile(filePath)
@@ -1379,7 +219,7 @@ func (f *FileSystem) genWatchedFileInfo(fileEntry os.DirEntry) (*watchedFileInfo
 			Throw()
 	}
 
-	return &watchedFileInfo{
+	return &WatchedFileInfo{
 		Size:          fileInfo.Size(),
 		LastChangedAt: fileInfo.ModTime(),
 		Hash:          hash,
@@ -1389,7 +229,7 @@ func (f *FileSystem) genWatchedFileInfo(fileEntry os.DirEntry) (*watchedFileInfo
 func (f *FileSystem) genWatchedFileInfos(fileEntries []os.DirEntry) watchedFilesMap {
 	type watchedFileEntry struct {
 		fileName string
-		fileInfo *watchedFileInfo
+		fileInfo *WatchedFileInfo
 	}
 
 	watchedFileChan := make(chan *watchedFileEntry, len(fileEntries))
@@ -1432,7 +272,7 @@ func (f *FileSystem) genWatchedFileInfos(fileEntries []os.DirEntry) watchedFiles
 }
 
 func (f *FileSystem) loadWatchedFileInfos() (watchedFilesMap, error) {
-	watchedFileMap := make(map[string]*watchedFileInfo)
+	watchedFileMap := make(map[string]*WatchedFileInfo)
 	watchedFileInfosFile, err := library.GetFile(f.genWatchedFilesPath())
 	if err != nil {
 		if errors.Is(err,
@@ -1457,7 +297,7 @@ func (f *FileSystem) loadWatchedFileInfos() (watchedFilesMap, error) {
 }
 
 func (f *FileSystem) saveWatchedFileInfos(watchedFileInfos watchedFilesMap) error {
-	f.watchedFileInfos = watchedFileInfos
+	f.watchedFileStore.Set(watchedFileInfos)
 
 	watchedFileInfosBytes, err := json.Marshal(watchedFileInfos)
 	if err != nil {
@@ -1487,7 +327,6 @@ func (f *FileSystem) saveWatchedFileInfosConcurrentSafe(watchedFiles watchedFile
 }
 
 func (f *FileSystem) updateWatchedFileInfos(saveFunc func(watchedFilesMap) error) error {
-	// Load current stored watched file infos.
 	watchedFileInfos, err := f.loadWatchedFileInfos()
 	if err != nil {
 		f.logger.Warn().Err(err).Msg("Failed to load watched file infos.")
@@ -1495,7 +334,6 @@ func (f *FileSystem) updateWatchedFileInfos(saveFunc func(watchedFilesMap) error
 		watchedFileInfos = make(watchedFilesMap)
 	}
 
-	// List actual interest content.
 	fileEntries, err := library.ListDirContent(f.solutionArchivesLocation, f.interestContentFilter)
 	if err != nil {
 		return errors.Stamp(err)
@@ -1511,7 +349,6 @@ func (f *FileSystem) updateWatchedFileInfos(saveFunc func(watchedFilesMap) error
 		}
 	}
 
-	// Filter out from fileEntries those which are up to date.
 	filteredEntries := make([]os.DirEntry, 0, len(fileEntries))
 
 	for _, fileEntry := range fileEntries {
@@ -1532,15 +369,12 @@ func (f *FileSystem) updateWatchedFileInfos(saveFunc func(watchedFilesMap) error
 		filteredEntries = append(filteredEntries, fileEntry)
 	}
 
-	// Generate watchedFileInfo for the new interesting content files.
 	newWatchedFileInfos := f.genWatchedFileInfos(filteredEntries)
 
-	// Merge new watched file infos with the old ones.
 	for fileName, watchedFileInfo := range newWatchedFileInfos {
 		watchedFileInfos[fileName] = watchedFileInfo
 	}
 
-	// Save watched file infos to disk.
 	if err := saveFunc(watchedFileInfos); err != nil {
 		return errors.Stamp(err)
 	}
@@ -1569,7 +403,6 @@ func (f *FileSystem) watchFiles(filenameChan chan domain.FileEventDetails) {
 				log.Error().Err(err).Msg("failed to update watched file infos")
 			}
 
-			// Determine the origin of the object
 			var origin domain.FileOrigin
 			if strings.HasPrefix(e.Name, f.solutionArchivesLocation) {
 				origin = domain.SolutionArchivesOrigin
@@ -1584,7 +417,6 @@ func (f *FileSystem) watchFiles(filenameChan chan domain.FileEventDetails) {
 					continue
 				}
 				log.Warn().Err(err).Msg("failed to determine if the object is a directory")
-				// In our use case, we expect to do nothing if the object is undetermined
 				continue
 			}
 
@@ -1592,19 +424,13 @@ func (f *FileSystem) watchFiles(filenameChan chan domain.FileEventDetails) {
 			switch origin {
 			case domain.SolutionArchivesOrigin:
 				if isDir {
-					// We consider that the directory is a working bucket
 					objectName, _ := filepath.Rel(f.solutionArchivesLocation, e.Name)
 					objectNameVersion, _ = strings.CutPrefix(objectName, library.FileSystemBucketPrefix)
 				} else {
-					// We consider that the file is a solution archive file
 					fileName := filepath.Base(e.Name)
 					objectNameVersion = strings.TrimSuffix(fileName, ".iso")
 				}
 			case domain.SolutionsOrigin:
-				/* objectName should be:
-				 * <solution>: for a solution directory
-				 * <solution>/<version>: for a mount point directory
-				 */
 				objectNameVersion, _ = filepath.Rel(f.solutionsLocation, e.Name)
 			}
 
@@ -1656,7 +482,6 @@ func (f *FileSystem) startWatchFiles(filenameChan chan domain.FileEventDetails) 
 			Throw()
 	}
 
-	// Below, we clean the fake objects created before the controller started
 	dirEntries, err := os.ReadDir(f.solutionArchivesLocation)
 	if err != nil {
 		return errors.From(domain.ErrStorageProviderInternal).
@@ -1721,6 +546,7 @@ func (f *FileSystem) startWatchFiles(filenameChan chan domain.FileEventDetails) 
 	}(dirEntriesToAnalyze)
 	return nil
 }
+
 func (f *FileSystem) stopWatchFiles() error {
 	defer f.Wait()
 
@@ -1735,20 +561,7 @@ func (f *FileSystem) stopWatchFiles() error {
 	return nil
 }
 
-// isDirectory determines if the object is a directory or a file.
 func isDirectory(origin domain.FileOrigin, e fsnotify.Event) (bool, error) {
-	/*
-		Determine if it is a directory or a file
-		Not so easy in case of delete event the object (file/directory) no more exists
-		SolutionArchivesOrigin:
-		  * Create or Write or Chmod => os.Stat(e.Name), if FileNotFound => continue, ignore the event
-		  * Remove or Rename:
-		    * ".bucket.<solution>-<version>" => Directory
-			* "<solution>-<version>.iso" => File
-		SolutionOrigin:
-		  * Create or Write or Chmod => os.Stat(e.Name), if FileNotFound => continue, ignore the event
-		  * Remove or Rename: Directory
-	*/
 	switch e.Op {
 	case fsnotify.Remove, fsnotify.Rename:
 		if origin == domain.SolutionArchivesOrigin {
@@ -1758,8 +571,6 @@ func isDirectory(origin domain.FileOrigin, e fsnotify.Event) (bool, error) {
 			} else if strings.HasSuffix(fileName, ".iso") {
 				return false, nil
 			}
-			// We cannot determine if it is a directory or a file
-			// We raise an error to the caller to handle it
 			return false, errors.From(domain.ErrStorageProviderInternal).
 				WithDetail("failed to determine if the object is a directory").
 				WithProperty("object_name", e.Name).
@@ -1767,8 +578,6 @@ func isDirectory(origin domain.FileOrigin, e fsnotify.Event) (bool, error) {
 				WithProperty("event_type", e.Op.String()).
 				Throw()
 		}
-		// We consider that the directory is a solution directory
-		// In that case, we consider that it is a directory
 		return true, nil
 
 	default:

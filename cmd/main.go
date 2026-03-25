@@ -140,7 +140,7 @@ func main() {
 		log.Fatalf("failed to load config: %v", err)
 	}
 	// Initialize the dependency container.
-	container := di.NewContainer(cfg, filenameChan, deleteChan)
+	container := di.NewContainer(ctx, cfg, filenameChan, deleteChan)
 
 	logger := container.GetLogger()
 
@@ -438,7 +438,7 @@ func main() {
 
 	// Start the watcher for the file system solution archive storage
 	setupLog.Info("starting file system solution archive storage watcher")
-	if err := container.GetFSSolutionArchiveStorage().Start(filenameChan); err != nil {
+	if err := container.GetStorageLifecycle().Start(filenameChan); err != nil {
 		setupLog.Error(err, "problem starting file system solution archive storage")
 		os.Exit(1)
 	}
@@ -456,7 +456,7 @@ func main() {
 	setupLog.V(1).Info("channels closed")
 
 	// Stop the watcher for the file system solution archive storage
-	if err := container.GetFSSolutionArchiveStorage().Stop(); err != nil {
+	if err := container.GetStorageLifecycle().Stop(); err != nil {
 		setupLog.Error(err, "problem stopping file system solution archive storage")
 		os.Exit(1)
 	}
