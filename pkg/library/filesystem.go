@@ -21,6 +21,8 @@ const (
 	FileSystemMultipartMetaSuffix      = ".meta"
 	FileSystemMultipartPartsSuffix     = ".parts"
 	FileSystemMultipartRecipientSuffix = ".recipient"
+	devicesDir                         = "/devices"
+	devDir                             = "/dev"
 
 	namingRegexpValidationString = `^[a-zA-Z0-9][a-zA-Z0-9_\-\.]{1,98}[a-zA-Z0-9]$`
 )
@@ -463,7 +465,7 @@ func IsMounted(filePath string, mountPath string) (bool, error) {
 // MountISO mounts the ISO file to the given mount point.
 func MountISO(isoPath, mountPoint string) error {
 	// 1. Get free loop device
-	ctrl, err := os.Open("/dev/loop-control")
+	ctrl, err := os.Open(fmt.Sprintf("%s/loop-control", devDir))
 	if err != nil {
 		return err
 	}
@@ -473,24 +475,33 @@ func MountISO(isoPath, mountPoint string) error {
 	if errno != 0 {
 		return errno
 	}
-	loopPath := fmt.Sprintf("/dev/loop%d", loopNum)
+	loopPath := fmt.Sprintf("%s/loop%d", devDir, loopNum)
 
 	// 2. Attach ISO with loop device
 	loop, err := os.OpenFile(loopPath, os.O_RDWR, 0)
 	if err != nil {
 		// ErrNotExist means targeted loop device does not exist
 		if errors.Is(err, os.ErrNotExist) {
-			// Create loop device with major=7, minor=loopNum
-			devNum := unix.Mkdev(7, uint32(loopNum))
-			err = unix.Mknod(loopPath, unix.S_IFBLK|0660, int(devNum))
+			// loop device creation in a specific directory to face permission issues on /dev
+			loopPath = fmt.Sprintf("%s/loop%d", devicesDir, loopNum)
+			loop, err = os.OpenFile(loopPath, os.O_RDWR, 0)
 			if err != nil {
-				return err
-			}
-			// Set ownership to root:disk (GID 6 is the disk group)
-			diskGid := 6
-			err = unix.Chown(loopPath, 0, diskGid)
-			if err != nil {
-				return err
+				// ErrNotExist means targeted loop device does not exist
+				if errors.Is(err, os.ErrNotExist) {
+					// Create loop device with major=7, minor=loopNum
+					devNum := unix.Mkdev(7, uint32(loopNum))
+					err = unix.Mknod(loopPath, unix.S_IFBLK|0660, int(devNum))
+					if err != nil {
+						return err
+					}
+					// Open the newly created loop device (mknod only creates the node).
+					loop, err = os.OpenFile(loopPath, os.O_RDWR, 0)
+					if err != nil {
+						return err
+					}
+				} else {
+					return err
+				}
 			}
 		} else {
 			return err
@@ -550,7 +561,8 @@ func UnmountISO(mountPoint string) error {
 // GetBackingFile queries a loop device (e.g., "/dev/loop0")
 // and returns the path to its associated backing file (e.g., "/tmp/myimage.img").
 func GetBackingFile(loopDevice string) (string, error) {
-	if !strings.HasPrefix(loopDevice, "/dev/loop") {
+	if !strings.HasPrefix(loopDevice, fmt.Sprintf("%s/loop", devDir)) &&
+		!strings.HasPrefix(loopDevice, fmt.Sprintf("%s/loop", devicesDir)) {
 		return "", errors.From(domain.ErrInternal).
 			WithDetail("input is not a loop device").
 			WithProperty("loop_device", loopDevice).
@@ -558,7 +570,10 @@ func GetBackingFile(loopDevice string) (string, error) {
 	}
 
 	// Extract the loop device number (e.g., "loop0" from "/dev/loop0")
-	loopName := strings.TrimPrefix(loopDevice, "/dev/")
+	loopName, ok := strings.CutPrefix(loopDevice, fmt.Sprintf("%s/", devDir))
+	if !ok {
+		loopName = strings.TrimPrefix(loopDevice, fmt.Sprintf("%s/", devicesDir))
+	}
 
 	// Use sysfs interface to read the backing file
 	// This approach doesn't require special permissions unlike opening /dev/loopX directly
@@ -649,7 +664,8 @@ func GetLoopDeviceForMount(mountPath string) (string, error) {
 	}
 
 	sourceDevice := mounts[0].Source
-	if strings.HasPrefix(sourceDevice, "/dev/loop") {
+	if strings.HasPrefix(sourceDevice, fmt.Sprintf("%s/loop", devDir)) ||
+		strings.HasPrefix(sourceDevice, fmt.Sprintf("%s/loop", devicesDir)) {
 		return sourceDevice, nil
 	}
 	return "", errors.From(domain.ErrInternal).
