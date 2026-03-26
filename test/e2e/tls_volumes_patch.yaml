@@ -1,0 +1,20 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: metalk8s-registry-node-agent-controller-manager
+spec:
+  template:
+    spec:
+      volumes:
+        - name: tls-server-extern-certs
+          secret:
+            secretName: tls-cert
+        - name: tls-client-extern-certs
+          secret:
+            secretName: tls-cert
+        - name: tls-server-intern-certs
+          secret:
+            secretName: tls-cert
+        - name: tls-client-intern-certs
+          secret:
+            secretName: tls-cert

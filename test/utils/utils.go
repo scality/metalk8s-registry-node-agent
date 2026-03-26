@@ -21,15 +21,18 @@ import (
 	"bytes"
 	"crypto/rand"
 	"crypto/rsa"
+	"crypto/sha256"
 	"crypto/tls"
 	"crypto/x509"
 	"crypto/x509/pkix"
+	"encoding/hex"
 	"fmt"
 	"math/big"
 	"net"
 	"net/http"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -349,4 +352,76 @@ func GenerateFakeTLSClientConfig(serverConfig *tls.Config) *tls.Config {
 		Certificates: serverConfig.Certificates,
 		RootCAs:      serverConfig.ClientCAs, // Trust the same CA that the server uses
 	}
+}
+
+func randomBytes(length int64) []byte {
+	const charset = "abcdefghijklmnopqrstuvwxyz" +
+		"ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+
+	b := make([]byte, length)
+	_, _ = rand.Read(b) // nolint:errcheck // No need to check the error.
+	for i := range b {
+		b[i] = charset[int(b[i])%len(charset)]
+	}
+	return b
+}
+
+func RandomString(length int64) string {
+	return string(randomBytes(length))
+}
+
+func RandomInt(min, max int) int {
+	n := max - min + 1
+	b, _ := rand.Int(rand.Reader, big.NewInt(int64(n))) // nolint:errcheck // No need to check the error.
+	return int(b.Int64()) + min
+}
+
+// MakeISOFile creates a proper ISO file for testing
+func MakeISOFile(isoFilePath string, size int64) (string, error) {
+	// Create a directory with test content
+	isoContentPath, err := os.MkdirTemp("/tmp", "iso-file-*")
+	if err != nil {
+		return "", fmt.Errorf("failed to create test content directory: %w", err)
+	}
+	defer os.RemoveAll(isoContentPath) // nolint: errcheck // No error check on defer.
+
+	// Create a test file in the directory
+	testFile := filepath.Join(isoContentPath, "test.txt")
+	err = os.WriteFile(testFile, randomBytes(size), 0644)
+	if err != nil {
+		return "", fmt.Errorf("failed to create test file: %w", err)
+	}
+
+	// Create ISO using genisoimage/mkisofs
+	cmd := exec.Command("genisoimage", "-o", isoFilePath, "-V", "METALK8S", "-r", "-J", isoContentPath)
+	_, err = Run(cmd)
+	if err != nil {
+		return "", fmt.Errorf("failed to create ISO file: %w", err)
+	}
+
+	// Calculate the checksum of the ISO file
+	isoData, err := os.ReadFile(isoFilePath)
+	if err != nil {
+		return "", fmt.Errorf("failed to read ISO file: %w", err)
+	}
+	hash := sha256.Sum256(isoData)
+	checksum := hex.EncodeToString(hash[:])
+	return checksum, nil
+}
+
+// MakeWrongISOFile creates a wrong ISO file for testing
+func MakeWrongISOFile(isoFilePath string, size int64) (string, error) {
+	err := os.WriteFile(isoFilePath, randomBytes(size), 0644)
+	if err != nil {
+		return "", fmt.Errorf("failed to create test file: %w", err)
+	}
+
+	// Calculate the checksum of the ISO file
+	isoData, err := os.ReadFile(isoFilePath)
+	if err != nil {
+		return "", fmt.Errorf("failed to read ISO file: %w", err)
+	}
+	hash := sha256.Sum256(isoData)
+	checksum := hex.EncodeToString(hash[:])
+	return checksum, nil
 }

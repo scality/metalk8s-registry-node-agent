@@ -1,0 +1,17 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: metalk8s-registry-node-agent-controller-manager
+spec:
+  template:
+    spec:
+      volumes:
+        - name: metalk8s-registry-node-agent-archives
+          hostPath: null
+          emptyDir: {}
+        - name: metalk8s-registry-node-agent-solutions
+          hostPath: null
+          emptyDir: {}
+        - name: devices
+          hostPath: null
+          emptyDir: {}
