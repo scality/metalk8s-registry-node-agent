@@ -81,6 +81,7 @@ func (c *Container) GetDownloadSolutionArchiveUseCase() *usecase.DownloadSolutio
 			c.GetLogger(),
 			store,
 			store,
+			store,
 			c.GetRootInternAPIPath(),
 		)
 	}

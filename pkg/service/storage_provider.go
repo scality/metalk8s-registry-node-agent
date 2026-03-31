@@ -46,6 +46,7 @@ type StorageProvider interface {
 	MultipartUploader
 	MultipartRemover
 	MultipartInspector
+	ArchiveReader
 
 	// RWLocker primitives:
 	Lock()
@@ -71,12 +72,6 @@ type StorageProvider interface {
 	// The caller should close the content reader as soon as possible after
 	// this method returns.
 	SaveFile(fileName string, content io.Reader, perm os.FileMode) error
-
-	// GetFile retrieves the content of a file from the root location in the
-	// storage based on its fileName.
-	//
-	// The caller should close the content reader as early as possible.
-	GetFile(fileName string) (io.ReadCloser, error)
 
 	// HashFile calculates the hash of a file from the root location in the
 	// storage based on its fileName.

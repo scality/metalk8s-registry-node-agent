@@ -16,6 +16,7 @@ type DownloadSolutionArchive struct {
 	logger        *zerolog.Logger
 	store         service.StorageProvider
 	archiveLister service.ArchiveLister
+	archiveReader service.ArchiveReader
 	rootAPIPath   string
 }
 
@@ -23,6 +24,7 @@ func NewDownloadSolutionArchive(
 	logger *zerolog.Logger,
 	store service.StorageProvider,
 	archiveLister service.ArchiveLister,
+	archiveReader service.ArchiveReader,
 	rootAPIPath string,
 ) *DownloadSolutionArchive {
 	l := logger.With().Str("use_case", "download_solution_archive").Logger()
@@ -31,6 +33,7 @@ func NewDownloadSolutionArchive(
 		logger:        &l,
 		store:         store,
 		archiveLister: archiveLister,
+		archiveReader: archiveReader,
 		rootAPIPath:   rootAPIPath,
 	}
 }
@@ -63,7 +66,7 @@ func (uc *DownloadSolutionArchive) Execute(
 	}
 
 	solutionArchiveFileName := library.GenSolutionArchiveFileName(solutionArchive)
-	file, err := uc.store.GetFile(solutionArchiveFileName)
+	file, err := uc.archiveReader.GetFile(solutionArchiveFileName)
 	if err != nil {
 		return nil, errors.Stamp(err)
 	}
