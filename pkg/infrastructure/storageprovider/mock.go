@@ -41,6 +41,7 @@ var _ service.StorageProvider = &MockFileSystem{}
 var _ service.BucketManager = &MockFileSystem{}
 var _ service.ArchiveRemover = &MockFileSystem{}
 var _ service.ArchiveReader = &MockFileSystem{}
+var _ service.FileWatcher = &MockFileSystem{}
 
 func NewMockFileSystem(opts *MockFileOpts) *MockFileSystem {
 	return &MockFileSystem{
@@ -50,6 +51,21 @@ func NewMockFileSystem(opts *MockFileOpts) *MockFileSystem {
 		interestContentFilter:    library.NewRegexNormalFileFilter(opts.InterestContentFilterRegex),
 		files:                    []string{},
 	}
+}
+
+// ControlDir returns the control directory.
+func (f *MockFileSystem) ControlDir() string {
+	return controlDir
+}
+
+// InitWatchedFileInfos initializes the watched file infos.
+func (f *MockFileSystem) InitWatchedFileInfos() error {
+	return nil
+}
+
+// RefreshWatchedFileInfos refreshes the watched file infos.
+func (f *MockFileSystem) RefreshWatchedFileInfos() error {
+	return nil
 }
 
 func (f *MockFileSystem) Init() error {

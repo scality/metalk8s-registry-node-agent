@@ -37,7 +37,6 @@ type StorageProvider interface {
 	MultipartUploader
 	MultipartRemover
 	MultipartInspector
-	FileWatcher
 	ArchiveSaver
 
 	// RWLocker primitives:
@@ -48,4 +47,13 @@ type StorageProvider interface {
 
 	// Init initializes the storage provider.
 	Init() error
+
+	// ControlDir returns the control directory.
+	ControlDir() string
+
+	// InitWatchedFileInfos initializes the watched file infos.
+	InitWatchedFileInfos() error
+
+	// RefreshWatchedFileInfos refreshes the watched file infos.
+	RefreshWatchedFileInfos() error
 }

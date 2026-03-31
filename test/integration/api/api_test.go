@@ -176,7 +176,7 @@ var _ = BeforeSuite(func() {
 
 	By("Starting the file system watcher for the solution archive storage")
 	go func() {
-		if err := testingSuite.container.GetFSSolutionArchiveStorage().StartWatchFiles(filenameChan); err != nil {
+		if err := testingSuite.container.GetFileSystemFileWatcher().StartWatchFiles(filenameChan); err != nil {
 			testingSuite.container.GetLogger().Error().Err(err).Msg("problem starting file system solution archive storage")
 		}
 	}()

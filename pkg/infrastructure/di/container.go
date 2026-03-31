@@ -43,6 +43,7 @@ type Container struct {
 	bucketManager          service.BucketManager
 	archiveRemover         service.ArchiveRemover
 	archiveReader          service.ArchiveReader
+	fileWatcher            service.FileWatcher
 
 	uploadPartHandler              *handler.UploadPart
 	downloadSolutionArchiveHandler *handler.DownloadSolutionArchive
