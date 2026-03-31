@@ -97,3 +97,14 @@ func (c *Container) GetUnmountSolutionArchiveUseCase() *usecase.UnmountSolutionA
 	}
 	return c.unmountSolutionArchiveUseCase
 }
+
+func (c *Container) GetCleanArchivesUseCase() *usecase.CleanArchives {
+	if c.cleanArchivesUseCase == nil {
+		c.cleanArchivesUseCase = usecase.NewCleanArchives(
+			c.GetLogger(),
+			c.GetFSSolutionArchiveStorage(),
+			c.deleteChan,
+		)
+	}
+	return c.cleanArchivesUseCase
+}

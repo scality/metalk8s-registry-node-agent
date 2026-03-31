@@ -10,7 +10,6 @@ import (
 	"github.com/scality/metalk8s-registry-node-agent/cmd/config"
 	"github.com/scality/metalk8s-registry-node-agent/pkg/domain"
 	"github.com/scality/metalk8s-registry-node-agent/pkg/infrastructure/externaldownloader"
-	"github.com/scality/metalk8s-registry-node-agent/pkg/infrastructure/solutionarchivecleaner"
 	"github.com/scality/metalk8s-registry-node-agent/pkg/presentation/http/extern"
 	"github.com/scality/metalk8s-registry-node-agent/pkg/presentation/http/handler"
 	"github.com/scality/metalk8s-registry-node-agent/pkg/presentation/http/intern"
@@ -49,7 +48,6 @@ type Container struct {
 	internResolver intern.StrictServerInterface
 
 	httpExternalDownloader *externaldownloader.HTTP
-	solutionArchiveCleaner *solutionarchivecleaner.FileSystem
 
 	uploadPartUseCase                 *usecase.UploadPart
 	initializeSessionUseCase          *usecase.InitializeSession
@@ -60,6 +58,7 @@ type Container struct {
 	validateSolutionArchiveUseCase    *usecase.ValidateSolutionArchive
 	downloadSolutionArchiveUseCase    *usecase.DownloadSolutionArchive
 	getExternalSolutionArchiveUseCase *usecase.GetExternalSolutionArchive
+	cleanArchivesUseCase              *usecase.CleanArchives
 }
 
 func NewContainer(

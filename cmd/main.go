@@ -355,7 +355,7 @@ func main() {
 	// It will remove unused solutions archives
 	go func() {
 		setupLog.Info("starting garbage collector")
-		container.GetStorageSolutionArchiveCleaner().Run()
+		container.GetCleanArchivesUseCase().Execute()
 	}()
 
 	if metricsCertWatcher != nil {
