@@ -107,7 +107,7 @@ func (c *Container) GetMountSolutionArchiveUseCase() *usecase.MountSolutionArchi
 		c.mountSolutionArchiveUseCase = usecase.NewMountSolutionArchive(
 			c.GetLogger(),
 			store,
-			store,
+			c.GetFileSystemArchiveMounter(),
 			store,
 		)
 	}
@@ -116,11 +116,10 @@ func (c *Container) GetMountSolutionArchiveUseCase() *usecase.MountSolutionArchi
 
 func (c *Container) GetUnmountSolutionArchiveUseCase() *usecase.UnmountSolutionArchive {
 	if c.unmountSolutionArchiveUseCase == nil {
-		store := c.GetFSSolutionArchiveStorage()
 		c.unmountSolutionArchiveUseCase = usecase.NewUnmountSolutionArchive(
 			c.GetLogger(),
-			store,
-			store,
+			c.GetFSSolutionArchiveStorage(),
+			c.GetFileSystemArchiveMounter(),
 		)
 	}
 	return c.unmountSolutionArchiveUseCase
