@@ -42,6 +42,7 @@ type StorageProvider interface {
 	ArchiveCleaner
 	ArchiveMounter
 	ArchiveLister
+	ArchiveRemover
 
 	// RWLocker primitives:
 	Lock()
@@ -73,10 +74,6 @@ type StorageProvider interface {
 	//
 	// The caller should close the content reader as early as possible.
 	GetFile(fileName string) (io.ReadCloser, error)
-
-	// DeleteFile deletes a file from the root location in the storage based on
-	// its fileName.
-	DeleteFile(fileName string) error
 
 	// HashFile calculates the hash of a file from the root location in the
 	// storage based on its fileName.

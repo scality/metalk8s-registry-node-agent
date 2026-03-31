@@ -10,22 +10,25 @@ import (
 )
 
 type ValidateSolutionArchive struct {
-	logger        *zerolog.Logger
-	store         service.StorageProvider
-	archiveLister service.ArchiveLister
+	logger         *zerolog.Logger
+	store          service.StorageProvider
+	archiveLister  service.ArchiveLister
+	archiveRemover service.ArchiveRemover
 }
 
 func NewValidateSolutionArchive(
 	logger *zerolog.Logger,
 	store service.StorageProvider,
 	archiveLister service.ArchiveLister,
+	archiveRemover service.ArchiveRemover,
 ) *ValidateSolutionArchive {
 	l := logger.With().Str("use_case", "validate_solution_archive").Logger()
 
 	return &ValidateSolutionArchive{
-		logger:        &l,
-		store:         store,
-		archiveLister: archiveLister,
+		logger:         &l,
+		store:          store,
+		archiveLister:  archiveLister,
+		archiveRemover: archiveRemover,
 	}
 }
 
@@ -54,7 +57,7 @@ func (uc *ValidateSolutionArchive) Execute(solutionArchive *domain.SolutionArchi
 		return false, errors.Stamp(err)
 	}
 	if hash != solutionArchive.Hash {
-		err := uc.store.DeleteFile(library.GenSolutionArchiveFileName(solutionArchive))
+		err := uc.archiveRemover.DeleteFile(library.GenSolutionArchiveFileName(solutionArchive))
 		if err != nil {
 			return false, errors.Stamp(err)
 		}
