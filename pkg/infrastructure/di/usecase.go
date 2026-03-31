@@ -92,7 +92,7 @@ func (c *Container) GetUnmountSolutionArchiveUseCase() *usecase.UnmountSolutionA
 	if c.unmountSolutionArchiveUseCase == nil {
 		c.unmountSolutionArchiveUseCase = usecase.NewUnmountSolutionArchive(
 			c.GetLogger(),
-			c.getStorageSolutionArchiveUnmounter(),
+			c.GetFSSolutionArchiveStorage(),
 		)
 	}
 	return c.unmountSolutionArchiveUseCase
