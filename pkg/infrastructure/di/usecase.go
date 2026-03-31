@@ -18,7 +18,7 @@ func (c *Container) GetInitializeSessionUseCase() *usecase.InitializeSession {
 	if c.initializeSessionUseCase == nil {
 		c.initializeSessionUseCase = usecase.NewInitializeSession(
 			c.GetLogger(),
-			c.getStorageSessionInitializer(),
+			c.GetFSSolutionArchiveStorage(),
 		)
 	}
 
