@@ -74,11 +74,11 @@ func (f *MockFileSystem) Start(filenameChan chan domain.FileEventDetails) error 
 	f.Lock()
 	defer f.Unlock()
 
-	return f.startWatchFiles(filenameChan)
+	return f.StartWatchFiles(filenameChan)
 }
 
 func (f *MockFileSystem) Stop() error {
-	return f.stopWatchFiles()
+	return f.StopWatchFiles()
 }
 
 func (f *MockFileSystem) SaveFile(
@@ -335,12 +335,12 @@ func (f *MockFileSystem) consolidateMultipartFile(
 	return nil
 }
 
-func (f *MockFileSystem) startWatchFiles(_ chan domain.FileEventDetails) error {
+func (f *MockFileSystem) StartWatchFiles(_ chan domain.FileEventDetails) error {
 	return nil
 }
 
 // nolint:errcheck
-func (f *MockFileSystem) stopWatchFiles() error {
+func (f *MockFileSystem) StopWatchFiles() error {
 	defer f.Wait()
 	f.watcher.Close()
 	return nil

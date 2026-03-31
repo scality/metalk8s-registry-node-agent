@@ -8,25 +8,25 @@ import (
 )
 
 type CleanArchive struct {
-	logger     *zerolog.Logger
-	store      service.StorageProvider
-	cleaner    service.ArchiveCleaner
-	deleteChan chan domain.FileEventDetails
+	logger      *zerolog.Logger
+	cleaner     service.ArchiveCleaner
+	fileWatcher service.FileWatcher
+	deleteChan  chan domain.FileEventDetails
 }
 
 func NewCleanArchive(
 	logger *zerolog.Logger,
-	store service.StorageProvider,
 	cleaner service.ArchiveCleaner,
+	fileWatcher service.FileWatcher,
 	deleteChan chan domain.FileEventDetails,
 ) *CleanArchive {
 	l := logger.With().Str("use_case", "clean_archive").Logger()
 
 	return &CleanArchive{
-		logger:     &l,
-		store:      store,
-		cleaner:    cleaner,
-		deleteChan: deleteChan,
+		logger:      &l,
+		cleaner:     cleaner,
+		fileWatcher: fileWatcher,
+		deleteChan:  deleteChan,
 	}
 }
 
@@ -46,7 +46,7 @@ func (uc *CleanArchive) Execute() {
 					Str("path", eventDetails.FullPathName).
 					Str("origin", "solution_archives").
 					Msg("failed to clean unused solution archive")
-				uc.store.AddWatchFileOrDirectory(eventDetails.FullPathName) // nolint: errcheck // was existing before
+				uc.fileWatcher.AddWatchFileOrDirectory(eventDetails.FullPathName) // nolint: errcheck // was existing before
 			}
 		case domain.SolutionsOrigin:
 			err := uc.cleaner.CleanUnusedSolutions(
@@ -59,7 +59,7 @@ func (uc *CleanArchive) Execute() {
 					Str("path", eventDetails.FullPathName).
 					Str("origin", "solutions").
 					Msg("failed to clean unused solution")
-				uc.store.AddWatchFileOrDirectory(eventDetails.FullPathName) // nolint: errcheck // was existing before
+				uc.fileWatcher.AddWatchFileOrDirectory(eventDetails.FullPathName) // nolint: errcheck // was existing before
 			}
 		}
 	}

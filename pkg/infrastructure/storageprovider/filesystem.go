@@ -120,12 +120,12 @@ func (f *FileSystem) Start(filenameChan chan domain.FileEventDetails) error {
 	f.Lock()
 	defer f.Unlock()
 
-	return f.startWatchFiles(filenameChan)
+	return f.StartWatchFiles(filenameChan)
 }
 
 // Stop stops the watcher on the storage provider.
 func (f *FileSystem) Stop() error {
-	return f.stopWatchFiles()
+	return f.StopWatchFiles()
 }
 
 func (f *FileSystem) SaveFile(
@@ -1594,7 +1594,7 @@ func (f *FileSystem) watchFiles(filenameChan chan domain.FileEventDetails) {
 	}
 }
 
-func (f *FileSystem) startWatchFiles(filenameChan chan domain.FileEventDetails) error {
+func (f *FileSystem) StartWatchFiles(filenameChan chan domain.FileEventDetails) error {
 	if err := f.updateWatchedFileInfos(f.saveWatchedFileInfos); err != nil {
 		return errors.Stamp(err)
 	}
@@ -1686,7 +1686,7 @@ func (f *FileSystem) startWatchFiles(filenameChan chan domain.FileEventDetails) 
 	}(dirEntriesToAnalyze)
 	return nil
 }
-func (f *FileSystem) stopWatchFiles() error {
+func (f *FileSystem) StopWatchFiles() error {
 	defer f.Wait()
 
 	if err := f.watcher.Close(); err != nil {

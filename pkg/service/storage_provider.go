@@ -3,8 +3,6 @@ package service
 import (
 	"io"
 	"os"
-
-	"github.com/scality/metalk8s-registry-node-agent/pkg/domain"
 )
 
 // StorageProvider encapsulates all storage methods required by the Solution
@@ -47,6 +45,7 @@ type StorageProvider interface {
 	MultipartRemover
 	MultipartInspector
 	ArchiveReader
+	FileWatcher
 
 	// RWLocker primitives:
 	Lock()
@@ -56,12 +55,6 @@ type StorageProvider interface {
 
 	// Init initializes the storage provider.
 	Init() error
-
-	// Start starts the watcher on the storage provider.
-	Start(filenameChan chan domain.FileEventDetails) error
-
-	// Stop stops the watcher on the storage provider.
-	Stop() error
 
 	// SaveFile saves a file to the root location in the storage. The fileName
 	// MUST be unique relative to the root location.
@@ -76,10 +69,4 @@ type StorageProvider interface {
 	// HashFile calculates the hash of a file from the root location in the
 	// storage based on its fileName.
 	HashFile(fileName string) (string, error)
-
-	// AddWatchFileOrDirectory adds a file or directory to the watcher.
-	AddWatchFileOrDirectory(path string) error
-
-	// RemoveWatchFileOrDirectory removes a file or directory from the watcher.
-	RemoveWatchFileOrDirectory(path string) error
 }
