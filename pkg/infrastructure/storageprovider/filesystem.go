@@ -136,21 +136,6 @@ func (f *FileSystem) ListFiles() ([]string, error) {
 	return f.listFiles()
 }
 
-func (f *FileSystem) GetFile(
-	fileName string,
-) (io.ReadCloser, error) {
-	if err := library.EnforceNamingConventions(fileName); err != nil {
-		return nil, errors.Stamp(err)
-	}
-
-	file, err := f.getFile(fileName)
-	if err != nil {
-		return nil, errors.Stamp(err)
-	}
-
-	return file, nil
-}
-
 // MoveFileToRoot moves a file from a bucket to the root location in the storage.
 func (f *FileSystem) MoveFileToRoot(
 	bucketName, fileName, newFileName string,
@@ -458,22 +443,6 @@ func (f *FileSystem) listFiles() ([]string, error) {
 	}
 
 	return files, nil
-}
-
-func (f *FileSystem) getFile(
-	fileName string,
-) (io.ReadCloser, error) {
-	filePath := filepath.Join(f.solutionArchivesLocation, fileName)
-	if err := library.CheckFile(filePath); err != nil {
-		return nil, errors.Stamp(err)
-	}
-
-	file, err := library.GetFile(filePath)
-	if err != nil {
-		return nil, errors.Stamp(err)
-	}
-
-	return file, nil
 }
 
 func (f *FileSystem) genFileOnBucketPath(

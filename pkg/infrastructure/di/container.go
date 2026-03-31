@@ -42,6 +42,7 @@ type Container struct {
 	solutionArchiveStorage service.StorageProvider
 	bucketManager          service.BucketManager
 	archiveRemover         service.ArchiveRemover
+	archiveReader          service.ArchiveReader
 
 	uploadPartHandler              *handler.UploadPart
 	downloadSolutionArchiveHandler *handler.DownloadSolutionArchive

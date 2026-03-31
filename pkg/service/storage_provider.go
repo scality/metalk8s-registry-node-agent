@@ -37,7 +37,6 @@ type StorageProvider interface {
 	MultipartUploader
 	MultipartRemover
 	MultipartInspector
-	ArchiveReader
 	FileWatcher
 	ArchiveSaver
 
