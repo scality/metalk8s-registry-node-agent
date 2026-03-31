@@ -60,7 +60,8 @@ func (c *Container) GetDownloadSolutionArchiveUseCase() *usecase.DownloadSolutio
 	if c.downloadSolutionArchiveUseCase == nil {
 		c.downloadSolutionArchiveUseCase = usecase.NewDownloadSolutionArchive(
 			c.GetLogger(),
-			c.getStorageSolutionArchiveDownloader(),
+			c.GetFSSolutionArchiveStorage(),
+			c.GetRootInternAPIPath(),
 		)
 	}
 	return c.downloadSolutionArchiveUseCase
