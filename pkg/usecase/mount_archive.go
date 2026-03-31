@@ -13,12 +13,14 @@ type MountSolutionArchive struct {
 	logger         *zerolog.Logger
 	store          service.StorageProvider
 	archiveMounter service.ArchiveMounter
+	archiveLister  service.ArchiveLister
 }
 
 func NewMountSolutionArchive(
 	logger *zerolog.Logger,
 	store service.StorageProvider,
 	archiveMounter service.ArchiveMounter,
+	archiveLister service.ArchiveLister,
 ) *MountSolutionArchive {
 	l := logger.With().Str("use_case", "mount_solution_archive").Logger()
 
@@ -26,6 +28,7 @@ func NewMountSolutionArchive(
 		logger:         &l,
 		store:          store,
 		archiveMounter: archiveMounter,
+		archiveLister:  archiveLister,
 	}
 }
 
@@ -38,7 +41,7 @@ func (uc *MountSolutionArchive) Execute(solutionArchive *domain.SolutionArchive)
 
 	// List all solution archives in the storage
 	// matching solutionArchiveStorageNamePattern
-	fileNames, err := uc.store.ListFiles()
+	fileNames, err := uc.archiveLister.ListFiles()
 	if err != nil {
 		return errors.Stamp(err)
 	}

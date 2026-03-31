@@ -17,12 +17,14 @@ type InitializeSession struct {
 	logger        *zerolog.Logger
 	store         service.StorageProvider
 	bucketManager service.BucketManager
+	archiveLister service.ArchiveLister
 }
 
 func NewInitializeSession(
 	logger *zerolog.Logger,
 	store service.StorageProvider,
 	bucketManager service.BucketManager,
+	archiveLister service.ArchiveLister,
 ) *InitializeSession {
 	l := logger.With().Str("use_case", "initialize_session").Logger()
 
@@ -30,6 +32,7 @@ func NewInitializeSession(
 		logger:        &l,
 		store:         store,
 		bucketManager: bucketManager,
+		archiveLister: archiveLister,
 	}
 }
 
@@ -42,7 +45,7 @@ func (uc *InitializeSession) Execute(solutionArchive *domain.SolutionArchive) (*
 
 	// List all solution archives in the storage
 	// matching solutionArchiveStorageNamePattern
-	fileNames, err := uc.store.ListFiles()
+	fileNames, err := uc.archiveLister.ListFiles()
 	if err != nil {
 		return nil, errors.Stamp(err)
 	}

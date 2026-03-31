@@ -10,19 +10,22 @@ import (
 )
 
 type ValidateSolutionArchive struct {
-	logger *zerolog.Logger
-	store  service.StorageProvider
+	logger        *zerolog.Logger
+	store         service.StorageProvider
+	archiveLister service.ArchiveLister
 }
 
 func NewValidateSolutionArchive(
 	logger *zerolog.Logger,
 	store service.StorageProvider,
+	archiveLister service.ArchiveLister,
 ) *ValidateSolutionArchive {
 	l := logger.With().Str("use_case", "validate_solution_archive").Logger()
 
 	return &ValidateSolutionArchive{
-		logger: &l,
-		store:  store,
+		logger:        &l,
+		store:         store,
+		archiveLister: archiveLister,
 	}
 }
 
@@ -36,7 +39,7 @@ func (uc *ValidateSolutionArchive) Execute(solutionArchive *domain.SolutionArchi
 
 	// List all solution archives in the storage
 	// matching solutionArchiveStorageNamePattern
-	fileNames, err := uc.store.ListFiles()
+	fileNames, err := uc.archiveLister.ListFiles()
 	if err != nil {
 		return false, errors.Stamp(err)
 	}
@@ -46,7 +49,7 @@ func (uc *ValidateSolutionArchive) Execute(solutionArchive *domain.SolutionArchi
 		return false, nil
 	}
 
-	hash, err := uc.store.GetHashFromFileInfos(library.GenSolutionArchiveFileName(solutionArchive))
+	hash, err := uc.archiveLister.GetArchiveHash(library.GenSolutionArchiveFileName(solutionArchive))
 	if err != nil {
 		return false, errors.Stamp(err)
 	}

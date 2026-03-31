@@ -327,8 +327,8 @@ func (f *FileSystem) ConsolidateMultipartFile(
 	return nil
 }
 
-// GetHashFromFileInfos retrieves the hash of a file from the storage backend.
-func (f *FileSystem) GetHashFromFileInfos(filename string) (string, error) {
+// GetArchiveHash retrieves the hash of a file from the storage backend.
+func (f *FileSystem) GetArchiveHash(filename string) (string, error) {
 	if _, ok := f.watchedFileInfos[filename]; !ok {
 		return "", errors.From(domain.ErrStorageProviderNotFound).
 			WithIdentifier(404000).
@@ -340,8 +340,8 @@ func (f *FileSystem) GetHashFromFileInfos(filename string) (string, error) {
 	return f.watchedFileInfos[filename].Hash, nil
 }
 
-// GetSizeFromFileInfos retrieves the size of a file from the storage backend.
-func (f *FileSystem) GetSizeFromFileInfos(filename string) (int64, error) {
+// GetArchiveSize retrieves the size of a file from the storage backend.
+func (f *FileSystem) GetArchiveSize(filename string) (int64, error) {
 	if _, ok := f.watchedFileInfos[filename]; !ok {
 		return 0, errors.From(domain.ErrStorageProviderNotFound).
 			WithDetail("file not found").

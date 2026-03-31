@@ -41,6 +41,7 @@ type StorageProvider interface {
 	BucketManager
 	ArchiveCleaner
 	ArchiveMounter
+	ArchiveLister
 
 	// RWLocker primitives:
 	Lock()
@@ -66,10 +67,6 @@ type StorageProvider interface {
 	// The caller should close the content reader as soon as possible after
 	// this method returns.
 	SaveFile(fileName string, content io.Reader, perm os.FileMode) error
-
-	// ListFiles lists all the flat files in the root location of the storage
-	// and returns their names.
-	ListFiles() ([]string, error)
 
 	// GetFile retrieves the content of a file from the root location in the
 	// storage based on its fileName.
@@ -136,14 +133,6 @@ type StorageProvider interface {
 		solutionArchiveMeta *domain.SolutionArchive,
 		perm os.FileMode,
 	) error
-
-	// GetHashFromFileInfos retrieves the hash of a file from the storage
-	// backend.
-	GetHashFromFileInfos(fileName string) (string, error)
-
-	// GetSizeFromFileInfos retrieves the size of a file from the storage
-	// backend.
-	GetSizeFromFileInfos(fileName string) (int64, error)
 
 	// AddWatchFileOrDirectory adds a file or directory to the watcher.
 	AddWatchFileOrDirectory(path string) error

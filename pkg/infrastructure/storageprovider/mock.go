@@ -222,7 +222,7 @@ func (f *MockFileSystem) ConsolidateMultipartFile(
 	return nil
 }
 
-func (f *MockFileSystem) GetHashFromFileInfos(filename string) (string, error) {
+func (f *MockFileSystem) GetArchiveHash(filename string) (string, error) {
 	hashMap := map[string]string{
 		"solution-2-4.2.1.iso": "ce775a33b30ae640d521df1fad60868fa701707ffdc4d8b4ca7ab60edfd05c26",
 		"solution-3-4.2.1.iso": "95162a9fe88f9d11c7f7ef7dc20c2426814e188fd858b27adb5274d3689675af",
@@ -239,7 +239,7 @@ func (f *MockFileSystem) GetHashFromFileInfos(filename string) (string, error) {
 		Throw()
 }
 
-func (f *MockFileSystem) GetSizeFromFileInfos(filename string) (int64, error) {
+func (f *MockFileSystem) GetArchiveSize(filename string) (int64, error) {
 	return 0, nil
 }
 
@@ -287,7 +287,7 @@ func (f *MockFileSystem) deleteFile(
 func (f *MockFileSystem) hashFile(
 	fileName string,
 ) (string, error) {
-	return f.GetHashFromFileInfos(fileName)
+	return f.GetArchiveHash(fileName)
 }
 
 func (f *MockFileSystem) moveFileToRoot(_, _, _ string) error {

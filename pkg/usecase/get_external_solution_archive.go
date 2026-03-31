@@ -12,12 +12,14 @@ type GetExternalSolutionArchive struct {
 	logger             *zerolog.Logger
 	store              service.StorageProvider
 	externalDownloader service.ExternalDownloader
+	archiveLister      service.ArchiveLister
 }
 
 func NewGetExternalSolutionArchive(
 	logger *zerolog.Logger,
 	store service.StorageProvider,
 	externalDownloader service.ExternalDownloader,
+	archiveLister service.ArchiveLister,
 ) *GetExternalSolutionArchive {
 	l := logger.With().Str("use_case", "get_external_solution_archive").Logger()
 
@@ -25,6 +27,7 @@ func NewGetExternalSolutionArchive(
 		logger:             &l,
 		store:              store,
 		externalDownloader: externalDownloader,
+		archiveLister:      archiveLister,
 	}
 }
 
@@ -39,7 +42,7 @@ func (uc *GetExternalSolutionArchive) Execute(solutionArchive *domain.SolutionAr
 
 	// List all solution archives in the storage
 	// matching solutionArchiveStorageNamePattern
-	fileNames, err := uc.store.ListFiles()
+	fileNames, err := uc.archiveLister.ListFiles()
 	if err != nil {
 		return errors.Stamp(err)
 	}
