@@ -82,7 +82,7 @@ func (c *Container) GetMountSolutionArchiveUseCase() *usecase.MountSolutionArchi
 	if c.mountSolutionArchiveUseCase == nil {
 		c.mountSolutionArchiveUseCase = usecase.NewMountSolutionArchive(
 			c.GetLogger(),
-			c.getStorageSolutionArchiveMounter(),
+			c.GetFSSolutionArchiveStorage(),
 		)
 	}
 	return c.mountSolutionArchiveUseCase
