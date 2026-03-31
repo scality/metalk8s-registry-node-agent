@@ -104,6 +104,7 @@ var _ = BeforeSuite(func() {
 	eventChan := make(chan event.GenericEvent)
 	container := di.NewContainer(ctx, &config.Environment{}, filenameChan, deleteChan)
 	container.GetMockFSSolutionArchiveStorage()
+	container.GetMockFileSystemBucketManager()
 	container.GetMockHTTPInternClient()
 
 	err = (&controller.NodeSolutionArchiveReconciler{

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 	"regexp"
 	"strings"
 
@@ -673,4 +674,8 @@ func GetLoopDeviceForMount(mountPath string) (string, error) {
 		WithProperty("mount_path", mountPath).
 		WithProperty("source_device", sourceDevice).
 		Throw()
+}
+
+func GenBucketPath(solutionArchivesLocation string, bucketName string) string {
+	return filepath.Join(solutionArchivesLocation, FileSystemBucketPrefix+bucketName)
 }

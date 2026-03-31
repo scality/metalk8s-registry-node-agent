@@ -40,6 +40,7 @@ type Container struct {
 	rootInternAPIPath         string
 
 	solutionArchiveStorage service.StorageProvider
+	bucketManager          service.BucketManager
 
 	uploadPartHandler              *handler.UploadPart
 	downloadSolutionArchiveHandler *handler.DownloadSolutionArchive

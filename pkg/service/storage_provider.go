@@ -31,7 +31,6 @@ package service
 //
 // The responsibility for close all io objects is delegated to the caller.
 type StorageProvider interface {
-	BucketManager
 	ArchiveCleaner
 	ArchiveMounter
 	ArchiveLister

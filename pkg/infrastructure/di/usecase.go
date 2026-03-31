@@ -9,7 +9,7 @@ func (c *Container) getUploadPartUseCase() *usecase.UploadPart {
 		c.uploadPartUseCase = usecase.NewUploadPart(
 			c.GetLogger(),
 			store,
-			store,
+			c.GetFileSystemBucketManager(),
 			store,
 			store,
 			store,
@@ -26,7 +26,7 @@ func (c *Container) GetInitializeSessionUseCase() *usecase.InitializeSession {
 		c.initializeSessionUseCase = usecase.NewInitializeSession(
 			c.GetLogger(),
 			store,
-			store,
+			c.GetFileSystemBucketManager(),
 			store,
 			store,
 			store,
@@ -64,11 +64,10 @@ func (c *Container) GetValidateSolutionArchiveUseCase() *usecase.ValidateSolutio
 
 func (c *Container) GetRemoveSessionUseCase() *usecase.RemoveSession {
 	if c.removeSessionUseCase == nil {
-		store := c.GetFSSolutionArchiveStorage()
 		c.removeSessionUseCase = usecase.NewRemoveSession(
 			c.GetLogger(),
-			store,
-			store,
+			c.GetFSSolutionArchiveStorage(),
+			c.GetFileSystemBucketManager(),
 		)
 	}
 	return c.removeSessionUseCase
