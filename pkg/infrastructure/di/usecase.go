@@ -50,7 +50,7 @@ func (c *Container) GetRemoveSessionUseCase() *usecase.RemoveSession {
 	if c.removeSessionUseCase == nil {
 		c.removeSessionUseCase = usecase.NewRemoveSession(
 			c.GetLogger(),
-			c.getStorageSessionRemover(),
+			c.GetFSSolutionArchiveStorage(),
 		)
 	}
 	return c.removeSessionUseCase
