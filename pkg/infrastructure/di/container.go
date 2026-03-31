@@ -12,7 +12,6 @@ import (
 	"github.com/scality/metalk8s-registry-node-agent/pkg/infrastructure/archivemounter"
 	"github.com/scality/metalk8s-registry-node-agent/pkg/infrastructure/archiveunmounter"
 	"github.com/scality/metalk8s-registry-node-agent/pkg/infrastructure/externaldownloader"
-	"github.com/scality/metalk8s-registry-node-agent/pkg/infrastructure/externalsolutionarchivegetter"
 	"github.com/scality/metalk8s-registry-node-agent/pkg/infrastructure/solutionarchivecleaner"
 	"github.com/scality/metalk8s-registry-node-agent/pkg/presentation/http/extern"
 	"github.com/scality/metalk8s-registry-node-agent/pkg/presentation/http/handler"
@@ -51,11 +50,10 @@ type Container struct {
 	externResolver extern.StrictServerInterface
 	internResolver intern.StrictServerInterface
 
-	httpExternalDownloader               *externaldownloader.HTTP
-	storageExternalSolutionArchiveGetter *externalsolutionarchivegetter.Storage
-	storageSolutionArchiveMounter        *archivemounter.Storage
-	storageSolutionArchiveUnmounter      *archiveunmounter.Storage
-	solutionArchiveCleaner               *solutionarchivecleaner.FileSystem
+	httpExternalDownloader          *externaldownloader.HTTP
+	storageSolutionArchiveMounter   *archivemounter.Storage
+	storageSolutionArchiveUnmounter *archiveunmounter.Storage
+	solutionArchiveCleaner          *solutionarchivecleaner.FileSystem
 
 	uploadPartUseCase                 *usecase.UploadPart
 	initializeSessionUseCase          *usecase.InitializeSession

@@ -71,7 +71,8 @@ func (c *Container) GetGetExternalSolutionArchiveUseCase() *usecase.GetExternalS
 	if c.getExternalSolutionArchiveUseCase == nil {
 		c.getExternalSolutionArchiveUseCase = usecase.NewGetExternalSolutionArchive(
 			c.GetLogger(),
-			c.getStorageExternalSolutionArchiveGetter(),
+			c.GetFSSolutionArchiveStorage(),
+			c.getHTTPExternalDownloader(),
 		)
 	}
 	return c.getExternalSolutionArchiveUseCase
