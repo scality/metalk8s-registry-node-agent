@@ -11,7 +11,6 @@ import (
 	"github.com/scality/metalk8s-registry-node-agent/pkg/domain"
 	"github.com/scality/metalk8s-registry-node-agent/pkg/infrastructure/archivedownloader"
 	"github.com/scality/metalk8s-registry-node-agent/pkg/infrastructure/archivemounter"
-	"github.com/scality/metalk8s-registry-node-agent/pkg/infrastructure/archiveremover"
 	"github.com/scality/metalk8s-registry-node-agent/pkg/infrastructure/archiveunmounter"
 	"github.com/scality/metalk8s-registry-node-agent/pkg/infrastructure/archivevalidator"
 	"github.com/scality/metalk8s-registry-node-agent/pkg/infrastructure/externaldownloader"
@@ -56,7 +55,6 @@ type Container struct {
 	internResolver intern.StrictServerInterface
 
 	httpExternalDownloader               *externaldownloader.HTTP
-	storageSolutionArchiveRemover        *archiveremover.Storage
 	storageSessionRemover                *sessionremover.Storage
 	storageSolutionArchiveValidator      *archivevalidator.Storage
 	storageSolutionArchiveDownloader     *archivedownloader.Storage

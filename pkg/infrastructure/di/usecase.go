@@ -30,7 +30,7 @@ func (c *Container) GetRemoveSolutionArchiveUseCase() *usecase.RemoveSolutionArc
 	if c.removeSolutionArchiveUseCase == nil {
 		c.removeSolutionArchiveUseCase = usecase.NewRemoveSolutionArchive(
 			c.GetLogger(),
-			c.getStorageSolutionArchiveRemover(),
+			c.GetFSSolutionArchiveStorage(),
 		)
 	}
 	return c.removeSolutionArchiveUseCase
