@@ -12,12 +12,13 @@ import (
 )
 
 type UploadPart struct {
-	logger            *zerolog.Logger
-	store             service.StorageProvider
-	bucketManager     service.BucketManager
-	multipartUploader service.MultipartUploader
-	multipartRemover  service.MultipartRemover
-	rootAPIPath       string
+	logger             *zerolog.Logger
+	store              service.StorageProvider
+	bucketManager      service.BucketManager
+	multipartUploader  service.MultipartUploader
+	multipartRemover   service.MultipartRemover
+	multipartInspector service.MultipartInspector
+	rootAPIPath        string
 }
 
 func NewUploadPart(
@@ -26,17 +27,19 @@ func NewUploadPart(
 	bucketManager service.BucketManager,
 	multipartUploader service.MultipartUploader,
 	multipartRemover service.MultipartRemover,
+	multipartInspector service.MultipartInspector,
 	rootAPIPath string,
 ) *UploadPart {
 	l := logger.With().Str("use_case", "upload_part").Logger()
 
 	return &UploadPart{
-		logger:            &l,
-		store:             store,
-		bucketManager:     bucketManager,
-		multipartUploader: multipartUploader,
-		multipartRemover:  multipartRemover,
-		rootAPIPath:       rootAPIPath,
+		logger:             &l,
+		store:              store,
+		bucketManager:      bucketManager,
+		multipartUploader:  multipartUploader,
+		multipartRemover:   multipartRemover,
+		multipartInspector: multipartInspector,
+		rootAPIPath:        rootAPIPath,
 	}
 }
 
@@ -60,7 +63,7 @@ func (uc *UploadPart) Execute(part *domain.Part) (*domain.SolutionArchiveStatus,
 	}
 
 	// Load the manifest from metadata file
-	solutionArchiveFromManifest, err := uc.store.GetMultipartFile(sessionBucket)
+	solutionArchiveFromManifest, err := uc.multipartInspector.GetMultipartFile(sessionBucket)
 	if err != nil {
 		return nil, errors.Intercept(err).
 			WithProperty("instance", fmt.Sprintf("%s/uploads/%s", uc.rootAPIPath, part.SolutionArchive.Name)).

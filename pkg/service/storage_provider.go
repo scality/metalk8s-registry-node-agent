@@ -45,6 +45,7 @@ type StorageProvider interface {
 	ArchiveRemover
 	MultipartUploader
 	MultipartRemover
+	MultipartInspector
 
 	// RWLocker primitives:
 	Lock()
@@ -80,17 +81,6 @@ type StorageProvider interface {
 	// HashFile calculates the hash of a file from the root location in the
 	// storage based on its fileName.
 	HashFile(fileName string) (string, error)
-
-	// GetMultipartFile retrieves the multipart file recipient from a given
-	// bucket and returns its SolutionArchiveMeta.
-	GetMultipartFile(bucketName string) (*domain.SolutionArchive, error)
-
-	// GetMultipartFileStatus retrieves the SolutionArchiveStatus of a multipart file
-	// recipient based on bucketName and solutionArchiveMeta.
-	GetMultipartFileStatus(
-		bucketName string,
-		solutionArchiveMeta *domain.SolutionArchive,
-	) (*domain.SolutionArchiveStatus, error)
 
 	// AddWatchFileOrDirectory adds a file or directory to the watcher.
 	AddWatchFileOrDirectory(path string) error
