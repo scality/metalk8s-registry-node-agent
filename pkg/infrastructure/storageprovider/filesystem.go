@@ -151,21 +151,6 @@ func (f *FileSystem) GetFile(
 	return file, nil
 }
 
-// DeleteFile deletes a file from the root location in the storage based on its fileName.
-func (f *FileSystem) DeleteFile(
-	fileName string,
-) error {
-	if err := library.EnforceNamingConventions(fileName); err != nil {
-		return errors.Stamp(err)
-	}
-
-	if err := f.deleteFile(fileName); err != nil {
-		return errors.Stamp(err)
-	}
-
-	return nil
-}
-
 // MoveFileToRoot moves a file from a bucket to the root location in the storage.
 func (f *FileSystem) MoveFileToRoot(
 	bucketName, fileName, newFileName string,
@@ -489,21 +474,6 @@ func (f *FileSystem) getFile(
 	}
 
 	return file, nil
-}
-
-func (f *FileSystem) deleteFile(
-	fileName string,
-) error {
-	filePath := filepath.Join(f.solutionArchivesLocation, fileName)
-	if err := library.CheckFile(filePath); err != nil {
-		return errors.Stamp(err)
-	}
-
-	if err := library.DeleteFile(filePath); err != nil {
-		return errors.Stamp(err)
-	}
-
-	return nil
 }
 
 func (f *FileSystem) genFileOnBucketPath(

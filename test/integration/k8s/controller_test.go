@@ -105,6 +105,7 @@ var _ = BeforeSuite(func() {
 	container := di.NewContainer(ctx, &config.Environment{}, filenameChan, deleteChan)
 	container.GetMockFSSolutionArchiveStorage()
 	container.GetMockFileSystemBucketManager()
+	container.GetMockFileSystemArchiveRemover()
 	container.GetMockHTTPInternClient()
 
 	err = (&controller.NodeSolutionArchiveReconciler{

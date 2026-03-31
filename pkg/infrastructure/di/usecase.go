@@ -43,7 +43,7 @@ func (c *Container) GetRemoveSolutionArchiveUseCase() *usecase.RemoveSolutionArc
 			c.GetLogger(),
 			store,
 			store,
-			store,
+			c.GetFileSystemArchiveRemover(),
 		)
 	}
 	return c.removeSolutionArchiveUseCase
@@ -56,7 +56,7 @@ func (c *Container) GetValidateSolutionArchiveUseCase() *usecase.ValidateSolutio
 			c.GetLogger(),
 			store,
 			store,
-			store,
+			c.GetFileSystemArchiveRemover(),
 		)
 	}
 	return c.validateSolutionArchiveUseCase

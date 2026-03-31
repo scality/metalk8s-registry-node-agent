@@ -34,7 +34,6 @@ type StorageProvider interface {
 	ArchiveCleaner
 	ArchiveMounter
 	ArchiveLister
-	ArchiveRemover
 	MultipartUploader
 	MultipartRemover
 	MultipartInspector

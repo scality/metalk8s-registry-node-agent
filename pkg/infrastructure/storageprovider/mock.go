@@ -39,6 +39,7 @@ type (
 
 var _ service.StorageProvider = &MockFileSystem{}
 var _ service.BucketManager = &MockFileSystem{}
+var _ service.ArchiveRemover = &MockFileSystem{}
 
 func NewMockFileSystem(opts *MockFileOpts) *MockFileSystem {
 	return &MockFileSystem{
