@@ -7,7 +7,8 @@ func (c *Container) getUploadPartUseCase() *usecase.UploadPart {
 	if c.uploadPartUseCase == nil {
 		c.uploadPartUseCase = usecase.NewUploadPart(
 			c.GetLogger(),
-			c.getStoragePartUploader(),
+			c.GetFSSolutionArchiveStorage(),
+			c.GetRootExternAPIPath(),
 		)
 	}
 
