@@ -10,6 +10,7 @@ func (c *Container) getUploadPartUseCase() *usecase.UploadPart {
 			c.GetLogger(),
 			store,
 			store,
+			store,
 			c.GetRootExternAPIPath(),
 		)
 	}
@@ -22,6 +23,7 @@ func (c *Container) GetInitializeSessionUseCase() *usecase.InitializeSession {
 		store := c.GetFSSolutionArchiveStorage()
 		c.initializeSessionUseCase = usecase.NewInitializeSession(
 			c.GetLogger(),
+			store,
 			store,
 			store,
 			store,

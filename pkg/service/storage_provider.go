@@ -43,6 +43,7 @@ type StorageProvider interface {
 	ArchiveMounter
 	ArchiveLister
 	ArchiveRemover
+	MultipartUploader
 
 	// RWLocker primitives:
 	Lock()
@@ -79,19 +80,6 @@ type StorageProvider interface {
 	// storage based on its fileName.
 	HashFile(fileName string) (string, error)
 
-	// MoveFileToRoot moves a file from a bucket to the root location in the
-	// storage.
-	MoveFileToRoot(bucketName, fileName, newFileName string) error
-
-	// CreateMultipartFiles creates into a bucket:
-	// - a metadata file
-	// - a multipart file recipient
-	// - a parts synthesis file
-	CreateMultipartFiles(
-		bucketName string,
-		solutionArchiveMeta *domain.SolutionArchive,
-	) (*domain.SolutionArchiveStatus, error)
-
 	// GetMultipartFile retrieves the multipart file recipient from a given
 	// bucket and returns its SolutionArchiveMeta.
 	GetMultipartFile(bucketName string) (*domain.SolutionArchive, error)
@@ -106,30 +94,6 @@ type StorageProvider interface {
 	// DeleteMultipartFile deletes a multipart file recipient from a bucket
 	// based in given bucketName and solutionArchiveMeta.
 	DeleteMultipartFile(bucketName string, solutionArchiveMeta *domain.SolutionArchive) error
-
-	// WritePartToMultipartFile properly writes the content of the given part
-	// into the multipart file recipient on the bucket indicated by the given
-	// bucketName.
-	WritePartToMultipartFile(bucketName string, part *domain.Part) (*domain.SolutionArchiveStatus, error)
-
-	// ConsolidateMultipartFile consolidates all the parts of a multipart file
-	// in a single flat file into the same bucket it is located.
-	//
-	// The resulting fileName is the solutionArchiveMeta.FileName appended with the
-	// solutionArchiveMeta.Version. The file extension is properly moved to the end.
-	// Since the multipart file is consolidated, the parts and all metadata
-	// associated are no more available.
-	//
-	// Also, it will o more appears in the ListMultipartFiles method, but in
-	// the ListFilesInBucket instead. That way its content becomes accessible.
-	//
-	// When supported by the storage backend, the perm parameter is used to set
-	// the file permissions.
-	ConsolidateMultipartFile(
-		bucketName string,
-		solutionArchiveMeta *domain.SolutionArchive,
-		perm os.FileMode,
-	) error
 
 	// AddWatchFileOrDirectory adds a file or directory to the watcher.
 	AddWatchFileOrDirectory(path string) error

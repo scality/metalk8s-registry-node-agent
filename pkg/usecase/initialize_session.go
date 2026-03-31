@@ -14,10 +14,11 @@ import (
 )
 
 type InitializeSession struct {
-	logger        *zerolog.Logger
-	store         service.StorageProvider
-	bucketManager service.BucketManager
-	archiveLister service.ArchiveLister
+	logger            *zerolog.Logger
+	store             service.StorageProvider
+	bucketManager     service.BucketManager
+	archiveLister     service.ArchiveLister
+	multipartUploader service.MultipartUploader
 }
 
 func NewInitializeSession(
@@ -25,14 +26,16 @@ func NewInitializeSession(
 	store service.StorageProvider,
 	bucketManager service.BucketManager,
 	archiveLister service.ArchiveLister,
+	multipartUploader service.MultipartUploader,
 ) *InitializeSession {
 	l := logger.With().Str("use_case", "initialize_session").Logger()
 
 	return &InitializeSession{
-		logger:        &l,
-		store:         store,
-		bucketManager: bucketManager,
-		archiveLister: archiveLister,
+		logger:            &l,
+		store:             store,
+		bucketManager:     bucketManager,
+		archiveLister:     archiveLister,
+		multipartUploader: multipartUploader,
 	}
 }
 
@@ -93,8 +96,7 @@ func (uc *InitializeSession) Execute(solutionArchive *domain.SolutionArchive) (*
 		return nil, errors.Stamp(err)
 	}
 
-	storageProvider := uc.store
-	solutionArchiveStatus, err := storageProvider.CreateMultipartFiles(bucketName, solutionArchive)
+	solutionArchiveStatus, err := uc.multipartUploader.CreateMultipartFiles(bucketName, solutionArchive)
 	if err != nil {
 		cleanup()
 		return nil, errors.Stamp(err)
