@@ -38,6 +38,8 @@ import (
 //
 // The responsibility for close all io objects is delegated to the caller.
 type StorageProvider interface {
+	BucketManager
+
 	// RWLocker primitives:
 	Lock()
 	Unlock()
@@ -80,18 +82,6 @@ type StorageProvider interface {
 	// HashFile calculates the hash of a file from the root location in the
 	// storage based on its fileName.
 	HashFile(fileName string) (string, error)
-
-	// CreateBucket creates a new bucket in the storage. The bucketName MUST be
-	// unique relative to the storage.
-	CreateBucket(bucketName string) error
-
-	// ListBuckets lists all the buckets in the storage and returns their
-	// bucketNames.
-	ListBuckets() ([]string, error)
-
-	// DeleteBucket deletes a bucket, and all its content, from the storage
-	// based on its bucketName.
-	DeleteBucket(bucketName string) error
 
 	// MoveFileToRoot moves a file from a bucket to the root location in the
 	// storage.

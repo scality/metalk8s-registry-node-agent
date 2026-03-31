@@ -14,19 +14,22 @@ import (
 )
 
 type InitializeSession struct {
-	logger *zerolog.Logger
-	store  service.StorageProvider
+	logger        *zerolog.Logger
+	store         service.StorageProvider
+	bucketManager service.BucketManager
 }
 
 func NewInitializeSession(
 	logger *zerolog.Logger,
 	store service.StorageProvider,
+	bucketManager service.BucketManager,
 ) *InitializeSession {
 	l := logger.With().Str("use_case", "initialize_session").Logger()
 
 	return &InitializeSession{
-		logger: &l,
-		store:  store,
+		logger:        &l,
+		store:         store,
+		bucketManager: bucketManager,
 	}
 }
 
@@ -72,16 +75,16 @@ func (uc *InitializeSession) Execute(solutionArchive *domain.SolutionArchive) (*
 	}
 
 	cleanup := func() {
-		deleteBucket := func(storage service.StorageProvider, bucketName string) {
-			if err := storage.DeleteBucket(bucketName); err != nil {
+		deleteBucket := func(bucketManager service.BucketManager, bucketName string) {
+			if err := bucketManager.DeleteBucket(bucketName); err != nil {
 				log.Println("Failed to delete the bucket", bucketName, err)
 			}
 		}
-		deleteBucket(uc.store, bucketName)
+		deleteBucket(uc.bucketManager, bucketName)
 	}
 
 	// Create the session bucket with required working files (parts, metadata, recipient)
-	err = uc.store.CreateBucket(bucketName)
+	err = uc.bucketManager.CreateBucket(bucketName)
 	if err != nil {
 		cleanup()
 		return nil, errors.Stamp(err)
@@ -106,7 +109,7 @@ func (uc *InitializeSession) Execute(solutionArchive *domain.SolutionArchive) (*
 // exists in the storage with the same prefixed name
 // or an error when multiple session buckets are found.
 func (uc *InitializeSession) sessionBucketAlreadyExists(name string) (bool, error) {
-	buckets, err := uc.store.ListBuckets()
+	buckets, err := uc.bucketManager.ListBuckets()
 	if err != nil && !errors.Is(err,
 		errors.Intercept(domain.ErrStorageProviderNotFound).
 			WithIdentifier(404000).

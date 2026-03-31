@@ -10,19 +10,22 @@ import (
 )
 
 type RemoveSession struct {
-	logger *zerolog.Logger
-	store  service.StorageProvider
+	logger        *zerolog.Logger
+	store         service.StorageProvider
+	bucketManager service.BucketManager
 }
 
 func NewRemoveSession(
 	logger *zerolog.Logger,
 	store service.StorageProvider,
+	bucketManager service.BucketManager,
 ) *RemoveSession {
 	l := logger.With().Str("use_case", "remove_session").Logger()
 
 	return &RemoveSession{
-		logger: &l,
-		store:  store,
+		logger:        &l,
+		store:         store,
+		bucketManager: bucketManager,
 	}
 }
 
@@ -34,7 +37,7 @@ func (uc *RemoveSession) Execute(solutionArchive *domain.SolutionArchive) error 
 	defer uc.store.Unlock()
 
 	// List all the buckets
-	buckets, err := uc.store.ListBuckets()
+	buckets, err := uc.bucketManager.ListBuckets()
 	if err != nil {
 		if errors.Is(err,
 			errors.Intercept(domain.ErrSessionRemoverNotFound).
@@ -59,7 +62,7 @@ func (uc *RemoveSession) Execute(solutionArchive *domain.SolutionArchive) error 
 			Throw()
 	}
 
-	err = uc.store.DeleteBucket(sessionBucket)
+	err = uc.bucketManager.DeleteBucket(sessionBucket)
 	if err != nil {
 		return errors.Stamp(err)
 	}

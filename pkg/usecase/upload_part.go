@@ -12,22 +12,25 @@ import (
 )
 
 type UploadPart struct {
-	logger      *zerolog.Logger
-	store       service.StorageProvider
-	rootAPIPath string
+	logger        *zerolog.Logger
+	store         service.StorageProvider
+	bucketManager service.BucketManager
+	rootAPIPath   string
 }
 
 func NewUploadPart(
 	logger *zerolog.Logger,
 	store service.StorageProvider,
+	bucketManager service.BucketManager,
 	rootAPIPath string,
 ) *UploadPart {
 	l := logger.With().Str("use_case", "upload_part").Logger()
 
 	return &UploadPart{
-		logger:      &l,
-		store:       store,
-		rootAPIPath: rootAPIPath,
+		logger:        &l,
+		store:         store,
+		bucketManager: bucketManager,
+		rootAPIPath:   rootAPIPath,
 	}
 }
 
@@ -37,7 +40,7 @@ func (uc *UploadPart) Execute(part *domain.Part) (*domain.SolutionArchiveStatus,
 	defer uc.store.Unlock()
 
 	// List all the buckets
-	buckets, err := uc.store.ListBuckets()
+	buckets, err := uc.bucketManager.ListBuckets()
 	if err != nil {
 		return nil, errors.Stamp(err)
 	}
@@ -136,7 +139,7 @@ func (uc *UploadPart) Execute(part *domain.Part) (*domain.SolutionArchiveStatus,
 			WithProperty("instance", fmt.Sprintf("%s/uploads/%s", uc.rootAPIPath, part.SolutionArchive.Name)).
 			Throw()
 	}
-	err = uc.store.DeleteBucket(sessionBucket)
+	err = uc.bucketManager.DeleteBucket(sessionBucket)
 	if err != nil {
 		return nil, errors.Intercept(err).
 			WithProperty("instance", fmt.Sprintf("%s/uploads/%s", uc.rootAPIPath, part.SolutionArchive.Name)).
