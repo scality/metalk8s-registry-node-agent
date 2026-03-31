@@ -40,7 +40,7 @@ func (c *Container) GetValidateSolutionArchiveUseCase() *usecase.ValidateSolutio
 	if c.validateSolutionArchiveUseCase == nil {
 		c.validateSolutionArchiveUseCase = usecase.NewValidateSolutionArchive(
 			c.GetLogger(),
-			c.getStorageSolutionArchiveValidator(),
+			c.GetFSSolutionArchiveStorage(),
 		)
 	}
 	return c.validateSolutionArchiveUseCase
