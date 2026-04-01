@@ -45,6 +45,7 @@ var _ service.FileWatcher = &MockFileSystem{}
 var _ service.ArchiveMounter = &MockFileSystem{}
 var _ service.ArchiveCleaner = &MockFileSystem{}
 var _ service.ArchiveLister = &MockFileSystem{}
+var _ service.MultipartInspector = &MockFileSystem{}
 
 func NewMockFileSystem(opts *MockFileOpts) *MockFileSystem {
 	return &MockFileSystem{

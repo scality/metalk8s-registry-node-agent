@@ -12,7 +12,7 @@ func (c *Container) getUploadPartUseCase() *usecase.UploadPart {
 			c.GetFileSystemBucketManager(),
 			store,
 			store,
-			store,
+			c.GetFileSystemMultipartInspector(),
 			c.GetRootExternAPIPath(),
 		)
 	}
@@ -29,7 +29,7 @@ func (c *Container) GetInitializeSessionUseCase() *usecase.InitializeSession {
 			c.GetFileSystemBucketManager(),
 			c.GetFileSystemArchiveLister(),
 			store,
-			store,
+			c.GetFileSystemMultipartInspector(),
 		)
 	}
 

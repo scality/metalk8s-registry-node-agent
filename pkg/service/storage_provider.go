@@ -33,7 +33,6 @@ package service
 type StorageProvider interface {
 	MultipartUploader
 	MultipartRemover
-	MultipartInspector
 	ArchiveSaver
 
 	// RWLocker primitives:

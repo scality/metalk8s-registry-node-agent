@@ -679,3 +679,40 @@ func GetLoopDeviceForMount(mountPath string) (string, error) {
 func GenBucketPath(solutionArchivesLocation string, bucketName string) string {
 	return filepath.Join(solutionArchivesLocation, FileSystemBucketPrefix+bucketName)
 }
+
+// GenBaseMultipartFilePath generates the base multipart file path for the
+// given bucket name and file name without apply any suffix.
+func GenBaseMultipartFilePath(solutionArchivesLocation string, bucketName, fileName string) string {
+	return filepath.Join(GenBucketPath(solutionArchivesLocation, bucketName), fileName)
+}
+
+// GenMultipartMetaFilePath generates the multipart meta file path for the given
+// bucket name and file name.
+func GenMultipartMetaFilePath(solutionArchivesLocation string, bucketName, fileName string) string {
+	return GenBaseMultipartFilePath(solutionArchivesLocation, bucketName, fileName) + FileSystemMultipartMetaSuffix
+}
+
+// GenMultipartPartsFilePath generates the multipart parts file path for the
+// given bucket name and file name.
+func GenMultipartPartsFilePath(solutionArchivesLocation string, bucketName, fileName string) string {
+	return GenBaseMultipartFilePath(solutionArchivesLocation, bucketName, fileName) + FileSystemMultipartPartsSuffix
+}
+
+// GenMultipartRecipientFilePath generates the multipart recipient file path for
+// the given bucket name and file name.
+func GenMultipartRecipientFilePath(solutionArchivesLocation string, bucketName, fileName string) string {
+	return GenBaseMultipartFilePath(solutionArchivesLocation, bucketName, fileName) +
+		FileSystemMultipartRecipientSuffix
+}
+
+// GenMultipartFilePaths generates the multipart file paths for the given bucket
+// name and file name.
+func GenMultipartFilePaths(
+	solutionArchivesLocation string,
+	bucketName,
+	fileName string,
+) (metaFilePath, partsFilePath, recipientFilePath string) {
+	return GenMultipartMetaFilePath(solutionArchivesLocation, bucketName, fileName),
+		GenMultipartPartsFilePath(solutionArchivesLocation, bucketName, fileName),
+		GenMultipartRecipientFilePath(solutionArchivesLocation, bucketName, fileName)
+}

@@ -151,33 +151,6 @@ func (f *FileSystem) CreateMultipartFiles(
 	return meta, nil
 }
 
-// GetMultipartFile retrieves the multipart file recipient from a given bucket
-// and returns its Solution Archive.
-func (f *FileSystem) GetMultipartFile(
-	bucketName string,
-) (*domain.SolutionArchive, error) {
-	meta, err := f.getMultipartFile(bucketName)
-	if err != nil {
-		return nil, errors.Stamp(err)
-	}
-
-	return meta, nil
-}
-
-// GetMultipartFileStatus retrieves the Solution Archive Status of a multipart file recipient
-// based on bucketName and solutionArchiveMeta.
-func (f *FileSystem) GetMultipartFileStatus(
-	bucketName string,
-	solutionArchiveMeta *domain.SolutionArchive,
-) (*domain.SolutionArchiveStatus, error) {
-	status, err := f.getSolutionArchiveStatus(bucketName, solutionArchiveMeta)
-	if err != nil {
-		return nil, errors.Stamp(err)
-	}
-
-	return status, nil
-}
-
 // DeleteMultipartFile deletes a multipart file recipient from a bucket based on bucketName and solutionArchiveMeta.
 func (f *FileSystem) DeleteMultipartFile(
 	bucketName string,
@@ -308,141 +281,6 @@ func (f *FileSystem) moveFileToRoot(
 // SPEC: The recipient has the same name as the final solution Archive but suffixed
 // with ".recipient"
 
-// filterOrphansMeta filters the orphaned SolutionArchiveMeta instances from the given
-// solutionArchiveMetas list and returns the filtered list.
-func (f *FileSystem) filterOrphansMeta(
-	bucketPath string,
-	solutionArchives []*domain.SolutionArchive,
-) []*domain.SolutionArchive {
-	filteredSolutionArchives := make([]*domain.SolutionArchive, 0, len(solutionArchives))
-
-	for _, solutionArchive := range solutionArchives {
-		if err := library.CheckFile(
-			filepath.Join(
-				bucketPath,
-				solutionArchive.Name+library.FileSystemMultipartPartsSuffix,
-			),
-		); err != nil {
-			f.logger.Warn().Err(err).Msg("The parts file is missing for the multipart file.")
-
-			continue
-		}
-
-		if err := library.CheckFile(
-			filepath.Join(
-				bucketPath,
-				solutionArchive.Name+library.FileSystemMultipartRecipientSuffix,
-			),
-		); err != nil {
-			f.logger.Warn().Err(err).Msg("The recipient file is missing for the multipart file.")
-
-			continue
-		}
-
-		filteredSolutionArchives = append(filteredSolutionArchives, solutionArchive)
-	}
-
-	return filteredSolutionArchives
-}
-
-// genBaseMultipartFilePath generates the base multipart file path for the
-// given bucket name and file name without apply any suffix.
-func (f *FileSystem) genBaseMultipartFilePath(bucketName, fileName string) string {
-	return filepath.Join(f.genBucketPath(bucketName), fileName)
-}
-
-// genMultipartMetaFilePath generates the multipart meta file path for the given
-// bucket name and file name.
-func (f *FileSystem) genMultipartMetaFilePath(bucketName, fileName string) string {
-	return f.genBaseMultipartFilePath(bucketName, fileName) + library.FileSystemMultipartMetaSuffix
-}
-
-// genMultipartPartsFilePath generates the multipart parts file path for the
-// given bucket name and file name.
-func (f *FileSystem) genMultipartPartsFilePath(bucketName, fileName string) string {
-	return f.genBaseMultipartFilePath(bucketName, fileName) + library.FileSystemMultipartPartsSuffix
-}
-
-// genMultipartRecipientFilePath generates the multipart recipient file path for
-// the given bucket name and file name.
-func (f *FileSystem) genMultipartRecipientFilePath(bucketName, fileName string) string {
-	return f.genBaseMultipartFilePath(bucketName, fileName) +
-		library.FileSystemMultipartRecipientSuffix
-}
-
-// genMultipartFilePaths generates the multipart file paths for the given bucket
-// name and file name.
-func (f *FileSystem) genMultipartFilePaths(
-	bucketName,
-	fileName string,
-) (metaFilePath, partsFilePath, recipientFilePath string) {
-	return f.genMultipartMetaFilePath(bucketName, fileName),
-		f.genMultipartPartsFilePath(bucketName, fileName),
-		f.genMultipartRecipientFilePath(bucketName, fileName)
-}
-
-// loadSolutionArchiveMeta loads the Solution Archive Meta instance from
-// the multipart meta file with the given file path.
-func loadSolutionArchiveMeta(meta *domain.SolutionArchive, filePath string) error {
-	metaFile, err := library.GetFile(filePath)
-	if err != nil {
-		return errors.Stamp(err)
-	}
-
-	defer metaFile.Close() // nolint: errcheck // No error check on defer.
-
-	if err := json.NewDecoder(metaFile).Decode(meta); err != nil {
-		return errors.From(domain.ErrStorageProviderInternal).
-			WithIdentifier(500000).
-			WithDetail("unable to load the metadata of the multipart file").
-			WithProperty("file_path", filePath).
-			WithProperty("while", "decoding the metadata from json").
-			CausedBy(err).
-			Throw()
-	}
-
-	return nil
-}
-
-// getSolutionArchiveMetaList returns the list of Solution Archive Meta instances
-// in the bucket with the given bucketPath.
-func (f *FileSystem) getSolutionArchiveMeta(bucketPath string) (*domain.SolutionArchive, error) {
-	metaFileNames, err := library.ListDirContentNames(bucketPath, library.MultipartMetaFilter)
-	if err != nil {
-		return nil, errors.Stamp(err)
-	}
-
-	solutionArchiveMetas := make([]*domain.SolutionArchive, 0, len(metaFileNames))
-
-	for _, metaFileName := range metaFileNames {
-		var solutionArchiveMeta domain.SolutionArchive
-
-		if err := loadSolutionArchiveMeta(&solutionArchiveMeta, filepath.Join(bucketPath, metaFileName)); err != nil {
-			return nil, errors.Stamp(err)
-		}
-
-		solutionArchiveMetas = append(solutionArchiveMetas, &solutionArchiveMeta)
-	}
-
-	solutionArchiveMetas = f.filterOrphansMeta(bucketPath, solutionArchiveMetas)
-	if len(solutionArchiveMetas) < 1 {
-		return nil, errors.From(domain.ErrStorageProviderNotFound).
-			WithIdentifier(404000).
-			WithDetail("no multipart files found in the bucket").
-			WithProperty("bucket_name", bucketPath).
-			Throw()
-	}
-	if len(solutionArchiveMetas) > 1 {
-		return nil, errors.From(domain.ErrStorageProviderInternal).
-			WithIdentifier(500000).
-			WithDetail("too many multipart files found in the bucket").
-			WithProperty("bucket_name", bucketPath).
-			Throw()
-	}
-
-	return solutionArchiveMetas[0], nil
-}
-
 func (f *FileSystem) createMultipartFiles(
 	bucketName string,
 	solutionArchiveMeta *domain.SolutionArchive,
@@ -451,7 +289,8 @@ func (f *FileSystem) createMultipartFiles(
 		return nil, errors.Stamp(err)
 	}
 
-	metaFilePath, partsFilePath, recipientFilePath := f.genMultipartFilePaths(
+	metaFilePath, partsFilePath, recipientFilePath := library.GenMultipartFilePaths(
+		f.solutionArchivesLocation,
 		bucketName,
 		solutionArchiveMeta.Name,
 	)
@@ -526,102 +365,6 @@ func (f *FileSystem) createMultipartFiles(
 	}, nil
 }
 
-func (f *FileSystem) getMultipartFile(bucketName string) (*domain.SolutionArchive, error) {
-	bucketPath := f.genBucketPath(bucketName)
-	if err := library.CheckDir(bucketPath); err != nil {
-		return nil, errors.Stamp(err)
-	}
-
-	solutionArchiveMeta, err := f.getSolutionArchiveMeta(bucketPath)
-	if err != nil {
-		return nil, errors.Stamp(err)
-	}
-
-	return solutionArchiveMeta, nil
-}
-
-func (f *FileSystem) getSolutionArchiveStatus(
-	bucketName string,
-	solutionArchiveMeta *domain.SolutionArchive,
-) (*domain.SolutionArchiveStatus, error) {
-	if err := library.CheckDir(f.genBucketPath(bucketName)); err != nil {
-		return nil, errors.Stamp(err)
-	}
-
-	metaFilePath, partsFilePath, recipientFilePath := f.genMultipartFilePaths(
-		bucketName,
-		solutionArchiveMeta.Name,
-	)
-
-	if err := library.CheckFile(metaFilePath); err != nil {
-		return nil, errors.Stamp(err)
-	}
-
-	if err := library.CheckFile(partsFilePath); err != nil {
-		return nil, errors.Stamp(err)
-	}
-
-	if err := library.CheckFile(recipientFilePath); err != nil {
-		return nil, errors.Stamp(err)
-	}
-
-	metaFile, err := library.GetFile(metaFilePath)
-	if err != nil {
-		return nil, errors.Stamp(err)
-	}
-
-	defer metaFile.Close() // nolint: errcheck // No error check on defer.
-
-	partsFile, err := library.GetFile(partsFilePath)
-	if err != nil {
-		return nil, errors.Stamp(err)
-	}
-
-	defer partsFile.Close() // nolint: errcheck // No error check on defer.
-
-	var storedSolutionArchiveMeta domain.SolutionArchive
-	if err := json.NewDecoder(metaFile).Decode(&storedSolutionArchiveMeta); err != nil {
-		return nil, errors.From(domain.ErrStorageProviderInternal).
-			WithIdentifier(500000).
-			WithDetail("unable to load the metadata of the multipart file").
-			WithProperty("file_path", metaFilePath).
-			WithProperty("while", "decoding the metadata from json").
-			CausedBy(err).
-			Throw()
-	}
-
-	if err := library.CompareSolutionArchiveMetas(solutionArchiveMeta, &storedSolutionArchiveMeta); err != nil {
-		return nil, errors.Stamp(err)
-	}
-
-	partMetas := make(map[int64]*domain.PartMeta)
-	for {
-		var partMeta domain.PartMeta
-
-		err = binary.Read(partsFile, binary.LittleEndian, &partMeta)
-		if errors.Is(err, io.EOF) {
-			break
-		}
-
-		if err != nil {
-			return nil, errors.From(domain.ErrStorageProviderInternal).
-				WithIdentifier(500000).
-				WithDetail("unable to load the parts metadata of the multipart file").
-				WithProperty("file_path", partsFilePath).
-				WithProperty("while", "decoding the parts metadata from binary").
-				CausedBy(err).
-				Throw()
-		}
-
-		partMetas[partMeta.Start] = &partMeta
-	}
-
-	return &domain.SolutionArchiveStatus{
-		SolutionArchive: solutionArchiveMeta,
-		Parts:           partMetas,
-	}, nil
-}
-
 func (f *FileSystem) deleteMultipartFile(
 	bucketName string,
 	solutionArchiveMeta *domain.SolutionArchive,
@@ -630,7 +373,8 @@ func (f *FileSystem) deleteMultipartFile(
 		return errors.Stamp(err)
 	}
 
-	metaFilePath, partsFilePath, recipientFilePath := f.genMultipartFilePaths(
+	metaFilePath, partsFilePath, recipientFilePath := library.GenMultipartFilePaths(
+		f.solutionArchivesLocation,
 		bucketName,
 		solutionArchiveMeta.Name,
 	)
@@ -681,8 +425,8 @@ func (f *FileSystem) writePartToMultipartFile(
 		return nil, errors.Stamp(err)
 	}
 
-	partsFilePath := f.genMultipartPartsFilePath(bucketName, part.SolutionArchive.Name)
-	recipientFilePath := f.genMultipartRecipientFilePath(bucketName, part.SolutionArchive.Name)
+	partsFilePath := library.GenMultipartPartsFilePath(f.solutionArchivesLocation, bucketName, part.SolutionArchive.Name)
+	recipientFilePath := library.GenMultipartRecipientFilePath(f.solutionArchivesLocation, bucketName, part.SolutionArchive.Name)
 
 	partsFile, err := os.OpenFile(partsFilePath, os.O_WRONLY, library.FileSystemDefaultFileMode)
 	if err != nil {
@@ -784,8 +528,9 @@ func (f *FileSystem) consolidateMultipartFile(
 			Throw()
 	}
 
-	baseFilePath := f.genBaseMultipartFilePath(bucketName, solutionArchiveMeta.Name)
-	metaFilePath, partsFilePath, recipientFilePath := f.genMultipartFilePaths(
+	baseFilePath := library.GenBaseMultipartFilePath(f.solutionArchivesLocation, bucketName, solutionArchiveMeta.Name)
+	metaFilePath, partsFilePath, recipientFilePath := library.GenMultipartFilePaths(
+		f.solutionArchivesLocation,
 		bucketName,
 		solutionArchiveMeta.Name,
 	)
