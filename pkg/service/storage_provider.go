@@ -31,7 +31,6 @@ package service
 //
 // The responsibility for close all io objects is delegated to the caller.
 type StorageProvider interface {
-	ArchiveLister
 	MultipartUploader
 	MultipartRemover
 	MultipartInspector
@@ -45,6 +44,14 @@ type StorageProvider interface {
 
 	// Init initializes the storage provider.
 	Init() error
+
+	// GetArchiveSize retrieves the size of a file from the storage
+	// backend.
+	GetArchiveSize(fileName string) (int64, error)
+
+	// GetArchiveHash retrieves the hash of a file from the storage
+	// backend.
+	GetArchiveHash(fileName string) (string, error)
 
 	// ControlDir returns the control directory.
 	ControlDir() string

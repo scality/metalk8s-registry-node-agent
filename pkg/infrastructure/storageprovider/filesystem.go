@@ -120,11 +120,6 @@ func (f *FileSystem) SaveFile(
 	return nil
 }
 
-// ListFiles lists all the flat files in the root location of the storage
-func (f *FileSystem) ListFiles() ([]string, error) {
-	return f.listFiles()
-}
-
 // MoveFileToRoot moves a file from a bucket to the root location in the storage.
 func (f *FileSystem) MoveFileToRoot(
 	bucketName, fileName, newFileName string,
@@ -222,31 +217,6 @@ func (f *FileSystem) ConsolidateMultipartFile(
 	return nil
 }
 
-// GetArchiveHash retrieves the hash of a file from the storage backend.
-func (f *FileSystem) GetArchiveHash(filename string) (string, error) {
-	if _, ok := f.watchedFileInfos[filename]; !ok {
-		return "", errors.From(domain.ErrStorageProviderNotFound).
-			WithIdentifier(404000).
-			WithDetail("file not found").
-			WithProperty("file_name", filename).
-			Throw()
-	}
-
-	return f.watchedFileInfos[filename].Hash, nil
-}
-
-// GetArchiveSize retrieves the size of a file from the storage backend.
-func (f *FileSystem) GetArchiveSize(filename string) (int64, error) {
-	if _, ok := f.watchedFileInfos[filename]; !ok {
-		return 0, errors.From(domain.ErrStorageProviderNotFound).
-			WithDetail("file not found").
-			WithProperty("file_name", filename).
-			Throw()
-	}
-
-	return f.watchedFileInfos[filename].Size, nil
-}
-
 // Bucket handling methods
 
 func (f *FileSystem) genBucketPath(
@@ -271,15 +241,6 @@ func (f *FileSystem) saveFile(
 	}
 
 	return nil
-}
-
-func (f *FileSystem) listFiles() ([]string, error) {
-	files, err := library.ListDirContentNames(f.solutionArchivesLocation, f.interestContentFilter)
-	if err != nil {
-		return nil, errors.Stamp(err)
-	}
-
-	return files, nil
 }
 
 func (f *FileSystem) genFileOnBucketPath(
@@ -1117,4 +1078,29 @@ func (f *FileSystem) updateWatchedFileInfos(saveFunc func(watchedFilesMap) error
 	}
 
 	return nil
+}
+
+// GetArchiveHash retrieves the hash of a file from the storage backend.
+func (f *FileSystem) GetArchiveHash(filename string) (string, error) {
+	if _, ok := f.watchedFileInfos[filename]; !ok {
+		return "", errors.From(domain.ErrStorageProviderNotFound).
+			WithIdentifier(404000).
+			WithDetail("file not found").
+			WithProperty("file_name", filename).
+			Throw()
+	}
+
+	return f.watchedFileInfos[filename].Hash, nil
+}
+
+// GetArchiveSize retrieves the size of a file from the storage backend.
+func (f *FileSystem) GetArchiveSize(filename string) (int64, error) {
+	if _, ok := f.watchedFileInfos[filename]; !ok {
+		return 0, errors.From(domain.ErrStorageProviderNotFound).
+			WithDetail("file not found").
+			WithProperty("file_name", filename).
+			Throw()
+	}
+
+	return f.watchedFileInfos[filename].Size, nil
 }

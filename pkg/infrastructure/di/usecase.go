@@ -27,7 +27,7 @@ func (c *Container) GetInitializeSessionUseCase() *usecase.InitializeSession {
 			c.GetLogger(),
 			store,
 			c.GetFileSystemBucketManager(),
-			store,
+			c.GetFileSystemArchiveLister(),
 			store,
 			store,
 		)
@@ -38,11 +38,10 @@ func (c *Container) GetInitializeSessionUseCase() *usecase.InitializeSession {
 
 func (c *Container) GetRemoveSolutionArchiveUseCase() *usecase.RemoveSolutionArchive {
 	if c.removeSolutionArchiveUseCase == nil {
-		store := c.GetFSSolutionArchiveStorage()
 		c.removeSolutionArchiveUseCase = usecase.NewRemoveSolutionArchive(
 			c.GetLogger(),
-			store,
-			store,
+			c.GetFSSolutionArchiveStorage(),
+			c.GetFileSystemArchiveLister(),
 			c.GetFileSystemArchiveRemover(),
 		)
 	}
@@ -51,11 +50,10 @@ func (c *Container) GetRemoveSolutionArchiveUseCase() *usecase.RemoveSolutionArc
 
 func (c *Container) GetValidateSolutionArchiveUseCase() *usecase.ValidateSolutionArchive {
 	if c.validateSolutionArchiveUseCase == nil {
-		store := c.GetFSSolutionArchiveStorage()
 		c.validateSolutionArchiveUseCase = usecase.NewValidateSolutionArchive(
 			c.GetLogger(),
-			store,
-			store,
+			c.GetFSSolutionArchiveStorage(),
+			c.GetFileSystemArchiveLister(),
 			c.GetFileSystemArchiveRemover(),
 		)
 	}
@@ -75,11 +73,10 @@ func (c *Container) GetRemoveSessionUseCase() *usecase.RemoveSession {
 
 func (c *Container) GetDownloadSolutionArchiveUseCase() *usecase.DownloadSolutionArchive {
 	if c.downloadSolutionArchiveUseCase == nil {
-		store := c.GetFSSolutionArchiveStorage()
 		c.downloadSolutionArchiveUseCase = usecase.NewDownloadSolutionArchive(
 			c.GetLogger(),
-			store,
-			store,
+			c.GetFSSolutionArchiveStorage(),
+			c.GetFileSystemArchiveLister(),
 			c.GetFileSystemArchiveReader(),
 			c.GetRootInternAPIPath(),
 		)
@@ -94,7 +91,7 @@ func (c *Container) GetGetExternalSolutionArchiveUseCase() *usecase.GetExternalS
 			c.GetLogger(),
 			store,
 			c.getHTTPExternalDownloader(),
-			store,
+			c.GetFileSystemArchiveLister(),
 			store,
 		)
 	}
@@ -103,12 +100,11 @@ func (c *Container) GetGetExternalSolutionArchiveUseCase() *usecase.GetExternalS
 
 func (c *Container) GetMountSolutionArchiveUseCase() *usecase.MountSolutionArchive {
 	if c.mountSolutionArchiveUseCase == nil {
-		store := c.GetFSSolutionArchiveStorage()
 		c.mountSolutionArchiveUseCase = usecase.NewMountSolutionArchive(
 			c.GetLogger(),
-			store,
+			c.GetFSSolutionArchiveStorage(),
 			c.GetFileSystemArchiveMounter(),
-			store,
+			c.GetFileSystemArchiveLister(),
 		)
 	}
 	return c.mountSolutionArchiveUseCase

@@ -46,6 +46,7 @@ type Container struct {
 	fileWatcher            service.FileWatcher
 	archiveMounter         service.ArchiveMounter
 	archiveCleaner         service.ArchiveCleaner
+	archiveLister          service.ArchiveLister
 
 	uploadPartHandler              *handler.UploadPart
 	downloadSolutionArchiveHandler *handler.DownloadSolutionArchive
