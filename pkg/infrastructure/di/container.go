@@ -49,6 +49,7 @@ type Container struct {
 	archiveLister          service.ArchiveLister
 	multipartInspector     service.MultipartInspector
 	multipartRemover       service.MultipartRemover
+	multipartUploader      service.MultipartUploader
 
 	uploadPartHandler              *handler.UploadPart
 	downloadSolutionArchiveHandler *handler.DownloadSolutionArchive

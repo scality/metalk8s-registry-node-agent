@@ -5,12 +5,11 @@ import "github.com/scality/metalk8s-registry-node-agent/pkg/usecase"
 
 func (c *Container) getUploadPartUseCase() *usecase.UploadPart {
 	if c.uploadPartUseCase == nil {
-		store := c.GetFSSolutionArchiveStorage()
 		c.uploadPartUseCase = usecase.NewUploadPart(
 			c.GetLogger(),
-			store,
+			c.GetFSSolutionArchiveStorage(),
 			c.GetFileSystemBucketManager(),
-			store,
+			c.GetFileSystemMultipartUploader(),
 			c.GetFileSystemMultipartRemover(),
 			c.GetFileSystemMultipartInspector(),
 			c.GetRootExternAPIPath(),
@@ -22,13 +21,12 @@ func (c *Container) getUploadPartUseCase() *usecase.UploadPart {
 
 func (c *Container) GetInitializeSessionUseCase() *usecase.InitializeSession {
 	if c.initializeSessionUseCase == nil {
-		store := c.GetFSSolutionArchiveStorage()
 		c.initializeSessionUseCase = usecase.NewInitializeSession(
 			c.GetLogger(),
-			store,
+			c.GetFSSolutionArchiveStorage(),
 			c.GetFileSystemBucketManager(),
 			c.GetFileSystemArchiveLister(),
-			store,
+			c.GetFileSystemMultipartUploader(),
 			c.GetFileSystemMultipartInspector(),
 		)
 	}
