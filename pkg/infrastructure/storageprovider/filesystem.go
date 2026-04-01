@@ -9,7 +9,6 @@ import (
 	"regexp"
 	"slices"
 	"sync"
-	"time"
 
 	"github.com/rs/zerolog"
 
@@ -29,7 +28,7 @@ type (
 		solutionArchivesLocation string
 		solutionsLocation        string
 		interestContentFilter    library.ContentFilter
-		watchedFileInfos         watchedFilesMap
+		watchedFileStore         *WatchedFileStore
 	}
 
 	FileOpts struct {
@@ -56,7 +55,12 @@ func NewFileSystem(opts *FileOpts) *FileSystem {
 		solutionArchivesLocation: opts.SolutionArchivesLocation,
 		solutionsLocation:        opts.SolutionsLocation,
 		interestContentFilter:    library.NewRegexNormalFileFilter(opts.InterestContentFilterRegex),
+		watchedFileStore:         NewWatchedFileStore(),
 	}
+}
+
+func (f *FileSystem) WatchedFileStore() *WatchedFileStore {
+	return f.watchedFileStore
 }
 
 func (f *FileSystem) ControlDir() string {
@@ -122,12 +126,6 @@ func (f *FileSystem) Init() error {
 // ===================================== TO REFACTOR ========================================= //
 
 type (
-	watchedFileInfo struct {
-		Size          int64     `json:"size"`
-		LastChangedAt time.Time `json:"last_changed_at"`
-		Hash          string    `json:"hash"`
-	}
-
 	watchedFilesMap map[string]*watchedFileInfo
 )
 
@@ -237,7 +235,7 @@ func (f *FileSystem) loadWatchedFileInfos() (watchedFilesMap, error) {
 }
 
 func (f *FileSystem) saveWatchedFileInfos(watchedFileInfos watchedFilesMap) error {
-	f.watchedFileInfos = watchedFileInfos
+	f.watchedFileStore.Set(watchedFileInfos)
 
 	watchedFileInfosBytes, err := json.Marshal(watchedFileInfos)
 	if err != nil {
@@ -336,27 +334,10 @@ func (f *FileSystem) updateWatchedFileInfos(saveFunc func(watchedFilesMap) error
 	return nil
 }
 
-// GetArchiveHash retrieves the hash of a file from the storage backend.
-func (f *FileSystem) GetArchiveHash(filename string) (string, error) {
-	if _, ok := f.watchedFileInfos[filename]; !ok {
-		return "", errors.From(domain.ErrStorageProviderNotFound).
-			WithIdentifier(404000).
-			WithDetail("file not found").
-			WithProperty("file_name", filename).
-			Throw()
-	}
-
-	return f.watchedFileInfos[filename].Hash, nil
+func (f *FileSystem) GetArchiveSize(fileName string) (int64, error) {
+	return f.watchedFileStore.GetSizeFromFileInfos(fileName)
 }
 
-// GetArchiveSize retrieves the size of a file from the storage backend.
-func (f *FileSystem) GetArchiveSize(filename string) (int64, error) {
-	if _, ok := f.watchedFileInfos[filename]; !ok {
-		return 0, errors.From(domain.ErrStorageProviderNotFound).
-			WithDetail("file not found").
-			WithProperty("file_name", filename).
-			Throw()
-	}
-
-	return f.watchedFileInfos[filename].Size, nil
+func (f *FileSystem) GetArchiveHash(fileName string) (string, error) {
+	return f.watchedFileStore.GetHashFromFileInfos(fileName)
 }
