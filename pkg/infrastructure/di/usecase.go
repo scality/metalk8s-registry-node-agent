@@ -129,7 +129,7 @@ func (c *Container) GetCleanArchivesUseCase() *usecase.CleanArchive {
 	if c.cleanArchivesUseCase == nil {
 		c.cleanArchivesUseCase = usecase.NewCleanArchive(
 			c.GetLogger(),
-			c.GetFSSolutionArchiveStorage(),
+			c.GetFileSystemArchiveCleaner(),
 			c.GetFileSystemFileWatcher(),
 			c.deleteChan,
 		)

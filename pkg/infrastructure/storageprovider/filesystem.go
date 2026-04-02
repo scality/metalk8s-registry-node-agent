@@ -6,7 +6,6 @@ import (
 	"encoding/binary"
 	"encoding/hex"
 	"encoding/json"
-	"strings"
 
 	"io"
 	"os"
@@ -1116,91 +1115,6 @@ func (f *FileSystem) updateWatchedFileInfos(saveFunc func(watchedFilesMap) error
 	if err := saveFunc(watchedFileInfos); err != nil {
 		return errors.Stamp(err)
 	}
-
-	return nil
-}
-
-func (f *FileSystem) CleanUnusedSolutions(path string, isDir bool) error {
-	f.Lock()
-	defer f.Unlock()
-
-	if isDir {
-		// Unmount the solution
-		err := f.UnmountFile(path)
-		if err != nil {
-			f.logger.Error().
-				Err(err).
-				Str("mount_point", path).
-				Msg("failed to unmount unused solution")
-			// Continue to try to delete the directory anyway
-		}
-
-		// Delete the directory
-		err = os.RemoveAll(path)
-		if err != nil {
-			return errors.From(domain.ErrSolutionArchiveCleanerInternal).
-				CausedBy(err).
-				WithDetail("failed to delete unused solution directory").
-				WithProperty("path", path).
-				Throw()
-		}
-
-		f.logger.Debug().
-			Str("path", path).
-			Msg("finished to clean unused solution directory")
-
-		return nil
-	}
-
-	err := library.DeleteFile(path)
-	if err != nil {
-		return errors.From(domain.ErrSolutionArchiveCleanerInternal).
-			CausedBy(err).
-			WithDetail("failed to delete unused solution").
-			WithProperty("path", path).
-			Throw()
-	}
-
-	f.logger.Debug().
-		Str("path", path).
-		Msg("finished to clean unused solution")
-
-	return nil
-}
-
-func (f *FileSystem) CleanUnusedSolutionArchives(path string, isDir bool) error {
-	f.Lock()
-	defer f.Unlock()
-
-	if isDir {
-		err := os.RemoveAll(path)
-		if err != nil {
-			return errors.From(domain.ErrSolutionArchiveCleanerInternal).
-				CausedBy(err).
-				WithDetail("failed to delete unused solution archive directory").
-				WithProperty("path", path).
-				Throw()
-		}
-
-		f.logger.Debug().
-			Str("path", path).
-			Msg("finished to clean unused solution archive directory")
-
-		return nil
-	}
-
-	err := library.DeleteFile(path)
-	if err != nil {
-		return errors.From(domain.ErrSolutionArchiveCleanerInternal).
-			CausedBy(err).
-			WithDetail("failed to delete unused solution archive").
-			WithProperty("path", path).
-			Throw()
-	}
-
-	f.logger.Debug().
-		Str("path", path).
-		Msg("finished to clean unused solution archive")
 
 	return nil
 }

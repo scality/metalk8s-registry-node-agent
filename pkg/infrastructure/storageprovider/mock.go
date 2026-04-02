@@ -43,6 +43,7 @@ var _ service.ArchiveRemover = &MockFileSystem{}
 var _ service.ArchiveReader = &MockFileSystem{}
 var _ service.FileWatcher = &MockFileSystem{}
 var _ service.ArchiveMounter = &MockFileSystem{}
+var _ service.ArchiveCleaner = &MockFileSystem{}
 
 func NewMockFileSystem(opts *MockFileOpts) *MockFileSystem {
 	return &MockFileSystem{
