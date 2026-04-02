@@ -75,3 +75,5 @@ jobs:
           url: ${{ vars.DEPENDENCY_TRACK_HOSTNAME }}
           api-key: ${{ secrets.DEPENDENCY_TRACK_APIKEY }}
           project-sbom: /tmp/sbom.json
+          parent-project-name: ${{ github.repository }}
+          parent-project-collection-logic: "NONE"
