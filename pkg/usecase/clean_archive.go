@@ -7,33 +7,39 @@ import (
 	"github.com/scality/metalk8s-registry-node-agent/pkg/service"
 )
 
-type CleanArchives struct {
+type CleanArchive struct {
 	logger     *zerolog.Logger
 	store      service.StorageProvider
+	cleaner    service.ArchiveCleaner
 	deleteChan chan domain.FileEventDetails
 }
 
-func NewCleanArchives(
+func NewCleanArchive(
 	logger *zerolog.Logger,
 	store service.StorageProvider,
+	cleaner service.ArchiveCleaner,
 	deleteChan chan domain.FileEventDetails,
-) *CleanArchives {
-	l := logger.With().Str("use_case", "clean_archives").Logger()
+) *CleanArchive {
+	l := logger.With().Str("use_case", "clean_archive").Logger()
 
-	return &CleanArchives{
+	return &CleanArchive{
 		logger:     &l,
 		store:      store,
+		cleaner:    cleaner,
 		deleteChan: deleteChan,
 	}
 }
 
-func (uc *CleanArchives) Execute() {
+func (uc *CleanArchive) Execute() {
 	uc.logger.Debug().
 		Msg("Cleaning archives")
 	for eventDetails := range uc.deleteChan {
 		switch eventDetails.Origin {
 		case domain.SolutionArchivesOrigin:
-			err := uc.store.CleanUnusedSolutionArchives(eventDetails.FullPathName, eventDetails.IsDir)
+			err := uc.cleaner.CleanUnusedSolutionArchives(
+				eventDetails.FullPathName,
+				eventDetails.IsDir,
+			)
 			if err != nil {
 				uc.logger.Error().
 					Err(err).
@@ -43,7 +49,10 @@ func (uc *CleanArchives) Execute() {
 				uc.store.AddWatchFileOrDirectory(eventDetails.FullPathName) // nolint: errcheck // was existing before
 			}
 		case domain.SolutionsOrigin:
-			err := uc.store.CleanUnusedSolutions(eventDetails.FullPathName, eventDetails.IsDir)
+			err := uc.cleaner.CleanUnusedSolutions(
+				eventDetails.FullPathName,
+				eventDetails.IsDir,
+			)
 			if err != nil {
 				uc.logger.Error().
 					Err(err).

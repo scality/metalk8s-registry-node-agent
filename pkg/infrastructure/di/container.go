@@ -58,7 +58,7 @@ type Container struct {
 	validateSolutionArchiveUseCase    *usecase.ValidateSolutionArchive
 	downloadSolutionArchiveUseCase    *usecase.DownloadSolutionArchive
 	getExternalSolutionArchiveUseCase *usecase.GetExternalSolutionArchive
-	cleanArchivesUseCase              *usecase.CleanArchives
+	cleanArchivesUseCase              *usecase.CleanArchive
 }
 
 func NewContainer(
