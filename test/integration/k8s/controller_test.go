@@ -114,6 +114,7 @@ var _ = BeforeSuite(func() {
 	container.GetMockFileSystemMultipartInspector()
 	container.GetMockFileSystemMultipartRemover()
 	container.GetMockFileSystemMultipartUploader()
+	container.GetMockFileSystemArchiveSaver()
 	container.GetMockHTTPInternClient()
 
 	err = (&controller.NodeSolutionArchiveReconciler{

@@ -50,6 +50,7 @@ type Container struct {
 	multipartInspector     service.MultipartInspector
 	multipartRemover       service.MultipartRemover
 	multipartUploader      service.MultipartUploader
+	archiveSaver           service.ArchiveSaver
 
 	uploadPartHandler              *handler.UploadPart
 	downloadSolutionArchiveHandler *handler.DownloadSolutionArchive

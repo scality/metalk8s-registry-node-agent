@@ -84,13 +84,12 @@ func (c *Container) GetDownloadSolutionArchiveUseCase() *usecase.DownloadSolutio
 
 func (c *Container) GetGetExternalSolutionArchiveUseCase() *usecase.GetExternalSolutionArchive {
 	if c.getExternalSolutionArchiveUseCase == nil {
-		store := c.GetFSSolutionArchiveStorage()
 		c.getExternalSolutionArchiveUseCase = usecase.NewGetExternalSolutionArchive(
 			c.GetLogger(),
-			store,
+			c.GetFSSolutionArchiveStorage(),
 			c.getHTTPExternalDownloader(),
 			c.GetFileSystemArchiveLister(),
-			store,
+			c.GetFileSystemArchiveSaver(),
 		)
 	}
 	return c.getExternalSolutionArchiveUseCase

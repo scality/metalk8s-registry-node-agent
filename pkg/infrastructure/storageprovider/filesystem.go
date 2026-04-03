@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/json"
 
-	"io"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -96,40 +95,6 @@ func (f *FileSystem) Init() error {
 			WithDetail("failed to create control directory").
 			WithProperty("control_directory", controlDirectoryPath).
 			Throw()
-	}
-
-	return nil
-}
-
-func (f *FileSystem) SaveFile(
-	fileName string,
-	content io.Reader,
-	perm os.FileMode,
-) error {
-	if err := library.EnforceNamingConventions(fileName); err != nil {
-		return errors.Stamp(err)
-	}
-
-	if err := f.saveFile(fileName, content, perm); err != nil {
-		return errors.Stamp(err)
-	}
-
-	return nil
-}
-
-func (f *FileSystem) saveFile(
-	fileName string,
-	content io.Reader,
-	perm os.FileMode,
-) error {
-	filePath := filepath.Join(f.solutionArchivesLocation, fileName)
-	if err := library.CheckFile(filePath); err != nil && !errors.Is(err,
-		errors.Intercept(domain.ErrNotFound).WithIdentifier(404000).Throw()) {
-		return errors.Stamp(err)
-	}
-
-	if err := library.SaveFile(filePath, content, perm); err != nil {
-		return errors.Stamp(err)
 	}
 
 	return nil
