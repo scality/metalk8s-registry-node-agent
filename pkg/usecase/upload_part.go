@@ -16,6 +16,7 @@ type UploadPart struct {
 	store             service.StorageProvider
 	bucketManager     service.BucketManager
 	multipartUploader service.MultipartUploader
+	multipartRemover  service.MultipartRemover
 	rootAPIPath       string
 }
 
@@ -24,6 +25,7 @@ func NewUploadPart(
 	store service.StorageProvider,
 	bucketManager service.BucketManager,
 	multipartUploader service.MultipartUploader,
+	multipartRemover service.MultipartRemover,
 	rootAPIPath string,
 ) *UploadPart {
 	l := logger.With().Str("use_case", "upload_part").Logger()
@@ -33,6 +35,7 @@ func NewUploadPart(
 		store:             store,
 		bucketManager:     bucketManager,
 		multipartUploader: multipartUploader,
+		multipartRemover:  multipartRemover,
 		rootAPIPath:       rootAPIPath,
 	}
 }
@@ -83,7 +86,10 @@ func (uc *UploadPart) Execute(part *domain.Part) (*domain.SolutionArchiveStatus,
 	if solutionArchiveFromManifest.Size == 0 {
 		solutionArchiveFromManifest.Size = part.SolutionArchive.Size
 
-		err = uc.store.DeleteMultipartFile(sessionBucket, solutionArchiveFromManifest)
+		err = uc.multipartRemover.DeleteMultipartFile(
+			sessionBucket,
+			solutionArchiveFromManifest,
+		)
 		if err != nil {
 			return nil, errors.Intercept(err).
 				WithProperty("instance", fmt.Sprintf("%s/uploads/%s", uc.rootAPIPath, part.SolutionArchive.Name)).
@@ -115,7 +121,10 @@ func (uc *UploadPart) Execute(part *domain.Part) (*domain.SolutionArchiveStatus,
 	// move it to the storage root location and then
 	// remove the bucket.
 	cleanUpCorrupted := func() {
-		if err := uc.store.DeleteMultipartFile(sessionBucket, part.SolutionArchive); err != nil {
+		if err := uc.multipartRemover.DeleteMultipartFile(
+			sessionBucket,
+			part.SolutionArchive,
+		); err != nil {
 			uc.logger.Error().Err(err).Any("solution archive", part.SolutionArchive).Msg("failed to delete multipart file")
 		}
 

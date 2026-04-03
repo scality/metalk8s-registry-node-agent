@@ -44,6 +44,7 @@ type StorageProvider interface {
 	ArchiveLister
 	ArchiveRemover
 	MultipartUploader
+	MultipartRemover
 
 	// RWLocker primitives:
 	Lock()
@@ -90,10 +91,6 @@ type StorageProvider interface {
 		bucketName string,
 		solutionArchiveMeta *domain.SolutionArchive,
 	) (*domain.SolutionArchiveStatus, error)
-
-	// DeleteMultipartFile deletes a multipart file recipient from a bucket
-	// based in given bucketName and solutionArchiveMeta.
-	DeleteMultipartFile(bucketName string, solutionArchiveMeta *domain.SolutionArchive) error
 
 	// AddWatchFileOrDirectory adds a file or directory to the watcher.
 	AddWatchFileOrDirectory(path string) error

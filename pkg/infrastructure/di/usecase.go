@@ -11,6 +11,7 @@ func (c *Container) getUploadPartUseCase() *usecase.UploadPart {
 			store,
 			store,
 			store,
+			store,
 			c.GetRootExternAPIPath(),
 		)
 	}
