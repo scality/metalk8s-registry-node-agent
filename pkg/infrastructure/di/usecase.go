@@ -11,7 +11,7 @@ func (c *Container) getUploadPartUseCase() *usecase.UploadPart {
 			store,
 			c.GetFileSystemBucketManager(),
 			store,
-			store,
+			c.GetFileSystemMultipartRemover(),
 			c.GetFileSystemMultipartInspector(),
 			c.GetRootExternAPIPath(),
 		)

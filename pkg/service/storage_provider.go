@@ -32,7 +32,6 @@ package service
 // The responsibility for close all io objects is delegated to the caller.
 type StorageProvider interface {
 	MultipartUploader
-	MultipartRemover
 	ArchiveSaver
 
 	// RWLocker primitives:

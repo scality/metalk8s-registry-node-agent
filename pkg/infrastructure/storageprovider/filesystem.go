@@ -151,18 +151,6 @@ func (f *FileSystem) CreateMultipartFiles(
 	return meta, nil
 }
 
-// DeleteMultipartFile deletes a multipart file recipient from a bucket based on bucketName and solutionArchiveMeta.
-func (f *FileSystem) DeleteMultipartFile(
-	bucketName string,
-	solutionArchiveMeta *domain.SolutionArchive,
-) error {
-	if err := f.deleteMultipartFile(bucketName, solutionArchiveMeta); err != nil {
-		return errors.Stamp(err)
-	}
-
-	return nil
-}
-
 // WritePartToMultipartFile writes the content of the given part into the multipart file recipient
 // on the bucket indicated by the given bucketName.
 func (f *FileSystem) WritePartToMultipartFile(bucketName string,
@@ -363,57 +351,6 @@ func (f *FileSystem) createMultipartFiles(
 		SolutionArchive: solutionArchiveMeta,
 		Parts:           make(map[int64]*domain.PartMeta),
 	}, nil
-}
-
-func (f *FileSystem) deleteMultipartFile(
-	bucketName string,
-	solutionArchiveMeta *domain.SolutionArchive,
-) error {
-	if err := library.CheckDir(f.genBucketPath(bucketName)); err != nil {
-		return errors.Stamp(err)
-	}
-
-	metaFilePath, partsFilePath, recipientFilePath := library.GenMultipartFilePaths(
-		f.solutionArchivesLocation,
-		bucketName,
-		solutionArchiveMeta.Name,
-	)
-
-	if err := library.CheckFile(metaFilePath); err != nil {
-		return errors.Stamp(err)
-	}
-
-	if err := library.CheckFile(partsFilePath); err != nil {
-		return errors.Stamp(err)
-	}
-
-	if err := library.CheckFile(recipientFilePath); err != nil {
-		return errors.Stamp(err)
-	}
-
-	problems := make(map[string]any)
-
-	if err := os.Remove(metaFilePath); err != nil {
-		problems["problem_remove_meta_file"] = err
-	}
-
-	if err := os.Remove(partsFilePath); err != nil {
-		problems["problem_remove_parts_file"] = err
-	}
-
-	if err := os.Remove(recipientFilePath); err != nil {
-		problems["problem_remove_recipient_filer"] = err
-	}
-
-	if len(problems) > 0 {
-		return errors.From(domain.ErrStorageProviderInternal).
-			WithIdentifier(500000).
-			WithDetail("unable to delete the multipart file").
-			WithProperties(problems).
-			Throw()
-	}
-
-	return nil
 }
 
 func (f *FileSystem) writePartToMultipartFile(
