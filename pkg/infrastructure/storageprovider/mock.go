@@ -70,17 +70,6 @@ func (f *MockFileSystem) Init() error {
 	return nil
 }
 
-func (f *MockFileSystem) Start(filenameChan chan domain.FileEventDetails) error {
-	f.Lock()
-	defer f.Unlock()
-
-	return f.StartWatchFiles(filenameChan)
-}
-
-func (f *MockFileSystem) Stop() error {
-	return f.StopWatchFiles()
-}
-
 func (f *MockFileSystem) SaveFile(
 	fileName string,
 	content io.Reader,

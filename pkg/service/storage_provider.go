@@ -51,8 +51,4 @@ type StorageProvider interface {
 
 	// Init initializes the storage provider.
 	Init() error
-
-	// HashFile calculates the hash of a file from the root location in the
-	// storage based on its fileName.
-	HashFile(fileName string) (string, error)
 }
