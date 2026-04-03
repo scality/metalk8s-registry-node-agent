@@ -13,6 +13,7 @@ type GetExternalSolutionArchive struct {
 	store              service.StorageProvider
 	externalDownloader service.ExternalDownloader
 	archiveLister      service.ArchiveLister
+	archiveSaver       service.ArchiveSaver
 }
 
 func NewGetExternalSolutionArchive(
@@ -20,6 +21,7 @@ func NewGetExternalSolutionArchive(
 	store service.StorageProvider,
 	externalDownloader service.ExternalDownloader,
 	archiveLister service.ArchiveLister,
+	archiveSaver service.ArchiveSaver,
 ) *GetExternalSolutionArchive {
 	l := logger.With().Str("use_case", "get_external_solution_archive").Logger()
 
@@ -28,6 +30,7 @@ func NewGetExternalSolutionArchive(
 		store:              store,
 		externalDownloader: externalDownloader,
 		archiveLister:      archiveLister,
+		archiveSaver:       archiveSaver,
 	}
 }
 
@@ -57,8 +60,11 @@ func (uc *GetExternalSolutionArchive) Execute(solutionArchive *domain.SolutionAr
 		return errors.Stamp(err)
 	}
 
-	err = uc.store.SaveFile(library.GenSolutionArchiveFileName(solutionArchive),
-		body, library.FileSystemDefaultFileMode)
+	err = uc.archiveSaver.SaveFile(
+		library.GenSolutionArchiveFileName(solutionArchive),
+		body,
+		library.FileSystemDefaultFileMode,
+	)
 	if err != nil {
 		return errors.Stamp(err)
 	}

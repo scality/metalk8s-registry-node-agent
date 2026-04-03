@@ -1,10 +1,5 @@
 package service
 
-import (
-	"io"
-	"os"
-)
-
 // StorageProvider encapsulates all storage methods required by the Solution
 // Archives Upload feature.
 //
@@ -46,6 +41,7 @@ type StorageProvider interface {
 	MultipartInspector
 	ArchiveReader
 	FileWatcher
+	ArchiveSaver
 
 	// RWLocker primitives:
 	Lock()
@@ -55,16 +51,6 @@ type StorageProvider interface {
 
 	// Init initializes the storage provider.
 	Init() error
-
-	// SaveFile saves a file to the root location in the storage. The fileName
-	// MUST be unique relative to the root location.
-	//
-	// When supported by the storage backend, the perm parameter is used to set
-	// the file permissions.
-	//
-	// The caller should close the content reader as soon as possible after
-	// this method returns.
-	SaveFile(fileName string, content io.Reader, perm os.FileMode) error
 
 	// HashFile calculates the hash of a file from the root location in the
 	// storage based on its fileName.

@@ -96,6 +96,7 @@ func (c *Container) GetGetExternalSolutionArchiveUseCase() *usecase.GetExternalS
 			store,
 			c.getHTTPExternalDownloader(),
 			store,
+			store,
 		)
 	}
 	return c.getExternalSolutionArchiveUseCase
