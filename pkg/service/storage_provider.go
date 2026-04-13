@@ -164,4 +164,10 @@ type StorageProvider interface {
 
 	// RemoveWatchFileOrDirectory removes a file or directory from the watcher.
 	RemoveWatchFileOrDirectory(path string) error
+
+	// CleanUnusedSolutionArchives cleans unused solution archives from the storage.
+	CleanUnusedSolutionArchives(path string, isDir bool) error
+
+	// CleanUnusedSolutions cleans unused solutions from the storage.
+	CleanUnusedSolutions(path string, isDir bool) error
 }

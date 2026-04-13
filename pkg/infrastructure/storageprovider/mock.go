@@ -353,3 +353,11 @@ func (f *MockFileSystem) AddWatchFileOrDirectory(path string) error {
 func (f *MockFileSystem) RemoveWatchFileOrDirectory(path string) error {
 	return nil
 }
+
+func (f *MockFileSystem) CleanUnusedSolutionArchives(path string, isDir bool) error {
+	return nil
+}
+
+func (f *MockFileSystem) CleanUnusedSolutions(path string, isDir bool) error {
+	return nil
+}

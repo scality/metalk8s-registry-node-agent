@@ -9,17 +9,7 @@ import (
 
 	"github.com/scality/metalk8s-registry-node-agent/cmd/config"
 	"github.com/scality/metalk8s-registry-node-agent/pkg/domain"
-	"github.com/scality/metalk8s-registry-node-agent/pkg/infrastructure/archivedownloader"
-	"github.com/scality/metalk8s-registry-node-agent/pkg/infrastructure/archivemounter"
-	"github.com/scality/metalk8s-registry-node-agent/pkg/infrastructure/archiveremover"
-	"github.com/scality/metalk8s-registry-node-agent/pkg/infrastructure/archiveunmounter"
-	"github.com/scality/metalk8s-registry-node-agent/pkg/infrastructure/archivevalidator"
 	"github.com/scality/metalk8s-registry-node-agent/pkg/infrastructure/externaldownloader"
-	"github.com/scality/metalk8s-registry-node-agent/pkg/infrastructure/externalsolutionarchivegetter"
-	"github.com/scality/metalk8s-registry-node-agent/pkg/infrastructure/partuploader"
-	"github.com/scality/metalk8s-registry-node-agent/pkg/infrastructure/sessioninitializer"
-	"github.com/scality/metalk8s-registry-node-agent/pkg/infrastructure/sessionremover"
-	"github.com/scality/metalk8s-registry-node-agent/pkg/infrastructure/solutionarchivecleaner"
 	"github.com/scality/metalk8s-registry-node-agent/pkg/presentation/http/extern"
 	"github.com/scality/metalk8s-registry-node-agent/pkg/presentation/http/handler"
 	"github.com/scality/metalk8s-registry-node-agent/pkg/presentation/http/intern"
@@ -57,17 +47,7 @@ type Container struct {
 	externResolver extern.StrictServerInterface
 	internResolver intern.StrictServerInterface
 
-	httpExternalDownloader               *externaldownloader.HTTP
-	storagePartUploader                  *partuploader.Storage
-	storageSessionInitializer            *sessioninitializer.Storage
-	storageSolutionArchiveRemover        *archiveremover.Storage
-	storageSessionRemover                *sessionremover.Storage
-	storageSolutionArchiveValidator      *archivevalidator.Storage
-	storageSolutionArchiveDownloader     *archivedownloader.Storage
-	storageExternalSolutionArchiveGetter *externalsolutionarchivegetter.Storage
-	storageSolutionArchiveMounter        *archivemounter.Storage
-	storageSolutionArchiveUnmounter      *archiveunmounter.Storage
-	solutionArchiveCleaner               *solutionarchivecleaner.FileSystem
+	httpExternalDownloader *externaldownloader.HTTP
 
 	uploadPartUseCase                 *usecase.UploadPart
 	initializeSessionUseCase          *usecase.InitializeSession
@@ -78,6 +58,7 @@ type Container struct {
 	validateSolutionArchiveUseCase    *usecase.ValidateSolutionArchive
 	downloadSolutionArchiveUseCase    *usecase.DownloadSolutionArchive
 	getExternalSolutionArchiveUseCase *usecase.GetExternalSolutionArchive
+	cleanArchivesUseCase              *usecase.CleanArchives
 }
 
 func NewContainer(
