@@ -13,22 +13,28 @@ import (
 )
 
 type DownloadSolutionArchive struct {
-	logger      *zerolog.Logger
-	store       service.StorageProvider
-	rootAPIPath string
+	logger        *zerolog.Logger
+	store         service.StorageProvider
+	archiveLister service.ArchiveLister
+	archiveReader service.ArchiveReader
+	rootAPIPath   string
 }
 
 func NewDownloadSolutionArchive(
 	logger *zerolog.Logger,
 	store service.StorageProvider,
+	archiveLister service.ArchiveLister,
+	archiveReader service.ArchiveReader,
 	rootAPIPath string,
 ) *DownloadSolutionArchive {
 	l := logger.With().Str("use_case", "download_solution_archive").Logger()
 
 	return &DownloadSolutionArchive{
-		logger:      &l,
-		store:       store,
-		rootAPIPath: rootAPIPath,
+		logger:        &l,
+		store:         store,
+		archiveLister: archiveLister,
+		archiveReader: archiveReader,
+		rootAPIPath:   rootAPIPath,
 	}
 }
 
@@ -44,7 +50,7 @@ func (uc *DownloadSolutionArchive) Execute(
 
 	// List all solution archives in the storage
 	// matching solutionArchiveStorageNamePattern
-	fileNames, err := uc.store.ListFiles()
+	fileNames, err := uc.archiveLister.ListFiles()
 	if err != nil {
 		return nil, errors.Stamp(err)
 	}
@@ -60,12 +66,12 @@ func (uc *DownloadSolutionArchive) Execute(
 	}
 
 	solutionArchiveFileName := library.GenSolutionArchiveFileName(solutionArchive)
-	file, err := uc.store.GetFile(solutionArchiveFileName)
+	file, err := uc.archiveReader.GetFile(solutionArchiveFileName)
 	if err != nil {
 		return nil, errors.Stamp(err)
 	}
 
-	size, err := uc.store.GetSizeFromFileInfos(solutionArchiveFileName)
+	size, err := uc.archiveLister.GetArchiveSize(solutionArchiveFileName)
 	if err != nil {
 		return nil, errors.Stamp(err)
 	}

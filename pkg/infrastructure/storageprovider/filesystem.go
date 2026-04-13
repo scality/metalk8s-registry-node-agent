@@ -115,19 +115,6 @@ func (f *FileSystem) Init() error {
 	return nil
 }
 
-// Start starts the watcher on the storage provider.
-func (f *FileSystem) Start(filenameChan chan domain.FileEventDetails) error {
-	f.Lock()
-	defer f.Unlock()
-
-	return f.startWatchFiles(filenameChan)
-}
-
-// Stop stops the watcher on the storage provider.
-func (f *FileSystem) Stop() error {
-	return f.stopWatchFiles()
-}
-
 func (f *FileSystem) SaveFile(
 	fileName string,
 	content io.Reader,
@@ -177,22 +164,6 @@ func (f *FileSystem) DeleteFile(
 	}
 
 	return nil
-}
-
-// HashFile calculates the hash of a file from the root location in the storage based on its fileName.
-func (f *FileSystem) HashFile(
-	fileName string,
-) (string, error) {
-	if err := library.EnforceNamingConventions(fileName); err != nil {
-		return "", errors.Stamp(err)
-	}
-
-	hash, err := f.hashFile(fileName)
-	if err != nil {
-		return "", errors.Stamp(err)
-	}
-
-	return hash, nil
 }
 
 // CreateBucket creates a new bucket in the storage.
@@ -327,8 +298,8 @@ func (f *FileSystem) ConsolidateMultipartFile(
 	return nil
 }
 
-// GetHashFromFileInfos retrieves the hash of a file from the storage backend.
-func (f *FileSystem) GetHashFromFileInfos(filename string) (string, error) {
+// GetArchiveHash retrieves the hash of a file from the storage backend.
+func (f *FileSystem) GetArchiveHash(filename string) (string, error) {
 	if _, ok := f.watchedFileInfos[filename]; !ok {
 		return "", errors.From(domain.ErrStorageProviderNotFound).
 			WithIdentifier(404000).
@@ -340,8 +311,8 @@ func (f *FileSystem) GetHashFromFileInfos(filename string) (string, error) {
 	return f.watchedFileInfos[filename].Hash, nil
 }
 
-// GetSizeFromFileInfos retrieves the size of a file from the storage backend.
-func (f *FileSystem) GetSizeFromFileInfos(filename string) (int64, error) {
+// GetArchiveSize retrieves the size of a file from the storage backend.
+func (f *FileSystem) GetArchiveSize(filename string) (int64, error) {
 	if _, ok := f.watchedFileInfos[filename]; !ok {
 		return 0, errors.From(domain.ErrStorageProviderNotFound).
 			WithDetail("file not found").
@@ -632,56 +603,6 @@ func (f *FileSystem) deleteFile(
 	}
 
 	return nil
-}
-
-func (f *FileSystem) hashFile(
-	fileName string,
-) (string, error) {
-	if f.isFileInfoUpToDate(fileName) {
-		return f.watchedFileInfos[fileName].Hash, nil
-	}
-
-	filePath := filepath.Join(f.solutionArchivesLocation, fileName)
-	if err := library.CheckFile(filePath); err != nil {
-		return "", errors.Stamp(err)
-	}
-
-	hash, err := library.HashFile(filePath)
-	if err != nil {
-		return "", errors.Stamp(err)
-	}
-
-	return hash, nil
-}
-
-func (f *FileSystem) isFileInfoUpToDate(filename string) bool {
-	if f.watchedFileInfos == nil {
-		return false
-	}
-
-	storedFileInfo, ok := f.watchedFileInfos[filename]
-	if !ok {
-		return false
-	}
-
-	filePath := filepath.Join(f.solutionArchivesLocation, filename)
-
-	physicalFileInfo, err := os.Stat(filePath)
-	if err != nil {
-		f.logger.Error().Err(err).Msg("Failed to get file info.")
-
-		return false
-	}
-
-	if storedFileInfo.Size != physicalFileInfo.Size() {
-		return false
-	}
-
-	if storedFileInfo.LastChangedAt != physicalFileInfo.ModTime() {
-		return false
-	}
-
-	return true
 }
 
 func (f *FileSystem) genFileOnBucketPath(
@@ -1594,7 +1515,7 @@ func (f *FileSystem) watchFiles(filenameChan chan domain.FileEventDetails) {
 	}
 }
 
-func (f *FileSystem) startWatchFiles(filenameChan chan domain.FileEventDetails) error {
+func (f *FileSystem) StartWatchFiles(filenameChan chan domain.FileEventDetails) error {
 	if err := f.updateWatchedFileInfos(f.saveWatchedFileInfos); err != nil {
 		return errors.Stamp(err)
 	}
@@ -1686,7 +1607,7 @@ func (f *FileSystem) startWatchFiles(filenameChan chan domain.FileEventDetails) 
 	}(dirEntriesToAnalyze)
 	return nil
 }
-func (f *FileSystem) stopWatchFiles() error {
+func (f *FileSystem) StopWatchFiles() error {
 	defer f.Wait()
 
 	if err := f.watcher.Close(); err != nil {

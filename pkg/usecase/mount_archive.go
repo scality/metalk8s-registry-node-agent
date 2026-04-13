@@ -10,19 +10,25 @@ import (
 )
 
 type MountSolutionArchive struct {
-	logger *zerolog.Logger
-	store  service.StorageProvider
+	logger         *zerolog.Logger
+	store          service.StorageProvider
+	archiveMounter service.ArchiveMounter
+	archiveLister  service.ArchiveLister
 }
 
 func NewMountSolutionArchive(
 	logger *zerolog.Logger,
 	store service.StorageProvider,
+	archiveMounter service.ArchiveMounter,
+	archiveLister service.ArchiveLister,
 ) *MountSolutionArchive {
 	l := logger.With().Str("use_case", "mount_solution_archive").Logger()
 
 	return &MountSolutionArchive{
-		logger: &l,
-		store:  store,
+		logger:         &l,
+		store:          store,
+		archiveMounter: archiveMounter,
+		archiveLister:  archiveLister,
 	}
 }
 
@@ -35,14 +41,14 @@ func (uc *MountSolutionArchive) Execute(solutionArchive *domain.SolutionArchive)
 
 	// List all solution archives in the storage
 	// matching solutionArchiveStorageNamePattern
-	fileNames, err := uc.store.ListFiles()
+	fileNames, err := uc.archiveLister.ListFiles()
 	if err != nil {
 		return errors.Stamp(err)
 	}
 
 	// Check if the solution archive exists in the storage
 	if library.SolutionArchiveExists(solutionArchive, fileNames) {
-		err := uc.store.MountFile(library.GenSolutionArchiveFileName(solutionArchive),
+		err := uc.archiveMounter.MountFile(library.GenSolutionArchiveFileName(solutionArchive),
 			library.GenSolutionDirName(solutionArchive))
 		if err != nil {
 			if errors.Is(err,

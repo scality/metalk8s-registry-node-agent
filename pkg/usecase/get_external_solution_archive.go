@@ -12,12 +12,16 @@ type GetExternalSolutionArchive struct {
 	logger             *zerolog.Logger
 	store              service.StorageProvider
 	externalDownloader service.ExternalDownloader
+	archiveLister      service.ArchiveLister
+	archiveSaver       service.ArchiveSaver
 }
 
 func NewGetExternalSolutionArchive(
 	logger *zerolog.Logger,
 	store service.StorageProvider,
 	externalDownloader service.ExternalDownloader,
+	archiveLister service.ArchiveLister,
+	archiveSaver service.ArchiveSaver,
 ) *GetExternalSolutionArchive {
 	l := logger.With().Str("use_case", "get_external_solution_archive").Logger()
 
@@ -25,6 +29,8 @@ func NewGetExternalSolutionArchive(
 		logger:             &l,
 		store:              store,
 		externalDownloader: externalDownloader,
+		archiveLister:      archiveLister,
+		archiveSaver:       archiveSaver,
 	}
 }
 
@@ -39,7 +45,7 @@ func (uc *GetExternalSolutionArchive) Execute(solutionArchive *domain.SolutionAr
 
 	// List all solution archives in the storage
 	// matching solutionArchiveStorageNamePattern
-	fileNames, err := uc.store.ListFiles()
+	fileNames, err := uc.archiveLister.ListFiles()
 	if err != nil {
 		return errors.Stamp(err)
 	}
@@ -54,8 +60,11 @@ func (uc *GetExternalSolutionArchive) Execute(solutionArchive *domain.SolutionAr
 		return errors.Stamp(err)
 	}
 
-	err = uc.store.SaveFile(library.GenSolutionArchiveFileName(solutionArchive),
-		body, library.FileSystemDefaultFileMode)
+	err = uc.archiveSaver.SaveFile(
+		library.GenSolutionArchiveFileName(solutionArchive),
+		body,
+		library.FileSystemDefaultFileMode,
+	)
 	if err != nil {
 		return errors.Stamp(err)
 	}

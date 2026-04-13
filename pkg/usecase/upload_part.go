@@ -12,22 +12,34 @@ import (
 )
 
 type UploadPart struct {
-	logger      *zerolog.Logger
-	store       service.StorageProvider
-	rootAPIPath string
+	logger             *zerolog.Logger
+	store              service.StorageProvider
+	bucketManager      service.BucketManager
+	multipartUploader  service.MultipartUploader
+	multipartRemover   service.MultipartRemover
+	multipartInspector service.MultipartInspector
+	rootAPIPath        string
 }
 
 func NewUploadPart(
 	logger *zerolog.Logger,
 	store service.StorageProvider,
+	bucketManager service.BucketManager,
+	multipartUploader service.MultipartUploader,
+	multipartRemover service.MultipartRemover,
+	multipartInspector service.MultipartInspector,
 	rootAPIPath string,
 ) *UploadPart {
 	l := logger.With().Str("use_case", "upload_part").Logger()
 
 	return &UploadPart{
-		logger:      &l,
-		store:       store,
-		rootAPIPath: rootAPIPath,
+		logger:             &l,
+		store:              store,
+		bucketManager:      bucketManager,
+		multipartUploader:  multipartUploader,
+		multipartRemover:   multipartRemover,
+		multipartInspector: multipartInspector,
+		rootAPIPath:        rootAPIPath,
 	}
 }
 
@@ -37,7 +49,7 @@ func (uc *UploadPart) Execute(part *domain.Part) (*domain.SolutionArchiveStatus,
 	defer uc.store.Unlock()
 
 	// List all the buckets
-	buckets, err := uc.store.ListBuckets()
+	buckets, err := uc.bucketManager.ListBuckets()
 	if err != nil {
 		return nil, errors.Stamp(err)
 	}
@@ -51,7 +63,7 @@ func (uc *UploadPart) Execute(part *domain.Part) (*domain.SolutionArchiveStatus,
 	}
 
 	// Load the manifest from metadata file
-	solutionArchiveFromManifest, err := uc.store.GetMultipartFile(sessionBucket)
+	solutionArchiveFromManifest, err := uc.multipartInspector.GetMultipartFile(sessionBucket)
 	if err != nil {
 		return nil, errors.Intercept(err).
 			WithProperty("instance", fmt.Sprintf("%s/uploads/%s", uc.rootAPIPath, part.SolutionArchive.Name)).
@@ -77,14 +89,17 @@ func (uc *UploadPart) Execute(part *domain.Part) (*domain.SolutionArchiveStatus,
 	if solutionArchiveFromManifest.Size == 0 {
 		solutionArchiveFromManifest.Size = part.SolutionArchive.Size
 
-		err = uc.store.DeleteMultipartFile(sessionBucket, solutionArchiveFromManifest)
+		err = uc.multipartRemover.DeleteMultipartFile(
+			sessionBucket,
+			solutionArchiveFromManifest,
+		)
 		if err != nil {
 			return nil, errors.Intercept(err).
 				WithProperty("instance", fmt.Sprintf("%s/uploads/%s", uc.rootAPIPath, part.SolutionArchive.Name)).
 				Throw()
 		}
 
-		_, err = uc.store.CreateMultipartFiles(sessionBucket, solutionArchiveFromManifest)
+		_, err = uc.multipartUploader.CreateMultipartFiles(sessionBucket, solutionArchiveFromManifest)
 		if err != nil {
 			return nil, errors.Intercept(err).
 				WithProperty("instance", fmt.Sprintf("%s/uploads/%s", uc.rootAPIPath, part.SolutionArchive.Name)).
@@ -94,7 +109,7 @@ func (uc *UploadPart) Execute(part *domain.Part) (*domain.SolutionArchiveStatus,
 
 	part.SolutionArchive = solutionArchiveFromManifest
 
-	solutionArchiveStatus, err := uc.store.WritePartToMultipartFile(sessionBucket, part)
+	solutionArchiveStatus, err := uc.multipartUploader.WritePartToMultipartFile(sessionBucket, part)
 	if err != nil {
 		return nil, errors.Intercept(err).
 			WithProperty("instance", fmt.Sprintf("%s/uploads/%s", uc.rootAPIPath, part.SolutionArchive.Name)).
@@ -109,16 +124,23 @@ func (uc *UploadPart) Execute(part *domain.Part) (*domain.SolutionArchiveStatus,
 	// move it to the storage root location and then
 	// remove the bucket.
 	cleanUpCorrupted := func() {
-		if err := uc.store.DeleteMultipartFile(sessionBucket, part.SolutionArchive); err != nil {
+		if err := uc.multipartRemover.DeleteMultipartFile(
+			sessionBucket,
+			part.SolutionArchive,
+		); err != nil {
 			uc.logger.Error().Err(err).Any("solution archive", part.SolutionArchive).Msg("failed to delete multipart file")
 		}
 
-		if _, err := uc.store.CreateMultipartFiles(sessionBucket, part.SolutionArchive); err != nil {
+		if _, err := uc.multipartUploader.CreateMultipartFiles(sessionBucket, part.SolutionArchive); err != nil {
 			uc.logger.Error().Err(err).Any("solution archive", part.SolutionArchive).Msg("failed to create multipart file")
 		}
 	}
 
-	err = uc.store.ConsolidateMultipartFile(sessionBucket, part.SolutionArchive, library.FileSystemDefaultFileMode)
+	err = uc.multipartUploader.ConsolidateMultipartFile(
+		sessionBucket,
+		part.SolutionArchive,
+		library.FileSystemDefaultFileMode,
+	)
 	if err != nil {
 		cleanUpCorrupted()
 
@@ -128,7 +150,7 @@ func (uc *UploadPart) Execute(part *domain.Part) (*domain.SolutionArchiveStatus,
 	}
 
 	solutionArchiveFileName := library.GenSolutionArchiveFileName(part.SolutionArchive)
-	err = uc.store.MoveFileToRoot(sessionBucket, part.SolutionArchive.Name, solutionArchiveFileName)
+	err = uc.multipartUploader.MoveFileToRoot(sessionBucket, part.SolutionArchive.Name, solutionArchiveFileName)
 	if err != nil {
 		cleanUpCorrupted()
 
@@ -136,7 +158,7 @@ func (uc *UploadPart) Execute(part *domain.Part) (*domain.SolutionArchiveStatus,
 			WithProperty("instance", fmt.Sprintf("%s/uploads/%s", uc.rootAPIPath, part.SolutionArchive.Name)).
 			Throw()
 	}
-	err = uc.store.DeleteBucket(sessionBucket)
+	err = uc.bucketManager.DeleteBucket(sessionBucket)
 	if err != nil {
 		return nil, errors.Intercept(err).
 			WithProperty("instance", fmt.Sprintf("%s/uploads/%s", uc.rootAPIPath, part.SolutionArchive.Name)).
