@@ -104,6 +104,17 @@ var _ = BeforeSuite(func() {
 	eventChan := make(chan event.GenericEvent)
 	container := di.NewContainer(ctx, &config.Environment{}, filenameChan, deleteChan)
 	container.GetMockFSSolutionArchiveStorage()
+	container.GetMockFileSystemBucketManager()
+	container.GetMockFileSystemArchiveRemover()
+	container.GetMockFileSystemArchiveReader()
+	container.GetMockFileSystemFileWatcher()
+	container.GetMockFileSystemArchiveMounter()
+	container.GetMockFileSystemArchiveCleaner()
+	container.GetMockFileSystemArchiveLister()
+	container.GetMockFileSystemMultipartInspector()
+	container.GetMockFileSystemMultipartRemover()
+	container.GetMockFileSystemMultipartUploader()
+	container.GetMockFileSystemArchiveSaver()
 	container.GetMockHTTPInternClient()
 
 	err = (&controller.NodeSolutionArchiveReconciler{

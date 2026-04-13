@@ -438,7 +438,7 @@ func main() {
 
 	// Start the watcher for the file system solution archive storage
 	setupLog.Info("starting file system solution archive storage watcher")
-	if err := container.GetFSSolutionArchiveStorage().StartWatchFiles(filenameChan); err != nil {
+	if err := container.GetFileSystemFileWatcher().StartWatchFiles(filenameChan); err != nil {
 		setupLog.Error(err, "problem starting file system solution archive storage")
 		os.Exit(1)
 	}
@@ -456,7 +456,7 @@ func main() {
 	setupLog.V(1).Info("channels closed")
 
 	// Stop the watcher for the file system solution archive storage
-	if err := container.GetFSSolutionArchiveStorage().StopWatchFiles(); err != nil {
+	if err := container.GetFileSystemFileWatcher().StopWatchFiles(); err != nil {
 		setupLog.Error(err, "problem stopping file system solution archive storage")
 		os.Exit(1)
 	}

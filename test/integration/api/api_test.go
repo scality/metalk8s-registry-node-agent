@@ -169,14 +169,14 @@ var _ = BeforeSuite(func() {
 		"artesca-base-4.0.0-preview.1.iso": "platform2\nplatform1\nplatform0\n",
 	} {
 		err := testingSuite.container.
-			GetFSSolutionArchiveStorage().
+			GetFileSystemArchiveSaver().
 			SaveFile(fileName, bytes.NewReader([]byte(content)), 0644)
 		Expect(err).NotTo(HaveOccurred())
 	}
 
 	By("Starting the file system watcher for the solution archive storage")
 	go func() {
-		if err := testingSuite.container.GetFSSolutionArchiveStorage().StartWatchFiles(filenameChan); err != nil {
+		if err := testingSuite.container.GetFileSystemFileWatcher().StartWatchFiles(filenameChan); err != nil {
 			testingSuite.container.GetLogger().Error().Err(err).Msg("problem starting file system solution archive storage")
 		}
 	}()

@@ -31,18 +31,6 @@ package service
 //
 // The responsibility for close all io objects is delegated to the caller.
 type StorageProvider interface {
-	BucketManager
-	ArchiveCleaner
-	ArchiveMounter
-	ArchiveLister
-	ArchiveRemover
-	MultipartUploader
-	MultipartRemover
-	MultipartInspector
-	ArchiveReader
-	FileWatcher
-	ArchiveSaver
-
 	// RWLocker primitives:
 	Lock()
 	Unlock()
@@ -51,4 +39,21 @@ type StorageProvider interface {
 
 	// Init initializes the storage provider.
 	Init() error
+
+	// GetArchiveSize retrieves the size of a file from the storage
+	// backend.
+	GetArchiveSize(fileName string) (int64, error)
+
+	// GetArchiveHash retrieves the hash of a file from the storage
+	// backend.
+	GetArchiveHash(fileName string) (string, error)
+
+	// ControlDir returns the control directory.
+	ControlDir() string
+
+	// InitWatchedFileInfos initializes the watched file infos.
+	InitWatchedFileInfos() error
+
+	// RefreshWatchedFileInfos refreshes the watched file infos.
+	RefreshWatchedFileInfos() error
 }
