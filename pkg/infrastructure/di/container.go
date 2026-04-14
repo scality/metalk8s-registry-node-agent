@@ -52,6 +52,9 @@ type Container struct {
 	multipartUploader      service.MultipartUploader
 	archiveSaver           service.ArchiveSaver
 
+	inMemoryArchiveLocker service.LockerUnlocker
+	inMemoryBucketLocker  service.LockerUnlocker
+
 	uploadPartHandler              *handler.UploadPart
 	downloadSolutionArchiveHandler *handler.DownloadSolutionArchive
 
