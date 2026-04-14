@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"strings"
 
 	"github.com/moby/sys/mountinfo"
@@ -332,16 +333,8 @@ func SolutionArchiveExists(
 	solutionArchive *domain.SolutionArchive,
 	fileNames []string,
 ) bool {
-	filesMap := make(map[string]any, len(fileNames))
-	for _, fileName := range fileNames {
-		filesMap[fileName] = nil
-	}
-
 	fileName := GenSolutionArchiveFileName(solutionArchive)
-	if _, ok := filesMap[fileName]; ok {
-		return true
-	}
-	return false
+	return slices.Contains(fileNames, fileName)
 }
 
 // ExtractSessionBucket validate and extract the session bucket from the given list of buckets.
@@ -372,6 +365,7 @@ func ExtractSessionBucket(buckets []string, solutionArchive *domain.SolutionArch
 	return sessionBuckets[0], nil
 }
 
+// GetSolutionArchiveNameVersion generates a solution archive name and version.
 func GetSolutionArchiveNameVersion(name, version string) string {
 	return fmt.Sprintf("%s-%s", name, version)
 }
