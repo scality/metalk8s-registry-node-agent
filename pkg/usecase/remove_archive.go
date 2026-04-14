@@ -11,24 +11,24 @@ import (
 
 type RemoveSolutionArchive struct {
 	logger         *zerolog.Logger
-	store          service.StorageProvider
 	archiveLister  service.ArchiveLister
 	archiveRemover service.ArchiveRemover
+	archiveLocker  service.LockerUnlocker
 }
 
 func NewRemoveSolutionArchive(
 	logger *zerolog.Logger,
-	store service.StorageProvider,
 	archiveLister service.ArchiveLister,
 	archiveRemover service.ArchiveRemover,
+	archiveLocker service.LockerUnlocker,
 ) *RemoveSolutionArchive {
 	l := logger.With().Str("use_case", "remove_solution_archive").Logger()
 
 	return &RemoveSolutionArchive{
 		logger:         &l,
-		store:          store,
 		archiveLister:  archiveLister,
 		archiveRemover: archiveRemover,
+		archiveLocker:  archiveLocker,
 	}
 }
 
@@ -37,8 +37,8 @@ func (uc *RemoveSolutionArchive) Execute(solutionArchive *domain.SolutionArchive
 		Any("solution_archive", solutionArchive).
 		Msg("Removing solution archive")
 
-	uc.store.Lock()
-	defer uc.store.Unlock()
+	uc.archiveLocker.Lock(solutionArchive)
+	defer uc.archiveLocker.Unlock(solutionArchive)
 
 	// List all solution archives in the storage
 	// matching solutionArchiveStorageNamePattern

@@ -11,21 +11,21 @@ import (
 
 type RemoveSession struct {
 	logger        *zerolog.Logger
-	store         service.StorageProvider
 	bucketManager service.BucketManager
+	bucketLocker  service.LockerUnlocker
 }
 
 func NewRemoveSession(
 	logger *zerolog.Logger,
-	store service.StorageProvider,
 	bucketManager service.BucketManager,
+	bucketLocker service.LockerUnlocker,
 ) *RemoveSession {
 	l := logger.With().Str("use_case", "remove_session").Logger()
 
 	return &RemoveSession{
 		logger:        &l,
-		store:         store,
 		bucketManager: bucketManager,
+		bucketLocker:  bucketLocker,
 	}
 }
 
@@ -33,8 +33,10 @@ func (uc *RemoveSession) Execute(solutionArchive *domain.SolutionArchive) error 
 	uc.logger.Debug().
 		Any("solution_archive", solutionArchive).
 		Msg("Removing session")
-	uc.store.Lock()
-	defer uc.store.Unlock()
+
+	// To avoid simultaneous removals of the same session
+	uc.bucketLocker.Lock(solutionArchive)
+	defer uc.bucketLocker.Unlock(solutionArchive)
 
 	// List all the buckets
 	buckets, err := uc.bucketManager.ListBuckets()

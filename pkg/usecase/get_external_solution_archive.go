@@ -10,27 +10,27 @@ import (
 
 type GetExternalSolutionArchive struct {
 	logger             *zerolog.Logger
-	store              service.StorageProvider
 	externalDownloader service.ExternalDownloader
 	archiveLister      service.ArchiveLister
 	archiveSaver       service.ArchiveSaver
+	archiveLocker      service.LockerUnlocker
 }
 
 func NewGetExternalSolutionArchive(
 	logger *zerolog.Logger,
-	store service.StorageProvider,
 	externalDownloader service.ExternalDownloader,
 	archiveLister service.ArchiveLister,
 	archiveSaver service.ArchiveSaver,
+	archiveLocker service.LockerUnlocker,
 ) *GetExternalSolutionArchive {
 	l := logger.With().Str("use_case", "get_external_solution_archive").Logger()
 
 	return &GetExternalSolutionArchive{
 		logger:             &l,
-		store:              store,
 		externalDownloader: externalDownloader,
 		archiveLister:      archiveLister,
 		archiveSaver:       archiveSaver,
+		archiveLocker:      archiveLocker,
 	}
 }
 
@@ -40,8 +40,9 @@ func (uc *GetExternalSolutionArchive) Execute(solutionArchive *domain.SolutionAr
 		Str("download_url", downloadURL).
 		Msg("Getting external solution archive")
 
-	uc.store.Lock()
-	defer uc.store.Unlock()
+	// To avoid simultaneous downloads and deletions of the same solution archive
+	uc.archiveLocker.Lock(solutionArchive)
+	defer uc.archiveLocker.Unlock(solutionArchive)
 
 	// List all solution archives in the storage
 	// matching solutionArchiveStorageNamePattern

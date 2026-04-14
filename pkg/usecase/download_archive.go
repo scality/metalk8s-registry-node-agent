@@ -14,26 +14,26 @@ import (
 
 type DownloadSolutionArchive struct {
 	logger        *zerolog.Logger
-	store         service.StorageProvider
 	archiveLister service.ArchiveLister
 	archiveReader service.ArchiveReader
+	archiveLocker service.LockerUnlocker
 	rootAPIPath   string
 }
 
 func NewDownloadSolutionArchive(
 	logger *zerolog.Logger,
-	store service.StorageProvider,
 	archiveLister service.ArchiveLister,
 	archiveReader service.ArchiveReader,
+	archiveLocker service.LockerUnlocker,
 	rootAPIPath string,
 ) *DownloadSolutionArchive {
 	l := logger.With().Str("use_case", "download_solution_archive").Logger()
 
 	return &DownloadSolutionArchive{
 		logger:        &l,
-		store:         store,
 		archiveLister: archiveLister,
 		archiveReader: archiveReader,
+		archiveLocker: archiveLocker,
 		rootAPIPath:   rootAPIPath,
 	}
 }
@@ -45,8 +45,9 @@ func (uc *DownloadSolutionArchive) Execute(
 		Any("solution_archive", solutionArchive).
 		Msg("Downloading solution archive")
 
-	uc.store.Lock()
-	defer uc.store.Unlock()
+	// To avoid simultaneous downloads and deletion of the same solution archive
+	uc.archiveLocker.Lock(solutionArchive)
+	defer uc.archiveLocker.Unlock(solutionArchive)
 
 	// List all solution archives in the storage
 	// matching solutionArchiveStorageNamePattern
