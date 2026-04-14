@@ -1022,7 +1022,7 @@ func (nsa *NodeSolutionArchiveForTest) uploadToPod(podName string) bool {
 
 		// Create the HTTP request for this chunk
 		req, err := http.NewRequestWithContext(context.Background(),
-			"POST", url, bytes.NewReader(chunkData))
+			http.MethodPut, url, bytes.NewReader(chunkData))
 		if err != nil {
 			// nolint: errcheck // No need to check.
 			fmt.Fprintf(GinkgoWriter, "Failed to create HTTP request for chunk %d: %v\n",
