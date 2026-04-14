@@ -35,9 +35,6 @@ func NewFileSystem(
 var _ service.ArchiveCleaner = &FileSystem{}
 
 func (f *FileSystem) CleanUnusedSolutionArchives(path string, isDir bool) error {
-	f.store.Lock()
-	defer f.store.Unlock()
-
 	if isDir {
 		err := os.RemoveAll(path)
 		if err != nil {
@@ -72,9 +69,6 @@ func (f *FileSystem) CleanUnusedSolutionArchives(path string, isDir bool) error 
 }
 
 func (f *FileSystem) CleanUnusedSolutions(path string, isDir bool) error {
-	f.store.Lock()
-	defer f.store.Unlock()
-
 	if isDir {
 		// Unmount the solution
 		err := f.archiveMounter.UnmountFile(path)

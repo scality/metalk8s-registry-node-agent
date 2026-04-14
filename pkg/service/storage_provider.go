@@ -31,12 +31,6 @@ package service
 //
 // The responsibility for close all io objects is delegated to the caller.
 type StorageProvider interface {
-	// RWLocker primitives:
-	Lock()
-	Unlock()
-	RLock()
-	RUnlock()
-
 	// Init initializes the storage provider.
 	Init() error
 
