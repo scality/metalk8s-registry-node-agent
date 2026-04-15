@@ -46,7 +46,7 @@ jobs:
           curl --fail -LO -u ${{ secrets.ARTIFACTS_USER }}:${{ secrets.ARTIFACTS_PASSWORD }}
           ${{ steps.artifacts.outputs.link }}/crds.yaml
       
-      - uses: softprops/action-gh-release@v2
+      - uses: softprops/action-gh-release@v3
         with:
           name: MetalK8s Registry Node Agent ${{ github.ref_name }}
           tag_name: ${{ github.ref_name }}
