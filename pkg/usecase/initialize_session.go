@@ -15,30 +15,30 @@ import (
 
 type InitializeSession struct {
 	logger             *zerolog.Logger
-	store              service.StorageProvider
 	bucketManager      service.BucketManager
 	archiveLister      service.ArchiveLister
 	multipartUploader  service.MultipartUploader
 	multipartInspector service.MultipartInspector
+	bucketLocker       service.LockerUnlocker
 }
 
 func NewInitializeSession(
 	logger *zerolog.Logger,
-	store service.StorageProvider,
 	bucketManager service.BucketManager,
 	archiveLister service.ArchiveLister,
 	multipartUploader service.MultipartUploader,
 	multipartInspector service.MultipartInspector,
+	bucketLocker service.LockerUnlocker,
 ) *InitializeSession {
 	l := logger.With().Str("use_case", "initialize_session").Logger()
 
 	return &InitializeSession{
 		logger:             &l,
-		store:              store,
 		bucketManager:      bucketManager,
 		archiveLister:      archiveLister,
 		multipartUploader:  multipartUploader,
 		multipartInspector: multipartInspector,
+		bucketLocker:       bucketLocker,
 	}
 }
 
@@ -46,8 +46,10 @@ func (uc *InitializeSession) Execute(solutionArchive *domain.SolutionArchive) (*
 	uc.logger.Debug().
 		Any("solution_archive", solutionArchive).
 		Msg("Initializing session")
-	uc.store.Lock()
-	defer uc.store.Unlock()
+
+	// To avoid simultaneous uploads and deletions of the same solution archive
+	uc.bucketLocker.Lock(solutionArchive)
+	defer uc.bucketLocker.Unlock(solutionArchive)
 
 	// List all solution archives in the storage
 	// matching solutionArchiveStorageNamePattern

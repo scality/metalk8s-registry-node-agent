@@ -11,21 +11,21 @@ import (
 
 type UnmountSolutionArchive struct {
 	logger         *zerolog.Logger
-	store          service.StorageProvider
 	archiveMounter service.ArchiveMounter
+	archiveLocker  service.LockerUnlocker
 }
 
 func NewUnmountSolutionArchive(
 	logger *zerolog.Logger,
-	store service.StorageProvider,
 	archiveMounter service.ArchiveMounter,
+	archiveLocker service.LockerUnlocker,
 ) *UnmountSolutionArchive {
 	l := logger.With().Str("use_case", "unmount_solution_archive").Logger()
 
 	return &UnmountSolutionArchive{
 		logger:         &l,
-		store:          store,
 		archiveMounter: archiveMounter,
+		archiveLocker:  archiveLocker,
 	}
 }
 
@@ -34,8 +34,8 @@ func (uc *UnmountSolutionArchive) Execute(solutionArchive *domain.SolutionArchiv
 		Any("solution_archive", solutionArchive).
 		Msg("Unmounting solution archive")
 
-	uc.store.Lock()
-	defer uc.store.Unlock()
+	uc.archiveLocker.Lock(solutionArchive)
+	defer uc.archiveLocker.Unlock(solutionArchive)
 
 	err := uc.archiveMounter.UnmountFile(library.GenSolutionDirName(solutionArchive))
 	if err != nil {

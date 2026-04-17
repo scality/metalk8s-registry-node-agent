@@ -13,40 +13,44 @@ import (
 
 type UploadPart struct {
 	logger             *zerolog.Logger
-	store              service.StorageProvider
 	bucketManager      service.BucketManager
 	multipartUploader  service.MultipartUploader
 	multipartRemover   service.MultipartRemover
 	multipartInspector service.MultipartInspector
+	bucketLocker       service.LockerUnlocker
+	archiveLocker      service.LockerUnlocker
 	rootAPIPath        string
 }
 
 func NewUploadPart(
 	logger *zerolog.Logger,
-	store service.StorageProvider,
 	bucketManager service.BucketManager,
 	multipartUploader service.MultipartUploader,
 	multipartRemover service.MultipartRemover,
 	multipartInspector service.MultipartInspector,
+	bucketLocker service.LockerUnlocker,
+	archiveLocker service.LockerUnlocker,
 	rootAPIPath string,
 ) *UploadPart {
 	l := logger.With().Str("use_case", "upload_part").Logger()
 
 	return &UploadPart{
 		logger:             &l,
-		store:              store,
 		bucketManager:      bucketManager,
 		multipartUploader:  multipartUploader,
 		multipartRemover:   multipartRemover,
 		multipartInspector: multipartInspector,
+		bucketLocker:       bucketLocker,
+		archiveLocker:      archiveLocker,
 		rootAPIPath:        rootAPIPath,
 	}
 }
 
 func (uc *UploadPart) Execute(part *domain.Part) (*domain.SolutionArchiveStatus, error) {
 	uc.logger.Info().Msg("Uploading part")
-	uc.store.Lock()
-	defer uc.store.Unlock()
+
+	uc.bucketLocker.Lock(part.SolutionArchive)
+	defer uc.bucketLocker.Unlock(part.SolutionArchive)
 
 	// List all the buckets
 	buckets, err := uc.bucketManager.ListBuckets()
@@ -120,6 +124,9 @@ func (uc *UploadPart) Execute(part *domain.Part) (*domain.SolutionArchiveStatus,
 		return solutionArchiveStatus, nil
 	}
 
+	uc.archiveLocker.Lock(part.SolutionArchive)
+	defer uc.archiveLocker.Unlock(part.SolutionArchive)
+
 	// Solution archive upload is complete, so let's consolidate it,
 	// move it to the storage root location and then
 	// remove the bucket.
@@ -164,6 +171,7 @@ func (uc *UploadPart) Execute(part *domain.Part) (*domain.SolutionArchiveStatus,
 			WithProperty("instance", fmt.Sprintf("%s/uploads/%s", uc.rootAPIPath, part.SolutionArchive.Name)).
 			Throw()
 	}
+
 	uc.logger.Info().Msg("Part uploaded")
 
 	return solutionArchiveStatus, nil
