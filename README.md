@@ -88,14 +88,14 @@ spec:
 
 ### Upload API
 
-Endpoint: `POST /api/v1/uploads/{solution-archive}`
+Endpoint: `PUT /api/v1/uploads/{solution-archive}`
 
 Upload a chunk of an solution archive to the registry.  
 Review the API specification in `pkg/presentation/http/extern/uploads-openapi.yaml`
 
 **Upload chunks via API**:
 ```bash
-curl -X POST \
+curl -X PUT \
     --http1.1 \
     -H "X-Target-Version: 1.25.3" \
     -H "X-Sha256-checksum: ce775a33b30ae640d521df1fad60868fa701707ffdc4d8b4ca7ab60edfd05c26" \

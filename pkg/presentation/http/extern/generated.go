@@ -240,7 +240,7 @@ func NewUploadChunkRequestWithBody(server string, solutionArchive string, params
 		return nil, err
 	}
 
-	req, err := http.NewRequest("POST", queryURL.String(), body)
+	req, err := http.NewRequest("PUT", queryURL.String(), body)
 	if err != nil {
 		return nil, err
 	}
@@ -436,7 +436,7 @@ func ParseUploadChunkResponse(rsp *http.Response) (*UploadChunkResponse, error) 
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
 	// Upload the chunk of the solution archive.
-	// (POST /uploads/{solutionArchive})
+	// (PUT /uploads/{solutionArchive})
 	UploadChunk(w http.ResponseWriter, r *http.Request, solutionArchive string, params UploadChunkParams)
 }
 
@@ -668,7 +668,7 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 		ErrorHandlerFunc:   options.ErrorHandlerFunc,
 	}
 
-	m.HandleFunc("POST "+options.BaseURL+"/uploads/{solutionArchive}", wrapper.UploadChunk)
+	m.HandleFunc("PUT "+options.BaseURL+"/uploads/{solutionArchive}", wrapper.UploadChunk)
 
 	return m
 }
@@ -773,7 +773,7 @@ func (response UploadChunk507ApplicationProblemPlusJSONResponse) VisitUploadChun
 // StrictServerInterface represents all server handlers.
 type StrictServerInterface interface {
 	// Upload the chunk of the solution archive.
-	// (POST /uploads/{solutionArchive})
+	// (PUT /uploads/{solutionArchive})
 	UploadChunk(ctx context.Context, request UploadChunkRequestObject) (UploadChunkResponseObject, error)
 }
 
@@ -879,13 +879,13 @@ var swaggerSpec = []string{
 	"SfJC5kLZ0UoqIpqyP4xidlOEfXCIHbV4cgVcSLZ/4rDy7csba4FsLfB0rqT3BVrnjvrwa+fS+vqi1WbS",
 	"7mwD9aHMSaZuTtOf5+Ysa5NbD2eZld9ltPVRQFdnNzzGKh0UeiQqyCYOzO0VhlFz5jETIgXK+/j6vLIX",
 	"weZiHYnlmFR5i1BLqzKW+BNomv79e+U5By47rne+DxiFoxCFK3LgNGfexLsYhaMLz37/YOQwtqyp8VMn",
-	"ga6McQh7VFPPAG7imhKjK/eosDpsdJl879RwXcqx1sA15lsM3x4zTtbyuGvb9quZpr1Z84Mu+l+tLLZR",
-	"UB//lzT8K/hI5QJ0UO4/jog7U9HsT4PdF0QJRPdYDx1FhPH3ioYIVYdh0Sp/RO5sDJWQm+4sgXJWR6az",
-	"JbpB+TEMenXA0K3tRzGBfQ48dp+O7VMtNE0DLNgCxgMDx76fen7V7KL3GARhcD6+HBLFW9tABzZm7SOG",
-	"z3YxKP1GxMsNzbiINOhAaQnUFJ4NyDoWzxin0rk+VSNZ65tLTxW8lPQayd1z0fMw3EBb34CgCkNbhwPd",
-	"D9pMONp599qXWbuPFzYE9B6RNUOzZt6ItF5ayfQhqiU4do6VzZaz7VtaMxqz6WL7pmbya3Zcbt9Rj/lW",
-	"vvdiF1bcgZnZ82r7nr4RrNGTLZwag2xcfyAWjaxqbDFow3khU+cGx83t5EUYno1pzsYPZ2NMcP8OAAD/",
-	"/0FniRVOOQAA",
+	"ga6McRSmbalHADdxTYhRlXtSWJ01ujy+d0q4LuFYauAa8ymGb08ZJ2tp3DVt+9FM092suUEX/a9WFNso",
+	"qE//Sxr+FXykcgE6KPcfR8SdKWj2p8HuC6IEonssh44iwrh7RUOEqsOoaHU/Inc2hErITXOWQDmqI9PZ",
+	"Er2g/BYGnTpg6NX2m5jAPgceu0/H9qkWmqYB1msB44GBY99PPb/qddF5DIIwOB9fDonire2fAxuy9hHD",
+	"Z7sYlH4j4uWGXlxEGnSgtARq6s4GZB2KZ4xT6dyeqpGstc2lowpeSnqN5O6x6HkYbqCtbz5QRaGts4Hu",
+	"92wmGu28e+3DrN2nCxvieY/ImplZM25EWi+tZPoQ1RIcO6fKZsvZ9i2tEY3ZdLF9UzP4NTsut++op3wr",
+	"33uxCyvuvMzsebV9T98E1ujJ1k2NQTauPxCLRlY1tha04byQqXOB4+Z28iIMz8Y0Z+OHszHmt38HAAD/",
+	"/4IXBwFNOQAA",
 }
 
 // GetSwagger returns the content of the embedded swagger specification file

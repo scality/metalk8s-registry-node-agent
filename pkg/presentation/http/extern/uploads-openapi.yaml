@@ -7,7 +7,7 @@ servers:
   - url: https://IP:5001/api/v1/
 paths:
   /uploads/{solutionArchive}:
-    post:
+    put:
       summary: Upload the chunk of the solution archive.
       operationId: uploadChunk
       parameters:
