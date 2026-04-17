@@ -21,12 +21,16 @@ type FileSystem struct {
 	logger                   *zerolog.Logger
 	solutionArchivesLocation string
 	multipartInspector       service.MultipartInspector
+	multipartRemover         service.MultipartRemover
+	bucketManager            service.BucketManager
 }
 
 func NewFileSystem(
 	logger *zerolog.Logger,
 	solutionArchivesLocation string,
 	multipartInspector service.MultipartInspector,
+	multipartRemover service.MultipartRemover,
+	bucketManager service.BucketManager,
 ) service.MultipartUploader {
 	l := logger.With().
 		Str("infrastructure", "multipart_uploader").
@@ -36,6 +40,8 @@ func NewFileSystem(
 		logger:                   &l,
 		solutionArchivesLocation: solutionArchivesLocation,
 		multipartInspector:       multipartInspector,
+		multipartRemover:         multipartRemover,
+		bucketManager:            bucketManager,
 	}
 }
 
@@ -375,4 +381,74 @@ func (f *FileSystem) MoveFileToRoot(
 	}
 
 	return nil
+}
+
+// StorePart stores a part into a bucket.
+func (f *FileSystem) StorePart(
+	sessionBucket string,
+	solutionArchiveFromManifest *domain.SolutionArchive,
+	part *domain.Part,
+) (*domain.SolutionArchiveStatus, error) {
+	// When this is the first stored part for a solution archive, the size is not set in the manifest
+	// so we use the size from the part
+	if solutionArchiveFromManifest.Size == 0 {
+		solutionArchiveFromManifest.Size = part.SolutionArchive.Size
+
+		err := f.multipartRemover.DeleteMultipartFile(sessionBucket, solutionArchiveFromManifest)
+		if err != nil {
+			return nil, errors.Stamp(err)
+		}
+
+		_, err = f.CreateMultipartFiles(sessionBucket, solutionArchiveFromManifest)
+		if err != nil {
+			return nil, errors.Stamp(err)
+		}
+	}
+
+	part.SolutionArchive = solutionArchiveFromManifest
+
+	solutionArchiveStatus, err := f.WritePartToMultipartFile(sessionBucket, part)
+	if err != nil {
+		return nil, errors.Stamp(err)
+	}
+
+	if !solutionArchiveStatus.IsComplete() {
+		return solutionArchiveStatus, nil
+	}
+
+	// Solution archive is complete, so let's consolidate it,
+	// move it to the storage root location and then
+	// remove the bucket.
+	cleanUpCorrupted := func() {
+		if err := f.multipartRemover.DeleteMultipartFile(sessionBucket, part.SolutionArchive); err != nil {
+			f.logger.Error().Err(err).Any("solution archive", part.SolutionArchive).Msg("failed to delete multipart file")
+		}
+
+		if _, err := f.CreateMultipartFiles(sessionBucket, part.SolutionArchive); err != nil {
+			f.logger.Error().Err(err).Any("solution archive", part.SolutionArchive).Msg("failed to create multipart file")
+		}
+	}
+
+	err = f.ConsolidateMultipartFile(
+		sessionBucket,
+		part.SolutionArchive,
+		library.FileSystemDefaultFileMode,
+	)
+	if err != nil {
+		cleanUpCorrupted()
+		return nil, errors.Stamp(err)
+	}
+
+	solutionArchiveFileName := library.GenSolutionArchiveFileName(part.SolutionArchive)
+	err = f.MoveFileToRoot(sessionBucket, part.SolutionArchive.Name, solutionArchiveFileName)
+	if err != nil {
+		cleanUpCorrupted()
+		return nil, errors.Stamp(err)
+	}
+	err = f.bucketManager.DeleteBucket(sessionBucket)
+	if err != nil {
+		return nil, errors.Stamp(err)
+	}
+
+	return solutionArchiveStatus, nil
 }

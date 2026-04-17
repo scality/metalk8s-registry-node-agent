@@ -165,6 +165,19 @@ func (f *MockFileSystem) DeleteBucket(
 	return nil
 }
 
+func (f *MockFileSystem) StorePart(
+	sessionBucket string,
+	solutionArchiveFromManifest *domain.SolutionArchive,
+	part *domain.Part,
+) (*domain.SolutionArchiveStatus, error) {
+	solutionArchiveFileName := library.GenSolutionArchiveFileName(part.SolutionArchive)
+	f.MoveFileToRoot(sessionBucket, part.SolutionArchive.Name, solutionArchiveFileName) // nolint:errcheck
+	return &domain.SolutionArchiveStatus{
+		SolutionArchive: solutionArchiveFromManifest,
+		Parts:           make(map[int64]*domain.PartMeta),
+	}, nil
+}
+
 func (f *MockFileSystem) MoveFileToRoot(
 	bucketName, fileName, newFileName string,
 ) error {

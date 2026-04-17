@@ -45,4 +45,11 @@ type MultipartUploader interface {
 	// MoveFileToRoot moves a file from a bucket to the root location in the
 	// storage.
 	MoveFileToRoot(bucketName, fileName, newFileName string) error
+
+	// StorePart stores a part into a bucket.
+	StorePart(
+		sessionBucket string,
+		solutionArchiveFromManifest *domain.SolutionArchive,
+		part *domain.Part,
+	) (*domain.SolutionArchiveStatus, error)
 }
