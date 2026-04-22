@@ -13,3 +13,8 @@ nodes:
     # Use this label to identify this node as a registry
     # instead of "node-role.kubernetes.io/registry" that make cluster creation failed
     role: worker
+- role: worker
+  labels:
+    # Use this label to identify this node as a registry
+    # instead of "node-role.kubernetes.io/registry" that make cluster creation failed
+    role: worker

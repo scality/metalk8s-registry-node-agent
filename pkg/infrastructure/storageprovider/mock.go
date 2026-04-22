@@ -27,6 +27,8 @@ type (
 		interestContentFilter    library.ContentFilter
 		watcher                  *fsnotify.Watcher
 		files                    []string
+		buckets                  []string
+		multipartMeta            map[string]*domain.SolutionArchive
 	}
 
 	MockFileOpts struct {
@@ -48,7 +50,6 @@ var _ service.ArchiveLister = &MockFileSystem{}
 var _ service.MultipartInspector = &MockFileSystem{}
 var _ service.MultipartRemover = &MockFileSystem{}
 var _ service.MultipartUploader = &MockFileSystem{}
-var _ service.ArchiveSaver = &MockFileSystem{}
 
 func NewMockFileSystem(opts *MockFileOpts) *MockFileSystem {
 	return &MockFileSystem{
@@ -57,6 +58,8 @@ func NewMockFileSystem(opts *MockFileOpts) *MockFileSystem {
 		solutionsLocation:        opts.SolutionsLocation,
 		interestContentFilter:    library.NewRegexNormalFileFilter(opts.InterestContentFilterRegex),
 		files:                    []string{},
+		buckets:                  []string{},
+		multipartMeta:            make(map[string]*domain.SolutionArchive),
 	}
 }
 
@@ -116,6 +119,14 @@ func (f *MockFileSystem) GetFile(
 	return io.ReadCloser(nil), nil
 }
 
+func (f *MockFileSystem) GetPart(
+	fileName string,
+	start int64,
+	end int64,
+) (io.ReadCloser, error) {
+	return io.ReadCloser(nil), nil
+}
+
 func (f *MockFileSystem) DeleteFile(
 	fileName string,
 ) error {
@@ -156,6 +167,19 @@ func (f *MockFileSystem) DeleteBucket(
 	}
 
 	return nil
+}
+
+func (f *MockFileSystem) StorePart(
+	sessionBucket string,
+	solutionArchiveFromManifest *domain.SolutionArchive,
+	part *domain.Part,
+) (*domain.SolutionArchiveStatus, error) {
+	solutionArchiveFileName := library.GenSolutionArchiveFileName(part.SolutionArchive)
+	f.MoveFileToRoot(sessionBucket, part.SolutionArchive.Name, solutionArchiveFileName) // nolint:errcheck
+	return &domain.SolutionArchiveStatus{
+		SolutionArchive: solutionArchiveFromManifest,
+		Parts:           make(map[int64]*domain.PartMeta),
+	}, nil
 }
 
 func (f *MockFileSystem) MoveFileToRoot(
@@ -274,18 +298,26 @@ func (f *MockFileSystem) UnmountFile(
 // Bucket handling methods
 
 func (f *MockFileSystem) createBucket(
-	_ string,
+	bucketName string,
 ) error {
+	f.buckets = append(f.buckets, bucketName)
 	return nil
 }
 
 func (f *MockFileSystem) listBuckets() ([]string, error) {
-	return []string{}, nil
+	return f.buckets, nil
 }
 
 func (f *MockFileSystem) deleteBucket(
-	_ string,
-) error {
+	bucketName string,
+) error { // nolint: unparam
+	for i, b := range f.buckets {
+		if b == bucketName {
+			f.buckets = append(f.buckets[:i], f.buckets[i+1:]...)
+			break
+		}
+	}
+	delete(f.multipartMeta, bucketName)
 	return nil
 }
 
@@ -305,22 +337,27 @@ func (f *MockFileSystem) hashFile(
 	return f.GetArchiveHash(fileName)
 }
 
-func (f *MockFileSystem) moveFileToRoot(_, _, _ string) error {
+func (f *MockFileSystem) moveFileToRoot(_, _, newFileName string) error { // nolint: unparam
+	f.files = append(f.files, newFileName)
 	return nil
 }
 
 // nolint:unparam
 func (f *MockFileSystem) createMultipartFiles(
-	_ string,
+	bucketName string,
 	solutionArchiveMeta *domain.SolutionArchive,
 ) (*domain.SolutionArchiveStatus, error) {
+	f.multipartMeta[bucketName] = solutionArchiveMeta
 	return &domain.SolutionArchiveStatus{
 		SolutionArchive: solutionArchiveMeta,
 		Parts:           make(map[int64]*domain.PartMeta),
 	}, nil
 }
 
-func (f *MockFileSystem) getMultipartFile(_ string) (*domain.SolutionArchive, error) {
+func (f *MockFileSystem) getMultipartFile(bucketName string) (*domain.SolutionArchive, error) { // nolint: unparam
+	if meta, ok := f.multipartMeta[bucketName]; ok {
+		return meta, nil
+	}
 	return &domain.SolutionArchive{}, nil
 }
 
@@ -336,10 +373,16 @@ func (f *MockFileSystem) deleteMultipartFile(_ string, _ *domain.SolutionArchive
 }
 
 func (f *MockFileSystem) writePartToMultipartFile(
-	_ string,
-	_ *domain.Part,
-) (*domain.SolutionArchiveStatus, error) {
-	return &domain.SolutionArchiveStatus{}, nil
+	bucketName string,
+	part *domain.Part,
+) (*domain.SolutionArchiveStatus, error) { // nolint: unparam
+	sa := f.multipartMeta[bucketName]
+	return &domain.SolutionArchiveStatus{
+		SolutionArchive: sa,
+		Parts: map[int64]*domain.PartMeta{
+			part.Meta.Start: {Start: part.Meta.Start, End: part.Meta.End},
+		},
+	}, nil
 }
 
 func (f *MockFileSystem) consolidateMultipartFile(

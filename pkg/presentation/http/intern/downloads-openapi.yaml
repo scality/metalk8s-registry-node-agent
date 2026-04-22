@@ -23,14 +23,72 @@ paths:
           required: true
           schema:
             type: string
+        - name: X-Sha256-checksum
+          in: header
+          description: Sha256 of the solution archive
+          required: true
+          schema:
+            type: string
+        - name: Range
+          in: header
+          description: >-
+            Range of the chunk to serve. Must respect the format `bytes=<start-index>-<end-index>`
+          required: true
+          example: bytes=0-2
+          schema:
+            type: string
       responses:
-        "200":
-          description: successful operation
+        "206":
+          description: successful partial content
+          headers:
+            Content-Range:
+              description: The range of the chunk served
+              required: true
+              schema:
+                type: string
+                format: bytes <start-index>-<end-index>/<total-size-in-bytes>
+                example: bytes 0-2/4
           content:
             application/octet-stream:
               schema:
                 type: string
                 format: binary
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/ServerError"
+    head:
+      summary: Describe the solution archive.
+      operationId: describeSolutionArchive
+      parameters:
+        - name: solutionArchive
+          in: path
+          description: Name of the solution archive
+          required: true
+          schema:
+            type: string
+        - name: version
+          in: path
+          description: Version of the solution archive
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: successful operation
+          headers:
+            Content-Length:
+              description: Size of the requested file in bytes
+              required: true
+              schema:
+                type: integer
+                format: int64
         "400":
           $ref: "#/components/responses/BadRequest"
         "401":

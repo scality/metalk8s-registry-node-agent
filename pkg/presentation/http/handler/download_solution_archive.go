@@ -1,8 +1,9 @@
-//nolint:lll
+//nolint:lll,dupl // normal to have handlers very similar
 package handler
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 
 	"github.com/rs/zerolog"
@@ -35,20 +36,23 @@ func (h *DownloadSolutionArchive) DownloadSolutionArchive(
 	_ context.Context,
 	request intern.DownloadSolutionArchiveRequestObject,
 ) (intern.DownloadSolutionArchiveResponseObject, error) {
-	var solutionArchive domain.SolutionArchive
+	var solutionArchivePart domain.Part
 
-	if err := fillSolutionArchiveFromDownloadSolutionArchiveRequestObject(&solutionArchive, &request); err != nil {
+	if err := fillSolutionArchiveFromDownloadSolutionArchiveRequestObject(&solutionArchivePart, &request); err != nil {
 		return h.genDownloadSolutionArchiveResponseObjectFromError(errors.Stamp(err))
 	}
 
-	solutionArchiveFile, err := h.uc.Execute(&solutionArchive)
+	partFile, err := h.uc.Execute(&solutionArchivePart)
 	if err != nil {
 		return h.genDownloadSolutionArchiveResponseObjectFromError(errors.Stamp(err))
 	}
 
-	return intern.DownloadSolutionArchive200ApplicationoctetStreamResponse{
-		Body:          solutionArchiveFile.File,
-		ContentLength: solutionArchiveFile.Size,
+	return intern.DownloadSolutionArchive206ApplicationoctetStreamResponse{
+		Body:          partFile.File,
+		ContentLength: partFile.ContentLength,
+		Headers: intern.DownloadSolutionArchive206ResponseHeaders{
+			ContentRange: fmt.Sprintf("bytes %d-%d/%d", solutionArchivePart.Meta.Start, solutionArchivePart.Meta.End, partFile.Size),
+		},
 	}, nil
 }
 

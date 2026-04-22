@@ -132,6 +132,14 @@ var _ = Describe("Manager", Ordered, func() {
 		cmd = exec.Command("make", "deploy-e2e", fmt.Sprintf("IMG=%s", projectImage))
 		_, err = utils.Run(cmd)
 		Expect(err).NotTo(HaveOccurred(), "Failed to deploy the controller-manager")
+
+		By("scaling the controller-manager pods to all worker nodes")
+		cmd = exec.Command("kubectl", "scale", "statefulset",
+			"-l", "control-plane=controller-manager",
+			"-n", namespace,
+			"--replicas", fmt.Sprintf("%d", len(nodeNames)))
+		_, err = utils.Run(cmd)
+		Expect(err).NotTo(HaveOccurred(), "Failed to scale the controller-manager pods")
 	})
 
 	// After all tests have been executed, clean up by undeploying the controller, uninstalling CRDs,
@@ -209,7 +217,7 @@ var _ = Describe("Manager", Ordered, func() {
 
 	Context("Manager", func() {
 		It("should run successfully", func() {
-			By("validating that the controller-manager pod is running as expected")
+			By("validating that the controller-manager pods are running as expected")
 			verifyControllerUp := func(g Gomega) {
 				// Get the name of the controller-manager pod
 				cmd := exec.Command("kubectl", "get",
@@ -224,7 +232,7 @@ var _ = Describe("Manager", Ordered, func() {
 				podOutput, err := utils.Run(cmd)
 				g.Expect(err).NotTo(HaveOccurred(), "Failed to retrieve controller-manager pod information")
 				podNames := utils.GetNonEmptyLines(podOutput)
-				g.Expect(podNames).To(HaveLen(2), "expected 2 controller pod running")
+				g.Expect(podNames).To(HaveLen(len(nodeNames)), "expected %d controller pods running", len(nodeNames))
 
 				// Retrieve the controller pods
 				// and fill the controllerPodNameByNode map
@@ -386,7 +394,7 @@ var _ = Describe("Manager", Ordered, func() {
 				name:    "metalk8s",
 				version: "1.25.3",
 				label:   "e2e",
-				size:    200,
+				size:    20000,
 			}
 
 			By("creating and uploading a solution archive file")

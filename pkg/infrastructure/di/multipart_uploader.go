@@ -11,6 +11,8 @@ func (c *Container) GetFileSystemMultipartUploader() service.MultipartUploader {
 			c.GetLogger(),
 			c.config.SolutionArchivesLocation,
 			c.GetFileSystemMultipartInspector(),
+			c.GetFileSystemMultipartRemover(),
+			c.GetFileSystemBucketManager(),
 		)
 	}
 	return c.multipartUploader

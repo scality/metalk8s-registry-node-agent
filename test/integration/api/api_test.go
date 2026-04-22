@@ -168,9 +168,11 @@ var _ = BeforeSuite(func() {
 	for fileName, content := range map[string]string{
 		"artesca-base-4.0.0-preview.1.iso": "platform2\nplatform1\nplatform0\n",
 	} {
-		err := testingSuite.container.
-			GetFileSystemArchiveSaver().
-			SaveFile(fileName, bytes.NewReader([]byte(content)), 0644)
+		fullFileName := filepath.Join(
+			testingSuite.SolutionArchiveStorageDirectory,
+			fileName,
+		)
+		err := utils.SaveFile(fullFileName, bytes.NewReader([]byte(content)), 0644)
 		Expect(err).NotTo(HaveOccurred())
 	}
 

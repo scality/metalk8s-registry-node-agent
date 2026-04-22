@@ -52,3 +52,25 @@ func (f *FileSystem) GetFile(fileName string) (io.ReadCloser, error) {
 
 	return file, nil
 }
+
+// GetPart retrieves the part defined by start/end indexes of a file
+// from the root location in the storage based on its fileName.
+//
+// The caller should close the content reader as early as possible.
+func (f *FileSystem) GetPart(fileName string, start int64, end int64) (io.ReadCloser, error) {
+	if err := library.EnforceNamingConventions(fileName); err != nil {
+		return nil, errors.Stamp(err)
+	}
+
+	filePath := filepath.Join(f.solutionArchivesLocation, fileName)
+	if err := library.CheckFile(filePath); err != nil {
+		return nil, errors.Stamp(err)
+	}
+
+	file, err := library.GetPart(filePath, start, end)
+	if err != nil {
+		return nil, errors.Stamp(err)
+	}
+
+	return file, nil
+}

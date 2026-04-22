@@ -27,6 +27,7 @@ import (
 	"crypto/x509/pkix"
 	"encoding/hex"
 	"fmt"
+	"io"
 	"math/big"
 	"net"
 	"net/http"
@@ -37,6 +38,7 @@ import (
 	"time"
 
 	. "github.com/onsi/ginkgo/v2" // nolint:revive,staticcheck
+	"github.com/scality/metalk8s-registry-node-agent/pkg/library"
 	"github.com/scality/metalk8s-registry-node-agent/pkg/presentation/http/extern"
 )
 
@@ -424,4 +426,12 @@ func MakeWrongISOFile(isoFilePath string, size int64) (string, error) {
 	hash := sha256.Sum256(isoData)
 	checksum := hex.EncodeToString(hash[:])
 	return checksum, nil
+}
+
+func SaveFile(
+	fullFileName string,
+	content io.Reader,
+	perm os.FileMode,
+) error {
+	return library.SaveFile(fullFileName, content, perm) // nolint:wrapcheck // No need to wrap the error.
 }

@@ -9,7 +9,6 @@ func (c *Container) getUploadPartUseCase() *usecase.UploadPart {
 			c.GetLogger(),
 			c.GetFileSystemBucketManager(),
 			c.GetFileSystemMultipartUploader(),
-			c.GetFileSystemMultipartRemover(),
 			c.GetFileSystemMultipartInspector(),
 			c.getInMemoryBucketLocker(),
 			c.getInMemoryArchiveLocker(),
@@ -83,14 +82,31 @@ func (c *Container) GetDownloadSolutionArchiveUseCase() *usecase.DownloadSolutio
 	return c.downloadSolutionArchiveUseCase
 }
 
+func (c *Container) GetDescribeSolutionArchiveUseCase() *usecase.DescribeSolutionArchive {
+	if c.describeSolutionArchiveUseCase == nil {
+		c.describeSolutionArchiveUseCase = usecase.NewDescribeSolutionArchive(
+			c.GetLogger(),
+			c.GetFileSystemArchiveLister(),
+			c.getInMemoryArchiveLocker(),
+			c.GetRootInternAPIPath(),
+		)
+	}
+	return c.describeSolutionArchiveUseCase
+}
+
 func (c *Container) GetGetExternalSolutionArchiveUseCase() *usecase.GetExternalSolutionArchive {
 	if c.getExternalSolutionArchiveUseCase == nil {
 		c.getExternalSolutionArchiveUseCase = usecase.NewGetExternalSolutionArchive(
 			c.GetLogger(),
 			c.getHTTPExternalDownloader(),
+			c.GetFileSystemBucketManager(),
 			c.GetFileSystemArchiveLister(),
-			c.GetFileSystemArchiveSaver(),
 			c.getInMemoryArchiveLocker(),
+			c.getInMemoryBucketLocker(),
+			c.GetFileSystemMultipartUploader(),
+			c.GetFileSystemMultipartInspector(),
+			c.GetRootExternAPIPath(),
+			c.GetChunkSize(),
 		)
 	}
 	return c.getExternalSolutionArchiveUseCase

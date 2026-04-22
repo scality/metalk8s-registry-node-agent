@@ -9,4 +9,10 @@ type LockerUnlocker interface {
 
 	// Unlock unlocks an object based on its Solution Archive.
 	Unlock(solutionArchive *domain.SolutionArchive)
+
+	// RLock read-locks an object based on its Solution Archive.
+	RLock(solutionArchive *domain.SolutionArchive)
+
+	// RUnlock read-unlocks an object based on its Solution Archive.
+	RUnlock(solutionArchive *domain.SolutionArchive)
 }

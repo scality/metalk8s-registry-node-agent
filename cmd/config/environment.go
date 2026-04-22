@@ -33,6 +33,8 @@ type (
 
 		RootExternAPIPath string
 		RootInternAPIPath string
+
+		ChunkSizeMB int64 `env:"CHUNK_SIZE_MB, default=10"`
 	}
 
 	Extern struct {
@@ -90,6 +92,13 @@ func (cfg *Environment) Load(ctx context.Context) error {
 			WithIdentifier(500000).
 			WithDetail("failed to process environment variables").
 			CausedBy(err).
+			Throw()
+	}
+
+	if cfg.ChunkSizeMB <= 0 {
+		return errors.From(domain.ErrInternal).
+			WithIdentifier(500000).
+			WithDetail("chunk size must be greater than 0").
 			Throw()
 	}
 
