@@ -69,7 +69,12 @@ func (uc *UploadPart) Execute(part *domain.Part) (*domain.SolutionArchiveStatus,
 	solutionArchiveFromManifest, err := uc.multipartInspector.GetMultipartFile(sessionBucket)
 	if err != nil {
 		return nil, errors.Intercept(err).
-			WithProperty("instance", fmt.Sprintf("%s/uploads/%s", uc.rootAPIPath, part.SolutionArchive.Name)).
+			WithProperty("instance", fmt.Sprintf(
+				"%s/uploads/%s/%s",
+				uc.rootAPIPath,
+				part.SolutionArchive.Name,
+				part.SolutionArchive.Version,
+			)).
 			Throw()
 	}
 
@@ -79,7 +84,12 @@ func (uc *UploadPart) Execute(part *domain.Part) (*domain.SolutionArchiveStatus,
 		return nil, errors.From(domain.ErrPartUploaderNotFound).
 			WithIdentifier(404000).
 			WithDetail("solution archive not found in the current session manifest").
-			WithProperty("instance", fmt.Sprintf("%s/uploads/%s", uc.rootAPIPath, part.SolutionArchive.Name)).
+			WithProperty("instance", fmt.Sprintf(
+				"%s/uploads/%s/%s",
+				uc.rootAPIPath,
+				part.SolutionArchive.Name,
+				part.SolutionArchive.Version,
+			)).
 			WithProperty("component", part.SolutionArchive.Name).
 			WithProperty("version", part.SolutionArchive.Version).
 			Throw()
@@ -92,14 +102,24 @@ func (uc *UploadPart) Execute(part *domain.Part) (*domain.SolutionArchiveStatus,
 	)
 	if err != nil {
 		return nil, errors.Intercept(err).
-			WithProperty("instance", fmt.Sprintf("%s/uploads/%s", uc.rootAPIPath, part.SolutionArchive.Name)).
+			WithProperty("instance", fmt.Sprintf(
+				"%s/uploads/%s/%s",
+				uc.rootAPIPath,
+				part.SolutionArchive.Name,
+				part.SolutionArchive.Version,
+			)).
 			Throw()
 	}
 
 	err = uc.multipartUploader.CommitPart(sessionBucket, part)
 	if err != nil {
 		return nil, errors.Intercept(err).
-			WithProperty("instance", fmt.Sprintf("%s/uploads/%s", uc.rootAPIPath, part.SolutionArchive.Name)).
+			WithProperty("instance", fmt.Sprintf(
+				"%s/uploads/%s/%s",
+				uc.rootAPIPath,
+				part.SolutionArchive.Name,
+				part.SolutionArchive.Version,
+			)).
 			Throw()
 	}
 
@@ -117,7 +137,12 @@ func (uc *UploadPart) Execute(part *domain.Part) (*domain.SolutionArchiveStatus,
 	)
 	if err != nil {
 		return nil, errors.Intercept(err).
-			WithProperty("instance", fmt.Sprintf("%s/uploads/%s", uc.rootAPIPath, part.SolutionArchive.Name)).
+			WithProperty("instance", fmt.Sprintf(
+				"%s/uploads/%s/%s",
+				uc.rootAPIPath,
+				part.SolutionArchive.Name,
+				part.SolutionArchive.Version,
+			)).
 			Throw()
 	}
 

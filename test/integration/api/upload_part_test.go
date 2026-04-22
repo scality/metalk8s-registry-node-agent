@@ -35,9 +35,9 @@ var _ = Describe("Upload Part API", func() {
 			resUpl, err := testingSuite.ExternClientWithResponse.UploadChunkWithBodyWithResponse(
 				context.TODO(),
 				"artesca-base",
+				"3.0.0-preview.2",
 				&extern.UploadChunkParams{
-					XTargetVersion: "3.0.0-preview.2",
-					ContentRange:   "bytes 0-37/200",
+					ContentRange: "bytes 0-37/200",
 				},
 				"application/octet-stream",
 				bytes.NewReader([]byte(uploadPartTestString)),
@@ -88,9 +88,9 @@ var _ = Describe("Upload Part API", func() {
 				resUpl, err = testingSuite.ExternClientWithResponse.UploadChunkWithBodyWithResponse(
 					ctx,
 					"platform",
+					"127.0.2-tiny",
 					&extern.UploadChunkParams{
-						XTargetVersion: "127.0.2-tiny",
-						ContentRange:   fmt.Sprintf("bytes %d-%d/30", i*10, (i*10)+9),
+						ContentRange: fmt.Sprintf("bytes %d-%d/30", i*10, (i*10)+9),
 					},
 					"application/octet-stream",
 					bytes.NewReader(fmt.Appendf(nil, "platform%d\n", i)),
@@ -146,9 +146,9 @@ var _ = Describe("Upload Part API", func() {
 			resUpl, err := testingSuite.ExternClientWithResponse.UploadChunkWithBodyWithResponse(
 				context.TODO(),
 				"artesca-base",
+				"3.0.0-preview.3",
 				&extern.UploadChunkParams{
-					XTargetVersion: "3.0.0-preview.3",
-					ContentRange:   "bytes 0-19/200",
+					ContentRange: "bytes 0-19/200",
 				},
 				"application/octet-stream",
 				bytes.NewReader([]byte(uploadPartTestString)),
@@ -177,9 +177,9 @@ var _ = Describe("Upload Part API", func() {
 				resUpl, err = testingSuite.ExternClientWithResponse.UploadChunkWithBodyWithResponse(
 					ctx,
 					"platform",
+					"127.0.3-tiny",
 					&extern.UploadChunkParams{
-						XTargetVersion: "127.0.3-tiny",
-						ContentRange:   fmt.Sprintf("bytes %d-%d/30", i*10, (i*10)+9),
+						ContentRange: fmt.Sprintf("bytes %d-%d/30", i*10, (i*10)+9),
 					},
 					"application/octet-stream",
 					bytes.NewReader(fmt.Appendf(nil, "platform%d\n", i)),
@@ -245,9 +245,9 @@ var _ = Describe("Upload Part API", func() {
 			resUpl, err := testingSuite.ExternClientWithResponse.UploadChunkWithBodyWithResponse(
 				context.TODO(),
 				"artesca-base",
+				"3.0.0-preview.4",
 				&extern.UploadChunkParams{
-					XTargetVersion: "3.0.0-preview.4",
-					ContentRange:   "bytes 0-1/200",
+					ContentRange: "bytes 0-1/200",
 				},
 				"application/octet-stream",
 				bytes.NewReader([]byte(uploadPartTestString)),
@@ -281,9 +281,9 @@ var _ = Describe("Upload Part API", func() {
 			resUpl, err = testingSuite.ExternClientWithResponse.UploadChunkWithBodyWithResponse(
 				ctx,
 				"platform",
+				"127.0.3-small",
 				&extern.UploadChunkParams{
-					XTargetVersion: "127.0.3-small",
-					ContentRange:   fmt.Sprintf("bytes %d-%d/40", 1*10, (1*10)+9),
+					ContentRange: fmt.Sprintf("bytes %d-%d/40", 1*10, (1*10)+9),
 				},
 				"application/octet-stream",
 				bytes.NewReader(fmt.Appendf(nil, "platform%d\n", 2)),
@@ -295,9 +295,9 @@ var _ = Describe("Upload Part API", func() {
 			resUpl, err = testingSuite.ExternClientWithResponse.UploadChunkWithBodyWithResponse(
 				ctx,
 				"platform",
+				"127.0.3-small",
 				&extern.UploadChunkParams{
-					XTargetVersion: "127.0.3-small",
-					ContentRange:   fmt.Sprintf("bytes %d-%d/40", 2*10, (2*10)+9),
+					ContentRange: fmt.Sprintf("bytes %d-%d/40", 2*10, (2*10)+9),
 				},
 				"application/octet-stream",
 				bytes.NewReader(fmt.Appendf(nil, "platform%d\n", 1)),
@@ -314,9 +314,9 @@ var _ = Describe("Upload Part API", func() {
 				resUpl, err = testingSuite.ExternClientWithResponse.UploadChunkWithBodyWithResponse(
 					ctx,
 					"platform",
+					"127.0.3-small",
 					&extern.UploadChunkParams{
-						XTargetVersion: "127.0.3-small",
-						ContentRange:   fmt.Sprintf("bytes %d-%d/40", i*10, (i*10)+9),
+						ContentRange: fmt.Sprintf("bytes %d-%d/40", i*10, (i*10)+9),
 					},
 					"application/octet-stream",
 					bytes.NewReader(fmt.Appendf(nil, "platform%d\n", i)),
@@ -382,9 +382,9 @@ var _ = Describe("Upload Part API", func() {
 				resUpl, err = testingSuite.ExternClientWithResponse.UploadChunkWithBodyWithResponse(
 					ctx,
 					"platform",
+					"127.0.2-unchecked",
 					&extern.UploadChunkParams{
-						XTargetVersion: "127.0.2-unchecked",
-						ContentRange:   fmt.Sprintf("bytes %d-%d/30", i*10, (i*10)+9),
+						ContentRange: fmt.Sprintf("bytes %d-%d/30", i*10, (i*10)+9),
 					},
 					"application/octet-stream",
 					bytes.NewReader(fmt.Appendf(nil, "platform%d\n", i)),
@@ -449,9 +449,9 @@ var _ = Describe("Upload Part API", func() {
 			resUpl, err := testingSuite.ExternClientWithResponse.UploadChunkWithBodyWithResponse(
 				context.TODO(),
 				"platform",
+				"127.0.4-badrange",
 				&extern.UploadChunkParams{
-					XTargetVersion: "127.0.4-badrange",
-					ContentRange:   "not-a-valid-range",
+					ContentRange: "not-a-valid-range",
 				},
 				"application/octet-stream",
 				bytes.NewReader([]byte("data")),
@@ -478,9 +478,9 @@ var _ = Describe("Upload Part API", func() {
 			resUpl, err := testingSuite.ExternClientWithResponse.UploadChunkWithBodyWithResponse(
 				context.TODO(),
 				"platform",
+				"127.0.4-invertedrange",
 				&extern.UploadChunkParams{
-					XTargetVersion: "127.0.4-invertedrange",
-					ContentRange:   "bytes 20-10/200",
+					ContentRange: "bytes 20-10/200",
 				},
 				"application/octet-stream",
 				bytes.NewReader([]byte("data")),
@@ -493,15 +493,15 @@ var _ = Describe("Upload Part API", func() {
 		})
 	})
 
-	Context("When uploading a chunk with a missing X-Target-Version header", func() {
+	Context("When uploading a chunk without the version parameter", func() {
 		It("should return a 400 bad request error", func() {
-			By("sending an upload without X-Target-Version")
+			By("sending an upload without the version parameter")
 			resUpl, err := testingSuite.ExternClientWithResponse.UploadChunkWithBodyWithResponse(
 				context.TODO(),
 				"platform",
+				"",
 				&extern.UploadChunkParams{
-					XTargetVersion: "",
-					ContentRange:   "bytes 0-9/100",
+					ContentRange: "bytes 0-9/100",
 				},
 				"application/octet-stream",
 				bytes.NewReader([]byte("0123456789")),
@@ -527,9 +527,9 @@ var _ = Describe("Upload Part API", func() {
 			resUpl, err := testingSuite.ExternClientWithResponse.UploadChunkWithBodyWithResponse(
 				context.TODO(),
 				"platform",
+				"127.0.4-overlap",
 				&extern.UploadChunkParams{
-					XTargetVersion: "127.0.4-overlap",
-					ContentRange:   "bytes 0-14/30",
+					ContentRange: "bytes 0-14/30",
 				},
 				"application/octet-stream",
 				bytes.NewReader([]byte("0123456789ABCDE")),
@@ -542,9 +542,9 @@ var _ = Describe("Upload Part API", func() {
 			resUpl, err = testingSuite.ExternClientWithResponse.UploadChunkWithBodyWithResponse(
 				context.TODO(),
 				"platform",
+				"127.0.4-overlap",
 				&extern.UploadChunkParams{
-					XTargetVersion: "127.0.4-overlap",
-					ContentRange:   "bytes 10-29/30",
+					ContentRange: "bytes 10-29/30",
 				},
 				"application/octet-stream",
 				bytes.NewReader([]byte("abcdefghijklmnopqrst")),

@@ -1012,7 +1012,7 @@ func (nsa *NodeSolutionArchiveForTest) uploadToPod(podName string) bool {
 		},
 	}
 
-	url := fmt.Sprintf("https://localhost:%d/api/v1/uploads/%s", localForwardPort, nsa.name)
+	url := fmt.Sprintf("https://localhost:%d/api/v1/uploads/%s/%s", localForwardPort, nsa.name, nsa.version)
 
 	// Calculate number of chunks
 	numChunks := (fileSize + chunkSize - 1) / chunkSize
@@ -1039,7 +1039,6 @@ func (nsa *NodeSolutionArchiveForTest) uploadToPod(podName string) bool {
 		}
 
 		// Set headers
-		req.Header.Set("X-Target-Version", nsa.version)
 		req.Header.Set("Content-Range", contentRange)
 		req.Header.Set("Content-Type", "application/octet-stream")
 

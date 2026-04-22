@@ -6,7 +6,7 @@ info:
 servers:
   - url: https://IP:5001/api/v1/
 paths:
-  /uploads/{solutionArchive}:
+  /uploads/{solutionArchive}/{version}:
     put:
       summary: Upload the chunk of the solution archive.
       operationId: uploadChunk
@@ -17,8 +17,8 @@ paths:
           required: true
           schema:
             type: string
-        - name: X-Target-Version
-          in: header
+        - name: version
+          in: path
           description: Version of the solution archive
           required: true
           schema:
@@ -26,7 +26,7 @@ paths:
         - name: Content-Range
           in: header
           description: >-
-            Range of the chunk to upload. Should repect the format `bytes <start-index>-<end-index>/<total-size-in-bytes>`
+            Range of the chunk to upload. Should respect the format `bytes <start-index>-<end-index>/<total-size-in-bytes>`
           required: true
           example: bytes 0-2/4
           schema:
