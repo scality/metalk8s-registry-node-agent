@@ -31,7 +31,6 @@ var _ service.ExternalDownloader = &HTTP{}
 func (h *HTTP) Download(
 	ctx context.Context,
 	downloadURL string,
-	hash string,
 	start int64,
 	end int64,
 	size int64,
@@ -45,7 +44,6 @@ func (h *HTTP) Download(
 			Throw()
 	}
 	// Add Headers on the request
-	req.Header.Set("X-Sha256-checksum", hash)
 	// According to RFC9110, the header should be bytes=%d-%d, without total size
 	req.Header.Set("Range", fmt.Sprintf("bytes=%d-%d", start, end))
 

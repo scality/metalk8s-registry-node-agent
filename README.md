@@ -98,7 +98,6 @@ Review the API specification in `pkg/presentation/http/extern/uploads-openapi.ya
 curl -X PUT \
     --http1.1 \
     -H "X-Target-Version: 1.25.3" \
-    -H "X-Sha256-checksum: ce775a33b30ae640d521df1fad60868fa701707ffdc4d8b4ca7ab60edfd05c26" \
     -H "Content-Range: bytes 0-1048575/20971520" \
     -H "Content-Type: application/octet-stream" \
     --cert "/path/to/mtls/tls.crt" \

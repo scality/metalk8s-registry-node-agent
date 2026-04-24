@@ -1040,9 +1040,6 @@ func (nsa *NodeSolutionArchiveForTest) uploadToPod(podName string) bool {
 
 		// Set headers
 		req.Header.Set("X-Target-Version", nsa.version)
-		if nsa.hash != "" {
-			req.Header.Set("X-Sha256-checksum", nsa.hash)
-		}
 		req.Header.Set("Content-Range", contentRange)
 		req.Header.Set("Content-Type", "application/octet-stream")
 

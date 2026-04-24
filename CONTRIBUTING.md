@@ -329,7 +329,6 @@ export CERT_DIR="/tmp/certs"
 curl -X PUT \
   --http1.1 \
   -H "X-Target-Version: 1.25.3" \
-  -H "X-Sha256-checksum: 81c931664a390272a230b5c56b23c5652559f5bed085282b70fcc56e9c3c2b2f" \
   -H "Content-Range: bytes 0-6153011/30765056" \
   -H "Content-Type: application/octet-stream" \
   --cert "${CERT_DIR}/tls.crt" \
@@ -358,11 +357,11 @@ curl -X PUT \
 ```shell
 export CERT_DIR="/tmp/certs"
 
-curl -X PUT --http1.1 -H "X-Target-Version: 1.25.3" -H "X-Sha256-checksum: 81c931664a390272a230b5c56b23c5652559f5bed085282b70fcc56e9c3c2b2f" -H "Content-Range: bytes 6153012-12306022/30765056" -H "Content-Type: application/octet-stream" --cert "${CERT_DIR}/tls.crt" --key "${CERT_DIR}/tls.key" --cacert "${CERT_DIR}/ca.crt" --data-binary @test.iso.01 https://localhost:5001/api/v1/uploads/metalk8s
+curl -X PUT --http1.1 -H "X-Target-Version: 1.25.3" -H "Content-Range: bytes 6153012-12306022/30765056" -H "Content-Type: application/octet-stream" --cert "${CERT_DIR}/tls.crt" --key "${CERT_DIR}/tls.key" --cacert "${CERT_DIR}/ca.crt" --data-binary @test.iso.01 https://localhost:5001/api/v1/uploads/metalk8s
 
-curl -X PUT --http1.1 -H "X-Target-Version: 1.25.3" -H "X-Sha256-checksum: 81c931664a390272a230b5c56b23c5652559f5bed085282b70fcc56e9c3c2b2f" -H "Content-Range: bytes 12306023-18459033/30765056" -H "Content-Type: application/octet-stream" --cert "${CERT_DIR}/tls.crt" --key "${CERT_DIR}/tls.key" --cacert "${CERT_DIR}/ca.crt" --data-binary @test.iso.02 https://localhost:5001/api/v1/uploads/metalk8s
+curl -X PUT --http1.1 -H "X-Target-Version: 1.25.3" -H "Content-Range: bytes 12306023-18459033/30765056" -H "Content-Type: application/octet-stream" --cert "${CERT_DIR}/tls.crt" --key "${CERT_DIR}/tls.key" --cacert "${CERT_DIR}/ca.crt" --data-binary @test.iso.02 https://localhost:5001/api/v1/uploads/metalk8s
 
-curl -X PUT --http1.1 -H "X-Target-Version: 1.25.3" -H "X-Sha256-checksum: 81c931664a390272a230b5c56b23c5652559f5bed085282b70fcc56e9c3c2b2f" -H "Content-Range: bytes 18459034-24612044/30765056" -H "Content-Type: application/octet-stream" --cert "${CERT_DIR}/tls.crt" --key "${CERT_DIR}/tls.key" --cacert "${CERT_DIR}/ca.crt" --data-binary @test.iso.03 https://localhost:5001/api/v1/uploads/metalk8s
+curl -X PUT --http1.1 -H "X-Target-Version: 1.25.3" -H "Content-Range: bytes 18459034-24612044/30765056" -H "Content-Type: application/octet-stream" --cert "${CERT_DIR}/tls.crt" --key "${CERT_DIR}/tls.key" --cacert "${CERT_DIR}/ca.crt" --data-binary @test.iso.03 https://localhost:5001/api/v1/uploads/metalk8s
 ```
 ```json
 {
@@ -402,7 +401,6 @@ export CERT_DIR="/tmp/certs"
 curl -X PUT \
   --http1.1 \
   -H "X-Target-Version: 1.25.3" \
-  -H "X-Sha256-checksum: 81c931664a390272a230b5c56b23c5652559f5bed085282b70fcc56e9c3c2b2f" \
   -H "Content-Range: bytes 24612045-30765055/30765056" \
   -H "Content-Type: application/octet-stream" \
   --cert "${CERT_DIR}/tls.crt" \

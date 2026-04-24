@@ -78,13 +78,6 @@ func fillPartFromUploadChunkRequestObject(
 			Throw()
 	}
 
-	if src.Params.XSha256Checksum == "" {
-		return errors.From(domain.ErrHandlerMissingRequestHeader).
-			WithIdentifier(400002).
-			WithDetail("header 'X-Sha256-checksum' is missing").
-			Throw()
-	}
-
 	if src.Params.XTargetVersion == "" {
 		return errors.From(domain.ErrHandlerMissingRequestHeader).
 			WithIdentifier(400002).
@@ -101,7 +94,6 @@ func fillPartFromUploadChunkRequestObject(
 		Name:    src.SolutionArchive,
 		Version: src.Params.XTargetVersion,
 		Size:    total,
-		Hash:    src.Params.XSha256Checksum,
 	}
 
 	dst.Meta = &domain.PartMeta{

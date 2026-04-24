@@ -143,7 +143,7 @@ func (uc *GetExternalSolutionArchive) Execute(
 			continue
 		}
 
-		body, err := uc.externalDownloader.Download(ctx, downloadURL, solutionArchive.Hash, start, end, solutionArchiveSize)
+		body, err := uc.externalDownloader.Download(ctx, downloadURL, start, end, solutionArchiveSize)
 		if err != nil {
 			return errors.Stamp(err)
 		}

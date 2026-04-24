@@ -75,15 +75,13 @@ func (uc *UploadPart) Execute(part *domain.Part) (*domain.SolutionArchiveStatus,
 
 	// Test if a session related to the solution archive from the part exists
 	if solutionArchiveFromManifest.Name != part.SolutionArchive.Name ||
-		solutionArchiveFromManifest.Version != part.SolutionArchive.Version ||
-		solutionArchiveFromManifest.Hash != part.SolutionArchive.Hash {
+		solutionArchiveFromManifest.Version != part.SolutionArchive.Version {
 		return nil, errors.From(domain.ErrPartUploaderNotFound).
 			WithIdentifier(404000).
 			WithDetail("solution archive not found in the current session manifest").
 			WithProperty("instance", fmt.Sprintf("%s/uploads/%s", uc.rootAPIPath, part.SolutionArchive.Name)).
 			WithProperty("component", part.SolutionArchive.Name).
 			WithProperty("version", part.SolutionArchive.Version).
-			WithProperty("hash", part.SolutionArchive.Hash).
 			Throw()
 	}
 
