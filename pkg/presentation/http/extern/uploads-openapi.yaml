@@ -23,12 +23,6 @@ paths:
           required: true
           schema:
             type: string
-        - name: X-Sha256-checksum
-          in: header
-          description: Sha256 of the solution archive
-          required: true
-          schema:
-            type: string
         - name: Content-Range
           in: header
           description: >-
