@@ -29,11 +29,6 @@ func fillSolutionArchiveFromDownloadSolutionArchiveRequestObject(
 			WithDetail("parameter 'version' is missing").
 			Throw()
 	}
-	if src.Params.XSha256Checksum == "" {
-		return errors.From(domain.ErrHandlerMissingRequestHeader).
-			WithDetail("header 'X-Sha256-checksum' is missing").
-			Throw()
-	}
 	if src.Params.Range == "" {
 		return errors.From(domain.ErrHandlerMissingRequestHeader).
 			WithDetail("header 'Range' is missing").
@@ -47,7 +42,6 @@ func fillSolutionArchiveFromDownloadSolutionArchiveRequestObject(
 	solutionArchive := &domain.SolutionArchive{
 		Name:    src.SolutionArchive,
 		Version: src.Version,
-		Hash:    src.Params.XSha256Checksum,
 	}
 
 	dst.SolutionArchive = solutionArchive

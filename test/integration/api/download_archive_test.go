@@ -26,8 +26,7 @@ var _ = Describe("Download Archive API", func() {
 				"artesca-base",
 				solutionArchive.Version,
 				&intern.DownloadSolutionArchiveParams{
-					XSha256Checksum: solutionArchive.Hash,
-					Range:           "bytes=0-2",
+					Range: "bytes=0-2",
 				},
 			)
 			Expect(err).NotTo(HaveOccurred())
@@ -50,8 +49,7 @@ var _ = Describe("Download Archive API", func() {
 				"non-existent-solution-archive",
 				"1.0.0",
 				&intern.DownloadSolutionArchiveParams{
-					XSha256Checksum: "sha",
-					Range:           "bytes=0-2",
+					Range: "bytes=0-2",
 				},
 			)
 			Expect(err).NotTo(HaveOccurred())
@@ -73,8 +71,7 @@ var _ = Describe("Download Archive API", func() {
 				"artesca-base",
 				"4.0.0-preview.1",
 				&intern.DownloadSolutionArchiveParams{
-					XSha256Checksum: "0fac9ac77b2915515aa726a1197536087e69123d49d29d0e397fa4931e7da29e",
-					Range:           "bytes=0-29",
+					Range: "bytes=0-29",
 				},
 			)
 			Expect(err).NotTo(HaveOccurred())
@@ -96,8 +93,7 @@ var _ = Describe("Download Archive API", func() {
 				"artesca-base",
 				"4.0.0-preview.1",
 				&intern.DownloadSolutionArchiveParams{
-					XSha256Checksum: "sha",
-					Range:           "invalid-range-format",
+					Range: "invalid-range-format",
 				},
 			)
 			Expect(err).NotTo(HaveOccurred())
@@ -116,8 +112,7 @@ var _ = Describe("Download Archive API", func() {
 				"artesca-base",
 				"4.0.0-preview.1",
 				&intern.DownloadSolutionArchiveParams{
-					XSha256Checksum: "sha",
-					Range:           "bytes=10-5",
+					Range: "bytes=10-5",
 				},
 			)
 			Expect(err).NotTo(HaveOccurred())
@@ -137,8 +132,7 @@ var _ = Describe("Download Archive API", func() {
 				"artesca-base",
 				"4.0.0-preview.1",
 				&intern.DownloadSolutionArchiveParams{
-					XSha256Checksum: "sha",
-					Range:           "bytes=0-99",
+					Range: "bytes=0-99",
 				},
 			)
 			Expect(err).NotTo(HaveOccurred())
@@ -156,8 +150,7 @@ var _ = Describe("Download Archive API", func() {
 				"wrong-name",
 				"4.0.0-preview.1",
 				&intern.DownloadSolutionArchiveParams{
-					XSha256Checksum: "sha",
-					Range:           "bytes=0-2",
+					Range: "bytes=0-2",
 				},
 			)
 			Expect(err).NotTo(HaveOccurred())
