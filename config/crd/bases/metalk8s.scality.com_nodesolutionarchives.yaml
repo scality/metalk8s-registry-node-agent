@@ -176,6 +176,12 @@ spec:
                   - type
                   type: object
                 type: array
+              crc32Checksum:
+                description: |-
+                  Calculated CRC32 checksum of the SolutionArchive
+                  (used internally to validate download of the solution archive between nodes)
+                format: int64
+                type: integer
               served:
                 description: The SolutionArchive is mounted on the Node
                 type: boolean

@@ -66,6 +66,10 @@ type NodeSolutionArchiveStatus struct {
 	// The SolutionArchive is mounted on the Node
 	Served     *bool              `json:"served,omitempty"`
 	Conditions []metav1.Condition `json:"conditions,omitempty"`
+	// Calculated CRC32 checksum of the SolutionArchive
+	// (used internally to validate download of the solution archive between nodes)
+	// +kubebuilder:validation:Format=int64
+	CRC32Checksum *uint32 `json:"crc32Checksum,omitempty"`
 	// URL of the SolutionArchive (used internally to replicate archive between nodes)
 	URL string `json:"url,omitempty"`
 }
