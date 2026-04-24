@@ -2,9 +2,7 @@ package multipartuploader
 
 import (
 	"bytes"
-	"crypto/sha256"
 	"encoding/binary"
-	"encoding/hex"
 	"encoding/json"
 	"io"
 	"os"
@@ -267,15 +265,8 @@ func (f *FileSystem) ConsolidateMultipartFile(
 	)
 
 	// Calculate the SHA256 hash of the recipient file
-	recipientFile, err := library.GetFile(recipientFilePath)
+	calculatedHash, err := library.HashFile(recipientFilePath)
 	if err != nil {
-		return errors.Stamp(err)
-	}
-
-	defer recipientFile.Close() // nolint: errcheck // No error check on defer.
-
-	hasher := sha256.New()
-	if _, err := io.Copy(hasher, recipientFile); err != nil {
 		return errors.From(domain.ErrStorageProviderInternal).
 			WithIdentifier(500000).
 			WithDetail("unable to calculate the hash of the recipient file").
@@ -284,16 +275,14 @@ func (f *FileSystem) ConsolidateMultipartFile(
 			Throw()
 	}
 
-	calculedHash := hex.EncodeToString(hasher.Sum(nil))
-
-	if calculedHash != solutionArchive.Hash {
+	if calculatedHash != solutionArchive.Hash {
 		return errors.From(domain.ErrStorageProviderBusinessRuleViolation).
 			WithIdentifier(422001).
 			WithDetail("the hash of the recipient file does not match the solution archive metadata").
 			WithProperty("component", solutionArchive.Name).
 			WithProperty("version", solutionArchive.Version).
 			WithProperty("expected_hash", solutionArchive.Hash).
-			WithProperty("calculed_hash", calculedHash).
+			WithProperty("calculated_hash", calculatedHash).
 			Throw()
 	}
 
