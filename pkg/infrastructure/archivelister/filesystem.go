@@ -53,3 +53,8 @@ func (f *FileSystem) GetArchiveSize(filename string) (int64, error) {
 func (f *FileSystem) GetArchiveHash(filename string) (string, error) {
 	return f.store.GetArchiveHash(filename)
 }
+
+// GetArchiveCRC32Checksum retrieves the CRC32 checksum of a file from the storage backend.
+func (f *FileSystem) GetArchiveCRC32Checksum(filename string) (uint32, error) {
+	return f.store.GetArchiveCRC32Checksum(filename)
+}

@@ -183,6 +183,20 @@ var _ = BeforeSuite(func() {
 		}
 	}()
 
+	// Drain file event channels so the watcher goroutine is not blocked on
+	// unbuffered channel sends. Without a consumer, subsequent fsnotify events
+	// (and their calls to RefreshWatchedFileInfos) would never be processed.
+	go func() {
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-filenameChan:
+			case <-deleteChan:
+			}
+		}
+	}()
+
 	// Wait for the watched_files_info.json to be created
 	Eventually(func() bool {
 		_, err := os.Stat(filepath.Join(testingSuite.SolutionArchiveStorageDirectory, controlDir, watchedFilesInfoName))

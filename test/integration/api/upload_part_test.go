@@ -137,6 +137,14 @@ var _ = Describe("Upload Part API", func() {
 
 			err = library.CheckFile(recipientFilePath)
 			Expect(err).To(HaveOccurred())
+
+			By("retrieving the CRC32 checksum of the solution archive")
+			var crc32Checksum uint32
+			Eventually(func() error {
+				_, crc32Checksum, err = testingSuite.container.GetValidateSolutionArchiveUseCase().Execute(solutionArchive)
+				return err
+			}, timeout, interval).Should(Succeed())
+			Expect(crc32Checksum).To(Equal(uint32(0x3d3e0e52)))
 		})
 	})
 

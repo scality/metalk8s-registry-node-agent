@@ -32,7 +32,7 @@ func NewValidateSolutionArchive(
 	}
 }
 
-func (uc *ValidateSolutionArchive) Execute(solutionArchive *domain.SolutionArchive) (bool, error) {
+func (uc *ValidateSolutionArchive) Execute(solutionArchive *domain.SolutionArchive) (bool, uint32, error) {
 	uc.logger.Debug().
 		Any("solution_archive", solutionArchive).
 		Msg("Validating solution archive")
@@ -44,27 +44,32 @@ func (uc *ValidateSolutionArchive) Execute(solutionArchive *domain.SolutionArchi
 	// matching solutionArchiveStorageNamePattern
 	fileNames, err := uc.archiveLister.ListFiles()
 	if err != nil {
-		return false, errors.Stamp(err)
+		return false, 0, errors.Stamp(err)
 	}
 
 	// Check if the solution archive exists in the storage
 	if !library.SolutionArchiveExists(solutionArchive, fileNames) {
-		return false, nil
+		return false, 0, nil
 	}
 
 	hash, err := uc.archiveLister.GetArchiveHash(library.GenSolutionArchiveFileName(solutionArchive))
 	if err != nil {
-		return false, errors.Stamp(err)
+		return false, 0, errors.Stamp(err)
 	}
 	if hash != solutionArchive.Hash {
 		err := uc.archiveRemover.DeleteFile(library.GenSolutionArchiveFileName(solutionArchive))
 		if err != nil {
-			return false, errors.Stamp(err)
+			return false, 0, errors.Stamp(err)
 		}
-		return false, nil
+		return false, 0, nil
+	}
+
+	crc32Checksum, err := uc.archiveLister.GetArchiveCRC32Checksum(library.GenSolutionArchiveFileName(solutionArchive))
+	if err != nil {
+		return false, 0, errors.Stamp(err)
 	}
 
 	uc.logger.Debug().Any("solution_archive", solutionArchive).Msg("Solution archive validation ended")
 
-	return true, nil
+	return true, crc32Checksum, nil
 }

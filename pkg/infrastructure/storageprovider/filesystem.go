@@ -142,7 +142,7 @@ func (f *FileSystem) genWatchedFilesPath() string {
 func (f *FileSystem) genWatchedFileInfo(fileEntry os.DirEntry) (*watchedFileInfo, error) {
 	filePath := filepath.Join(f.solutionArchivesLocation, fileEntry.Name())
 
-	hash, err := library.HashFile(filePath)
+	hash, crc32Checksum, err := library.HashAndCRC32File(filePath)
 	if err != nil {
 		return nil, errors.Stamp(err)
 	}
@@ -161,6 +161,7 @@ func (f *FileSystem) genWatchedFileInfo(fileEntry os.DirEntry) (*watchedFileInfo
 		Size:          fileInfo.Size(),
 		LastChangedAt: fileInfo.ModTime(),
 		Hash:          hash,
+		CRC32Checksum: crc32Checksum,
 	}, nil
 }
 
@@ -340,4 +341,8 @@ func (f *FileSystem) GetArchiveSize(fileName string) (int64, error) {
 
 func (f *FileSystem) GetArchiveHash(fileName string) (string, error) {
 	return f.watchedFileStore.GetHashFromFileInfos(fileName)
+}
+
+func (f *FileSystem) GetArchiveCRC32Checksum(fileName string) (uint32, error) {
+	return f.watchedFileStore.GetCRC32ChecksumFromFileInfos(fileName)
 }

@@ -178,7 +178,7 @@ func (r *NodeSolutionArchiveReconciler) Reconcile(ctx context.Context, req ctrl.
 
 	// 5. Checksum validation of the solution archive
 	log.V(1).Info("Checking if the solution archive is valid")
-	isValid, err := r.isValidSolutionArchive(nodeSolutionArchive)
+	isValid, crc32Checksum, err := r.isValidSolutionArchive(nodeSolutionArchive)
 	if err != nil {
 		log.Error(err, "error validating solution archive")
 		return ctrl.Result{RequeueAfter: 30 * time.Second}, nil
@@ -213,6 +213,7 @@ func (r *NodeSolutionArchiveReconciler) Reconcile(ctx context.Context, req ctrl.
 		return ctrl.Result{}, err
 	}
 	nodeSolutionArchive.Status.URL = downloadURL
+	nodeSolutionArchive.Status.CRC32Checksum = &crc32Checksum
 	nodeSolutionArchive.SetAvailable()
 	// Session may persist in case of manual upload of solution archive
 	err = r.Container.GetRemoveSessionUseCase().Execute(solutionArchive)
@@ -260,7 +261,7 @@ func getNodeName(o client.Object) string {
 	return ""
 }
 
-func (r *NodeSolutionArchiveReconciler) isValidSolutionArchive(nodeSolutionArchive *metalk8sv1alpha1.NodeSolutionArchive) (bool, error) {
+func (r *NodeSolutionArchiveReconciler) isValidSolutionArchive(nodeSolutionArchive *metalk8sv1alpha1.NodeSolutionArchive) (bool, uint32, error) {
 	solutionArchive := &domain.SolutionArchive{
 		Name:    nodeSolutionArchive.Spec.Name,
 		Version: nodeSolutionArchive.Spec.Version,

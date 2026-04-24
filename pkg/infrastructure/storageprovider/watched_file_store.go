@@ -13,6 +13,7 @@ type (
 		Size          int64     `json:"size"`
 		LastChangedAt time.Time `json:"last_changed_at"`
 		Hash          string    `json:"hash"`
+		CRC32Checksum uint32    `json:"crc32_checksum"`
 	}
 
 	WatchedFileStore struct {
@@ -57,6 +58,22 @@ func (s *WatchedFileStore) GetSizeFromFileInfos(filename string) (int64, error) 
 	}
 
 	return info.Size, nil
+}
+
+func (s *WatchedFileStore) GetCRC32ChecksumFromFileInfos(filename string) (uint32, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	info, ok := s.infos[filename]
+	if !ok {
+		return 0, errors.From(domain.ErrStorageProviderNotFound).
+			WithIdentifier(404000).
+			WithDetail("file not found").
+			WithProperty("file_name", filename).
+			Throw()
+	}
+
+	return info.CRC32Checksum, nil
 }
 
 func (s *WatchedFileStore) Set(infos map[string]*watchedFileInfo) {

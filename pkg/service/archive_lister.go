@@ -13,4 +13,8 @@ type ArchiveLister interface {
 	// GetArchiveHash retrieves the hash of a file from the storage
 	// backend.
 	GetArchiveHash(fileName string) (string, error)
+
+	// GetArchiveCRC32Checksum retrieves the CRC32 checksum of a file from the storage
+	// backend.
+	GetArchiveCRC32Checksum(fileName string) (uint32, error)
 }

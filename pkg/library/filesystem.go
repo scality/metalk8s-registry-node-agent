@@ -3,6 +3,7 @@ package library
 import (
 	"crypto"
 	"fmt"
+	"hash/crc32"
 	"io"
 	"os"
 	"path/filepath"
@@ -312,35 +313,38 @@ func DeleteFile(
 	return nil
 }
 
-// hashFile calculates the hash of the file.
-func HashFile(
+// HashAndCRC32File computes both the SHA256 hash and the CRC32 (IEEE)
+// checksum of the file at the given path, reading the file only once.
+func HashAndCRC32File(
 	filePath string,
-) (string, error) {
+) (string, uint32, error) {
 	file, err := GetFile(filePath)
 	if err != nil {
-		return "", errors.Stamp(err)
+		return "", 0, errors.Stamp(err)
 	}
 
 	defer file.Close() // nolint: errcheck // No error check on defer.
 
-	return HashReader(file)
+	return hashAndCRC32Reader(file)
 }
 
-// hashReader calculates the hash of the reader.
-func HashReader(
+// hashAndCRC32Reader computes both the SHA256 hash and the CRC32 (IEEE)
+// checksum of the given reader, consuming it only once via io.MultiWriter.
+func hashAndCRC32Reader(
 	reader io.Reader,
-) (string, error) {
+) (string, uint32, error) {
 	hasher := crypto.SHA256.New()
+	crc32Hasher := crc32.NewIEEE()
 
-	if _, err := io.Copy(hasher, reader); err != nil {
-		return "", errors.From(domain.ErrInternal).
+	if _, err := io.Copy(io.MultiWriter(hasher, crc32Hasher), reader); err != nil {
+		return "", 0, errors.From(domain.ErrInternal).
 			WithIdentifier(500000).
 			WithDetail("unexpected error while hashing the reader").
 			CausedBy(err).
 			Throw()
 	}
 
-	return fmt.Sprintf("%x", hasher.Sum(nil)), nil
+	return fmt.Sprintf("%x", hasher.Sum(nil)), crc32Hasher.Sum32(), nil
 }
 
 // GenBucketName generates a unique bucket name for a session based on the solution archive's name and version.

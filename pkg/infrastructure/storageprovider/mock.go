@@ -282,6 +282,10 @@ func (f *MockFileSystem) GetArchiveSize(filename string) (int64, error) {
 	return 0, nil
 }
 
+func (f *MockFileSystem) GetArchiveCRC32Checksum(filename string) (uint32, error) {
+	return 0, nil
+}
+
 func (f *MockFileSystem) MountFile(
 	fileName string,
 	mountPoint string,

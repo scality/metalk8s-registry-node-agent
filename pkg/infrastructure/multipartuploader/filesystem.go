@@ -265,7 +265,7 @@ func (f *FileSystem) ConsolidateMultipartFile(
 	)
 
 	// Calculate the SHA256 hash of the recipient file
-	calculatedHash, err := library.HashFile(recipientFilePath)
+	calculatedHash, _, err := library.HashAndCRC32File(recipientFilePath)
 	if err != nil {
 		return errors.From(domain.ErrStorageProviderInternal).
 			WithIdentifier(500000).

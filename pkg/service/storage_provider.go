@@ -42,6 +42,10 @@ type StorageProvider interface {
 	// backend.
 	GetArchiveHash(fileName string) (string, error)
 
+	// GetArchiveCRC32Checksum retrieves the CRC32 checksum of a file from the storage
+	// backend.
+	GetArchiveCRC32Checksum(fileName string) (uint32, error)
+
 	// ControlDir returns the control directory.
 	ControlDir() string
 
