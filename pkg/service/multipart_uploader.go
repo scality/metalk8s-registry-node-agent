@@ -40,6 +40,7 @@ type MultipartUploader interface {
 		bucketName string,
 		solutionArchiveMeta *domain.SolutionArchive,
 		perm os.FileMode,
+		crc32Checksum *uint32,
 	) error
 
 	// MoveFileToRoot moves a file from a bucket to the root location in the
@@ -51,5 +52,6 @@ type MultipartUploader interface {
 		sessionBucket string,
 		solutionArchiveFromManifest *domain.SolutionArchive,
 		part *domain.Part,
+		crc32Checksum *uint32,
 	) (*domain.SolutionArchiveStatus, error)
 }

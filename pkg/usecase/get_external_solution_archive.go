@@ -56,6 +56,7 @@ func (uc *GetExternalSolutionArchive) Execute(
 	ctx context.Context,
 	solutionArchive *domain.SolutionArchive,
 	downloadURL string,
+	crc32Checksum *uint32,
 ) error {
 	uc.logger.Debug().
 		Any("solution_archive", solutionArchive).
@@ -150,7 +151,12 @@ func (uc *GetExternalSolutionArchive) Execute(
 
 		// Store the chunk in the file (streams via io.Copy); then close the HTTP body this iteration.
 		part.Content = body
-		solutionArchiveStatus, err = uc.multipartUploader.StorePart(sessionBucket, solutionArchiveFromManifest, part)
+		solutionArchiveStatus, err = uc.multipartUploader.StorePart(
+			sessionBucket,
+			solutionArchiveFromManifest,
+			part,
+			crc32Checksum, // CRC32 Checksum validation is required when downloading
+		)
 		_ = body.Close() // nolint: errcheck // Return path uses StorePart err; Close releases the connection.
 		if err != nil {
 			return errors.Intercept(err).

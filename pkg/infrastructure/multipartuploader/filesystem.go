@@ -242,6 +242,7 @@ func (f *FileSystem) ConsolidateMultipartFile(
 	bucketName string,
 	solutionArchive *domain.SolutionArchive,
 	perm os.FileMode,
+	crc32Checksum *uint32,
 ) error {
 	solutionArchiveStatus, err := f.multipartInspector.GetMultipartFileStatus(bucketName, solutionArchive)
 	if err != nil {
@@ -264,14 +265,26 @@ func (f *FileSystem) ConsolidateMultipartFile(
 		solutionArchive.Name,
 	)
 
-	// Calculate the SHA256 hash of the recipient file
-	calculatedHash, _, err := library.HashAndCRC32File(recipientFilePath)
+	// Calculate the checksums of the recipient file
+	calculatedHash, calculatedCRC32Checksum, err := library.HashAndCRC32File(recipientFilePath)
 	if err != nil {
 		return errors.From(domain.ErrStorageProviderInternal).
 			WithIdentifier(500000).
-			WithDetail("unable to calculate the hash of the recipient file").
+			WithDetail("unable to calculate hash and CRC32 checksum of the recipient file").
 			WithProperty("file_path", recipientFilePath).
 			CausedBy(err).
+			Throw()
+	}
+
+	// crc32Checksum not set means no CRC32 Checksum validation required
+	if crc32Checksum != nil && calculatedCRC32Checksum != *crc32Checksum {
+		return errors.From(domain.ErrStorageProviderBusinessRuleViolation).
+			WithIdentifier(422001).
+			WithDetail("the CRC32 checksum of the recipient file does not match the solution archive metadata").
+			WithProperty("component", solutionArchive.Name).
+			WithProperty("version", solutionArchive.Version).
+			WithProperty("expected_crc32_checksum", *crc32Checksum).
+			WithProperty("calculated_crc32_checksum", calculatedCRC32Checksum).
 			Throw()
 	}
 
@@ -377,6 +390,7 @@ func (f *FileSystem) StorePart(
 	sessionBucket string,
 	solutionArchiveFromManifest *domain.SolutionArchive,
 	part *domain.Part,
+	crc32Checksum *uint32,
 ) (*domain.SolutionArchiveStatus, error) {
 	// When this is the first stored part for a solution archive, the size is not set in the manifest
 	// so we use the size from the part
@@ -422,6 +436,7 @@ func (f *FileSystem) StorePart(
 		sessionBucket,
 		part.SolutionArchive,
 		library.FileSystemDefaultFileMode,
+		crc32Checksum,
 	)
 	if err != nil {
 		cleanUpCorrupted()

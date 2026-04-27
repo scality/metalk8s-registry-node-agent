@@ -173,6 +173,7 @@ func (f *MockFileSystem) StorePart(
 	sessionBucket string,
 	solutionArchiveFromManifest *domain.SolutionArchive,
 	part *domain.Part,
+	crc32Checksum *uint32,
 ) (*domain.SolutionArchiveStatus, error) {
 	solutionArchiveFileName := library.GenSolutionArchiveFileName(part.SolutionArchive)
 	f.MoveFileToRoot(sessionBucket, part.SolutionArchive.Name, solutionArchiveFileName) // nolint:errcheck
@@ -253,11 +254,8 @@ func (f *MockFileSystem) ConsolidateMultipartFile(
 	bucketName string,
 	solutionArchiveMeta *domain.SolutionArchive,
 	perm os.FileMode,
+	crc32Checksum *uint32,
 ) error {
-	if err := f.consolidateMultipartFile(bucketName, solutionArchiveMeta, perm); err != nil {
-		return errors.Stamp(err)
-	}
-
 	return nil
 }
 
@@ -387,14 +385,6 @@ func (f *MockFileSystem) writePartToMultipartFile(
 			part.Meta.Start: {Start: part.Meta.Start, End: part.Meta.End},
 		},
 	}, nil
-}
-
-func (f *MockFileSystem) consolidateMultipartFile(
-	_ string,
-	_ *domain.SolutionArchive,
-	_ os.FileMode,
-) error {
-	return nil
 }
 
 func (f *MockFileSystem) StartWatchFiles(_ chan domain.FileEventDetails) error {

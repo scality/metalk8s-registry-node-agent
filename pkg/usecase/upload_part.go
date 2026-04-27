@@ -85,7 +85,12 @@ func (uc *UploadPart) Execute(part *domain.Part) (*domain.SolutionArchiveStatus,
 			Throw()
 	}
 
-	solutionArchiveStatus, err := uc.multipartUploader.StorePart(sessionBucket, solutionArchiveFromManifest, part)
+	solutionArchiveStatus, err := uc.multipartUploader.StorePart(
+		sessionBucket,
+		solutionArchiveFromManifest,
+		part,
+		nil, // CRC32 Checksum validation is not required when uploading
+	)
 	if err != nil {
 		return nil, errors.Intercept(err).
 			WithProperty("instance", fmt.Sprintf("%s/uploads/%s", uc.rootAPIPath, part.SolutionArchive.Name)).

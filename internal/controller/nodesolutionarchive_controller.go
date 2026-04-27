@@ -143,6 +143,7 @@ func (r *NodeSolutionArchiveReconciler) Reconcile(ctx context.Context, req ctrl.
 		log.V(1).Info("Checking if an existing solution archive is already available on another node")
 		otherSolutionArchiveAvailable := false
 		var urlToDownload string
+		var crc32Checksum *uint32
 		solutionArchiveNameVersion := library.GetSolutionArchiveNameVersion(
 			nodeSolutionArchive.Spec.Name,
 			nodeSolutionArchive.Spec.Version,
@@ -155,6 +156,7 @@ func (r *NodeSolutionArchiveReconciler) Reconcile(ctx context.Context, req ctrl.
 			if item.Spec.NodeName != nodeSolutionArchive.Spec.NodeName && item.Status.Available != nil && *item.Status.Available {
 				otherSolutionArchiveAvailable = true
 				urlToDownload = item.Status.URL
+				crc32Checksum = item.Status.CRC32Checksum
 				break
 			}
 		}
@@ -164,6 +166,7 @@ func (r *NodeSolutionArchiveReconciler) Reconcile(ctx context.Context, req ctrl.
 				ctx,
 				solutionArchive,
 				urlToDownload,
+				crc32Checksum,
 			)
 			if err != nil {
 				// In some edge case, even if the solution archive is available on another node,
