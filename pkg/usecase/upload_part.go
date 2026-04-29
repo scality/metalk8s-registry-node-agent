@@ -16,7 +16,6 @@ type UploadPart struct {
 	bucketManager      service.BucketManager
 	multipartUploader  service.MultipartUploader
 	multipartInspector service.MultipartInspector
-	multipartRemover   service.MultipartRemover
 	bucketLocker       service.LockerUnlocker
 	archiveLocker      service.LockerUnlocker
 	rootAPIPath        string
@@ -27,7 +26,6 @@ func NewUploadPart(
 	bucketManager service.BucketManager,
 	multipartUploader service.MultipartUploader,
 	multipartInspector service.MultipartInspector,
-	multipartRemover service.MultipartRemover,
 	bucketLocker service.LockerUnlocker,
 	archiveLocker service.LockerUnlocker,
 	rootAPIPath string,
@@ -39,7 +37,6 @@ func NewUploadPart(
 		bucketManager:      bucketManager,
 		multipartUploader:  multipartUploader,
 		multipartInspector: multipartInspector,
-		multipartRemover:   multipartRemover,
 		bucketLocker:       bucketLocker,
 		archiveLocker:      archiveLocker,
 		rootAPIPath:        rootAPIPath,
@@ -113,41 +110,12 @@ func (uc *UploadPart) Execute(part *domain.Part) (*domain.SolutionArchiveStatus,
 	// Solution archive is complete, so let's consolidate it,
 	// move it to the storage root location and then
 	// remove the bucket.
-	cleanUpCorrupted := func() {
-		if err := uc.multipartRemover.DeleteMultipartFile(sessionBucket, part.SolutionArchive); err != nil {
-			uc.logger.Error().Err(err).Any("solution archive", part.SolutionArchive).Msg("failed to delete multipart file")
-		}
-
-		if _, err := uc.multipartUploader.CreateMultipartFiles(sessionBucket, part.SolutionArchive); err != nil {
-			uc.logger.Error().Err(err).Any("solution archive", part.SolutionArchive).Msg("failed to create multipart file")
-		}
-	}
-
-	err = uc.multipartUploader.ConsolidateMultipartFile(
+	err = uc.multipartUploader.Consolidate(
 		sessionBucket,
-		part.SolutionArchive,
+		solutionArchiveFromManifest,
 		library.FileSystemDefaultFileMode,
 	)
 	if err != nil {
-		cleanUpCorrupted()
-		// return nil, errors.Stamp(err)
-		return nil, errors.Intercept(err).
-			WithProperty("instance", fmt.Sprintf("%s/uploads/%s", uc.rootAPIPath, part.SolutionArchive.Name)).
-			Throw()
-	}
-
-	solutionArchiveFileName := library.GenSolutionArchiveFileName(part.SolutionArchive)
-	err = uc.multipartUploader.MoveFileToRoot(sessionBucket, part.SolutionArchive.Name, solutionArchiveFileName)
-	if err != nil {
-		cleanUpCorrupted()
-		// return nil, errors.Stamp(err)
-		return nil, errors.Intercept(err).
-			WithProperty("instance", fmt.Sprintf("%s/uploads/%s", uc.rootAPIPath, part.SolutionArchive.Name)).
-			Throw()
-	}
-	err = uc.bucketManager.DeleteBucket(sessionBucket)
-	if err != nil {
-		// return nil, errors.Stamp(err)
 		return nil, errors.Intercept(err).
 			WithProperty("instance", fmt.Sprintf("%s/uploads/%s", uc.rootAPIPath, part.SolutionArchive.Name)).
 			Throw()

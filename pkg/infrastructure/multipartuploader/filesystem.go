@@ -260,9 +260,9 @@ func (f *FileSystem) CommitPart(bucketName string, part *domain.Part) error {
 	return nil
 }
 
-// ConsolidateMultipartFile consolidates all the parts of a multipart file in a single flat file
+// consolidateMultipartFile consolidates all the parts of a multipart file in a single flat file
 // into the same bucket it is located.
-func (f *FileSystem) ConsolidateMultipartFile(
+func (f *FileSystem) consolidateMultipartFile(
 	bucketName string,
 	solutionArchive *domain.SolutionArchive,
 	perm os.FileMode,
@@ -352,8 +352,8 @@ func (f *FileSystem) ConsolidateMultipartFile(
 	return nil
 }
 
-// MoveFileToRoot moves a file from a bucket to the root location in the storage.
-func (f *FileSystem) MoveFileToRoot(
+// moveFileToRoot moves a file from a bucket to the root location in the storage.
+func (f *FileSystem) moveFileToRoot(
 	bucketName, fileName, newFileName string,
 ) error {
 	if err := library.EnforceNamingConventions(newFileName); err != nil {
@@ -391,6 +391,51 @@ func (f *FileSystem) MoveFileToRoot(
 			WithProperty("while", "moving the file from bucket to root location").
 			CausedBy(err).
 			Throw()
+	}
+
+	return nil
+}
+
+// Consolidate consolidates all the parts of a multipart file
+// in a single flat file into the same bucket it is located and moves it to the root location.
+func (f *FileSystem) Consolidate(
+	bucketName string,
+	solutionArchive *domain.SolutionArchive,
+	perm os.FileMode,
+) error {
+	cleanUpCorrupted := func() {
+		if err := f.multipartRemover.DeleteMultipartFile(bucketName, solutionArchive); err != nil {
+			f.logger.Error().Err(err).
+				Any("solution archive", solutionArchive).
+				Msg("failed to delete multipart file")
+		}
+
+		if _, err := f.CreateMultipartFiles(bucketName, solutionArchive); err != nil {
+			f.logger.Error().Err(err).
+				Any("solution archive", solutionArchive).
+				Msg("failed to create multipart file")
+		}
+	}
+
+	err := f.consolidateMultipartFile(
+		bucketName,
+		solutionArchive,
+		perm,
+	)
+	if err != nil {
+		cleanUpCorrupted()
+		return errors.Stamp(err)
+	}
+
+	solutionArchiveFileName := library.GenSolutionArchiveFileName(solutionArchive)
+	err = f.moveFileToRoot(bucketName, solutionArchive.Name, solutionArchiveFileName)
+	if err != nil {
+		cleanUpCorrupted()
+		return errors.Stamp(err)
+	}
+	err = f.bucketManager.DeleteBucket(bucketName)
+	if err != nil {
+		return errors.Stamp(err)
 	}
 
 	return nil

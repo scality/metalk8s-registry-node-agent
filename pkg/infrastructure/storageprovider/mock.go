@@ -169,13 +169,13 @@ func (f *MockFileSystem) DeleteBucket(
 	return nil
 }
 
-func (f *MockFileSystem) MoveFileToRoot(
-	bucketName, fileName, newFileName string,
+func (f *MockFileSystem) Consolidate(
+	sessionBucket string,
+	solutionArchiveFromManifest *domain.SolutionArchive,
+	perm os.FileMode,
 ) error {
-	if err := f.moveFileToRoot(bucketName, fileName, newFileName); err != nil {
-		return errors.Stamp(err)
-	}
-
+	solutionArchiveFileName := library.GenSolutionArchiveFileName(solutionArchiveFromManifest)
+	f.files = append(f.files, solutionArchiveFileName)
 	return nil
 }
 
@@ -244,18 +244,6 @@ func (f *MockFileSystem) StorePart(
 }
 
 func (f *MockFileSystem) CommitPart(bucketName string, part *domain.Part) error {
-	return nil
-}
-
-func (f *MockFileSystem) ConsolidateMultipartFile(
-	bucketName string,
-	solutionArchiveMeta *domain.SolutionArchive,
-	perm os.FileMode,
-) error {
-	if err := f.consolidateMultipartFile(bucketName, solutionArchiveMeta, perm); err != nil {
-		return errors.Stamp(err)
-	}
-
 	return nil
 }
 
@@ -335,11 +323,6 @@ func (f *MockFileSystem) hashFile(
 	return f.GetArchiveHash(fileName)
 }
 
-func (f *MockFileSystem) moveFileToRoot(_, _, newFileName string) error { // nolint: unparam
-	f.files = append(f.files, newFileName)
-	return nil
-}
-
 // nolint:unparam
 func (f *MockFileSystem) createMultipartFiles(
 	bucketName string,
@@ -367,14 +350,6 @@ func (f *MockFileSystem) getSolutionArchiveStatus(
 }
 
 func (f *MockFileSystem) deleteMultipartFile(_ string, _ *domain.SolutionArchive) error {
-	return nil
-}
-
-func (f *MockFileSystem) consolidateMultipartFile(
-	_ string,
-	_ *domain.SolutionArchive,
-	_ os.FileMode,
-) error {
 	return nil
 }
 

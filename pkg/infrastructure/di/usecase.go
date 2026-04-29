@@ -10,7 +10,6 @@ func (c *Container) getUploadPartUseCase() *usecase.UploadPart {
 			c.GetFileSystemBucketManager(),
 			c.GetFileSystemMultipartUploader(),
 			c.GetFileSystemMultipartInspector(),
-			c.GetFileSystemMultipartRemover(),
 			c.getInMemoryBucketLocker(),
 			c.getInMemoryArchiveLocker(),
 			c.GetRootExternAPIPath(),
@@ -106,7 +105,6 @@ func (c *Container) GetGetExternalSolutionArchiveUseCase() *usecase.GetExternalS
 			c.getInMemoryBucketLocker(),
 			c.GetFileSystemMultipartUploader(),
 			c.GetFileSystemMultipartInspector(),
-			c.GetFileSystemMultipartRemover(),
 			c.GetRootExternAPIPath(),
 			c.GetChunkSize(),
 		)
