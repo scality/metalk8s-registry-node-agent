@@ -16,6 +16,7 @@ type UploadPart struct {
 	bucketManager      service.BucketManager
 	multipartUploader  service.MultipartUploader
 	multipartInspector service.MultipartInspector
+	multipartRemover   service.MultipartRemover
 	bucketLocker       service.LockerUnlocker
 	archiveLocker      service.LockerUnlocker
 	rootAPIPath        string
@@ -26,6 +27,7 @@ func NewUploadPart(
 	bucketManager service.BucketManager,
 	multipartUploader service.MultipartUploader,
 	multipartInspector service.MultipartInspector,
+	multipartRemover service.MultipartRemover,
 	bucketLocker service.LockerUnlocker,
 	archiveLocker service.LockerUnlocker,
 	rootAPIPath string,
@@ -37,6 +39,7 @@ func NewUploadPart(
 		bucketManager:      bucketManager,
 		multipartUploader:  multipartUploader,
 		multipartInspector: multipartInspector,
+		multipartRemover:   multipartRemover,
 		bucketLocker:       bucketLocker,
 		archiveLocker:      archiveLocker,
 		rootAPIPath:        rootAPIPath,
@@ -85,8 +88,82 @@ func (uc *UploadPart) Execute(part *domain.Part) (*domain.SolutionArchiveStatus,
 			Throw()
 	}
 
-	solutionArchiveStatus, err := uc.multipartUploader.StorePart(sessionBucket, solutionArchiveFromManifest, part)
+	// When this is the first stored part for a solution archive, the size is not set in the manifest
+	// so we use the size from the part
+	if solutionArchiveFromManifest.Size == 0 {
+		solutionArchiveFromManifest.Size = part.SolutionArchive.Size
+
+		if err := uc.multipartRemover.DeleteMultipartFile(sessionBucket, solutionArchiveFromManifest); err != nil {
+			return nil, errors.Intercept(err).
+				WithProperty("instance", fmt.Sprintf("%s/uploads/%s", uc.rootAPIPath, part.SolutionArchive.Name)).
+				Throw()
+		}
+
+		if _, err := uc.multipartUploader.CreateMultipartFiles(sessionBucket, solutionArchiveFromManifest); err != nil {
+			return nil, errors.Intercept(err).
+				WithProperty("instance", fmt.Sprintf("%s/uploads/%s", uc.rootAPIPath, part.SolutionArchive.Name)).
+				Throw()
+		}
+	}
+
+	part.SolutionArchive = solutionArchiveFromManifest
+
+	solutionArchiveStatus, err := uc.multipartUploader.WritePartToRecipientFile(sessionBucket, part)
 	if err != nil {
+		return nil, errors.Intercept(err).
+			WithProperty("instance", fmt.Sprintf("%s/uploads/%s", uc.rootAPIPath, part.SolutionArchive.Name)).
+			Throw()
+	}
+
+	err = uc.multipartUploader.CommitPart(sessionBucket, part)
+	if err != nil {
+		return nil, errors.Intercept(err).
+			WithProperty("instance", fmt.Sprintf("%s/uploads/%s", uc.rootAPIPath, part.SolutionArchive.Name)).
+			Throw()
+	}
+
+	if !solutionArchiveStatus.IsComplete() {
+		return solutionArchiveStatus, nil
+	}
+
+	// Solution archive is complete, so let's consolidate it,
+	// move it to the storage root location and then
+	// remove the bucket.
+	cleanUpCorrupted := func() {
+		if err := uc.multipartRemover.DeleteMultipartFile(sessionBucket, part.SolutionArchive); err != nil {
+			uc.logger.Error().Err(err).Any("solution archive", part.SolutionArchive).Msg("failed to delete multipart file")
+		}
+
+		if _, err := uc.multipartUploader.CreateMultipartFiles(sessionBucket, part.SolutionArchive); err != nil {
+			uc.logger.Error().Err(err).Any("solution archive", part.SolutionArchive).Msg("failed to create multipart file")
+		}
+	}
+
+	err = uc.multipartUploader.ConsolidateMultipartFile(
+		sessionBucket,
+		part.SolutionArchive,
+		library.FileSystemDefaultFileMode,
+	)
+	if err != nil {
+		cleanUpCorrupted()
+		// return nil, errors.Stamp(err)
+		return nil, errors.Intercept(err).
+			WithProperty("instance", fmt.Sprintf("%s/uploads/%s", uc.rootAPIPath, part.SolutionArchive.Name)).
+			Throw()
+	}
+
+	solutionArchiveFileName := library.GenSolutionArchiveFileName(part.SolutionArchive)
+	err = uc.multipartUploader.MoveFileToRoot(sessionBucket, part.SolutionArchive.Name, solutionArchiveFileName)
+	if err != nil {
+		cleanUpCorrupted()
+		// return nil, errors.Stamp(err)
+		return nil, errors.Intercept(err).
+			WithProperty("instance", fmt.Sprintf("%s/uploads/%s", uc.rootAPIPath, part.SolutionArchive.Name)).
+			Throw()
+	}
+	err = uc.bucketManager.DeleteBucket(sessionBucket)
+	if err != nil {
+		// return nil, errors.Stamp(err)
 		return nil, errors.Intercept(err).
 			WithProperty("instance", fmt.Sprintf("%s/uploads/%s", uc.rootAPIPath, part.SolutionArchive.Name)).
 			Throw()
