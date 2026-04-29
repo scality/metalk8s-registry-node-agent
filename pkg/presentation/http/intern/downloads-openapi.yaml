@@ -42,6 +42,17 @@ paths:
                 type: string
                 format: bytes <start-index>-<end-index>/<total-size-in-bytes>
                 example: bytes 0-2/4
+            # The 'Content-Digest' header is sent as an HTTP trailer.
+            # As oapi-codegen does not handle this feature, we need to manually reimplement
+            # the VisitDownloadSolutionArchiveResponse method
+            # (See pkg/presentation/http/handler/download_solution_archive.go).
+            Content-Digest:
+              description: The digest of the chunk, Base64 encoded
+              required: true
+              schema:
+                type: string
+                format: base64
+                example: "sha-256=:d435Qo+nKZ+gLcUHn7GQtQ72hiBVAgqoLsZnZPiTGPk=:"
           content:
             application/octet-stream:
               schema:
