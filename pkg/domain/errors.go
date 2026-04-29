@@ -34,8 +34,9 @@ var (
 )
 
 var (
-	ErrGetExternalSolutionArchiveNotFound error = errors.New("Not Found Error")
-	ErrGetExternalSolutionArchiveInternal error = errors.New("Internal Error")
+	ErrGetExternalSolutionArchiveNotFound    error = errors.New("Not Found Error")
+	ErrGetExternalSolutionArchiveInternal    error = errors.New("Internal Error")
+	ErrGetExternalSolutionArchiveNotComplete error = errors.New("Not Complete Error")
 )
 
 var (
