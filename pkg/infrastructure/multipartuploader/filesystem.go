@@ -134,9 +134,9 @@ func (f *FileSystem) CreateMultipartFiles(
 	}, nil
 }
 
-// WritePartToMultipartFile writes the content of the given part into the multipart file recipient
+// WritePartToRecipientFile writes the content of the given part into the multipart file recipient
 // on the bucket indicated by the given bucketName.
-func (f *FileSystem) WritePartToMultipartFile(bucketName string,
+func (f *FileSystem) WritePartToRecipientFile(bucketName string,
 	part *domain.Part,
 ) (*domain.SolutionArchiveStatus, error) {
 	solutionArchiveStatus, err := f.multipartInspector.GetMultipartFileStatus(bucketName, part.SolutionArchive)
@@ -144,28 +144,11 @@ func (f *FileSystem) WritePartToMultipartFile(bucketName string,
 		return nil, errors.Stamp(err)
 	}
 
-	partsFilePath := library.GenMultipartPartsFilePath(
-		f.solutionArchivesLocation,
-		bucketName,
-		part.SolutionArchive.Name,
-	)
 	recipientFilePath := library.GenMultipartRecipientFilePath(
 		f.solutionArchivesLocation,
 		bucketName,
 		part.SolutionArchive.Name,
 	)
-
-	partsFile, err := os.OpenFile(partsFilePath, os.O_WRONLY, library.FileSystemDefaultFileMode)
-	if err != nil {
-		return nil, errors.From(domain.ErrStorageProviderInternal).
-			WithIdentifier(500000).
-			WithDetail("unable to open the parts file").
-			WithProperty("file_path", partsFilePath).
-			CausedBy(err).
-			Throw()
-	}
-
-	defer partsFile.Close() // nolint: errcheck // No error check on defer.
 
 	recipientFile, err := os.OpenFile(recipientFilePath, os.O_RDWR, library.FileSystemDefaultFileMode)
 	if err != nil {
@@ -211,9 +194,35 @@ func (f *FileSystem) WritePartToMultipartFile(bucketName string,
 			Throw()
 	}
 
+	solutionArchiveStatus.Parts[part.Meta.Start] = part.Meta
+
+	return solutionArchiveStatus, nil
+}
+
+// CommitPart properly updates the .part files
+// with the metadata of the given part.
+func (f *FileSystem) CommitPart(bucketName string, part *domain.Part) error {
+	partsFilePath := library.GenMultipartPartsFilePath(
+		f.solutionArchivesLocation,
+		bucketName,
+		part.SolutionArchive.Name,
+	)
+
+	partsFile, err := os.OpenFile(partsFilePath, os.O_WRONLY, library.FileSystemDefaultFileMode)
+	if err != nil {
+		return errors.From(domain.ErrStorageProviderInternal).
+			WithIdentifier(500000).
+			WithDetail("unable to open the parts file").
+			WithProperty("file_path", partsFilePath).
+			CausedBy(err).
+			Throw()
+	}
+
+	defer partsFile.Close() // nolint: errcheck // No error check on defer.
+
 	_, err = partsFile.Seek(0, io.SeekEnd)
 	if err != nil {
-		return nil, errors.From(domain.ErrStorageProviderInternal).
+		return errors.From(domain.ErrStorageProviderInternal).
 			WithIdentifier(500000).
 			WithDetail("unable to move to the end of the parts file").
 			WithProperty("file_path", partsFilePath).
@@ -223,7 +232,7 @@ func (f *FileSystem) WritePartToMultipartFile(bucketName string,
 
 	err = binary.Write(partsFile, binary.LittleEndian, part.Meta)
 	if err != nil {
-		return nil, errors.From(domain.ErrStorageProviderInternal).
+		return errors.From(domain.ErrStorageProviderInternal).
 			WithIdentifier(500000).
 			WithDetail("unable to write the part metadata to the parts file").
 			WithProperty("file_path", partsFilePath).
@@ -231,9 +240,7 @@ func (f *FileSystem) WritePartToMultipartFile(bucketName string,
 			Throw()
 	}
 
-	solutionArchiveStatus.Parts[part.Meta.Start] = part.Meta
-
-	return solutionArchiveStatus, nil
+	return nil
 }
 
 // ConsolidateMultipartFile consolidates all the parts of a multipart file in a single flat file
@@ -396,7 +403,12 @@ func (f *FileSystem) StorePart(
 
 	part.SolutionArchive = solutionArchiveFromManifest
 
-	solutionArchiveStatus, err := f.WritePartToMultipartFile(sessionBucket, part)
+	solutionArchiveStatus, err := f.WritePartToRecipientFile(sessionBucket, part)
+	if err != nil {
+		return nil, errors.Stamp(err)
+	}
+
+	err = f.CommitPart(sessionBucket, part)
 	if err != nil {
 		return nil, errors.Stamp(err)
 	}

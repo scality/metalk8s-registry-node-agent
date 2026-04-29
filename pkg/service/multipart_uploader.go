@@ -18,10 +18,14 @@ type MultipartUploader interface {
 		solutionArchiveMeta *domain.SolutionArchive,
 	) (*domain.SolutionArchiveStatus, error)
 
-	// WritePartToMultipartFile properly writes the content of the given part
-	// into the multipart file recipient on the bucket indicated by the given
+	// WritePartToRecipientFile properly writes the content of the given part
+	// into the recipient file on the bucket indicated by the given
 	// bucketName.
-	WritePartToMultipartFile(bucketName string, part *domain.Part) (*domain.SolutionArchiveStatus, error)
+	WritePartToRecipientFile(bucketName string, part *domain.Part) (*domain.SolutionArchiveStatus, error)
+
+	// CommitPart properly updates the parts synthesis file
+	// with the metadata of the given part.
+	CommitPart(bucketName string, part *domain.Part) error
 
 	// ConsolidateMultipartFile consolidates all the parts of a multipart file
 	// in a single flat file into the same bucket it is located.

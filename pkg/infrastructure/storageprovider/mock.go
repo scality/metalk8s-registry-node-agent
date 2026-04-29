@@ -238,15 +238,20 @@ func (f *MockFileSystem) DeleteMultipartFile(
 	return nil
 }
 
-func (f *MockFileSystem) WritePartToMultipartFile(bucketName string,
+func (f *MockFileSystem) WritePartToRecipientFile(bucketName string,
 	part *domain.Part,
 ) (*domain.SolutionArchiveStatus, error) {
-	status, err := f.writePartToMultipartFile(bucketName, part)
-	if err != nil {
-		return nil, errors.Stamp(err)
-	}
+	sa := f.multipartMeta[bucketName]
+	return &domain.SolutionArchiveStatus{
+		SolutionArchive: sa,
+		Parts: map[int64]*domain.PartMeta{
+			part.Meta.Start: {Start: part.Meta.Start, End: part.Meta.End},
+		},
+	}, nil
+}
 
-	return status, nil
+func (f *MockFileSystem) CommitPart(bucketName string, part *domain.Part) error {
+	return nil
 }
 
 func (f *MockFileSystem) ConsolidateMultipartFile(
@@ -370,19 +375,6 @@ func (f *MockFileSystem) getSolutionArchiveStatus(
 
 func (f *MockFileSystem) deleteMultipartFile(_ string, _ *domain.SolutionArchive) error {
 	return nil
-}
-
-func (f *MockFileSystem) writePartToMultipartFile(
-	bucketName string,
-	part *domain.Part,
-) (*domain.SolutionArchiveStatus, error) { // nolint: unparam
-	sa := f.multipartMeta[bucketName]
-	return &domain.SolutionArchiveStatus{
-		SolutionArchive: sa,
-		Parts: map[int64]*domain.PartMeta{
-			part.Meta.Start: {Start: part.Meta.Start, End: part.Meta.End},
-		},
-	}, nil
 }
 
 func (f *MockFileSystem) consolidateMultipartFile(
