@@ -3,6 +3,8 @@ package di
 
 import (
 	"bytes"
+	"crypto/sha256"
+	"encoding/base64"
 	"io"
 	"net/http"
 
@@ -65,9 +67,17 @@ func (c *Container) GetMockHTTPInternClient() *http.Client {
 					}
 					// Create and return a mock response for GET (download)
 					mockData := make([]byte, 1024)
+					mockDataHash := sha256.Sum256(mockData)
+					mockDataHashBase64 := base64.StdEncoding.EncodeToString(mockDataHash[:])
 					return &http.Response{
-						StatusCode:    http.StatusPartialContent,
-						Header:        http.Header{"Content-Range": {"bytes 0-1023/1024"}},
+						StatusCode: http.StatusPartialContent,
+						Header: http.Header{
+							"Content-Range": {"bytes 0-1023/1024"},
+							"Trailer":       {"Content-Digest"},
+						},
+						Trailer: http.Header{
+							"Content-Digest": {"sha-256=:" + mockDataHashBase64 + ":"},
+						},
 						ContentLength: 3,
 						Body:          io.NopCloser(bytes.NewReader(mockData)),
 					}, nil

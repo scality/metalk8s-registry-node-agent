@@ -148,7 +148,6 @@ func (uc *GetExternalSolutionArchive) Execute(
 			return errors.Stamp(err)
 		}
 
-		// Store the chunk in the file (streams via io.Copy); then close the HTTP body this iteration.
 		part.Content = body
 
 		solutionArchiveStatus, err = uc.multipartUploader.StorePart(
@@ -156,8 +155,15 @@ func (uc *GetExternalSolutionArchive) Execute(
 			solutionArchiveFromManifest,
 			part,
 		)
-		_ = body.Close() // nolint: errcheck // Return path uses StorePart err; Close releases the connection.
 		if err != nil {
+			_ = body.Close() // nolint: errcheck // Return path uses WritePartToRecipientFile err; Close releases the connection.
+			return errors.Intercept(err).
+				WithProperty("instance", fmt.Sprintf("%s/downloads/%s", uc.rootAPIPath, solutionArchive.Name)).
+				Throw()
+		}
+
+		// Close verifies the Content-Digest trailer against the computed hash.
+		if err := body.Close(); err != nil {
 			return errors.Intercept(err).
 				WithProperty("instance", fmt.Sprintf("%s/downloads/%s", uc.rootAPIPath, solutionArchive.Name)).
 				Throw()
