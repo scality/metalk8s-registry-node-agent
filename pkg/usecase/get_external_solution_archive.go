@@ -154,30 +154,12 @@ func (uc *GetExternalSolutionArchive) Execute(
 		// Store the chunk in the file (streams via io.Copy); then close the HTTP body this iteration.
 		part.Content = body
 
-		// When this is the first stored part for a solution archive, the size is not set in the manifest
-		// so we use the size from the part. We need to recreate the multipart files with the correct size.
-		if solutionArchiveFromManifest.Size == 0 {
-			solutionArchiveFromManifest.Size = part.SolutionArchive.Size
-
-			if err := uc.multipartRemover.DeleteMultipartFile(sessionBucket, solutionArchiveFromManifest); err != nil {
-				_ = body.Close() // nolint: errcheck
-				return errors.Intercept(err).
-					WithProperty("instance", fmt.Sprintf("%s/downloads/%s", uc.rootAPIPath, solutionArchive.Name)).
-					Throw()
-			}
-
-			if _, err := uc.multipartUploader.CreateMultipartFiles(sessionBucket, solutionArchiveFromManifest); err != nil {
-				_ = body.Close() // nolint: errcheck
-				return errors.Intercept(err).
-					WithProperty("instance", fmt.Sprintf("%s/downloads/%s", uc.rootAPIPath, solutionArchive.Name)).
-					Throw()
-			}
-		}
-
-		part.SolutionArchive = solutionArchiveFromManifest
-
-		solutionArchiveStatus, err = uc.multipartUploader.WritePartToRecipientFile(sessionBucket, part)
-		_ = body.Close() // nolint: errcheck // Return path uses WritePartToRecipientFile err; Close releases the connection.
+		solutionArchiveStatus, err = uc.multipartUploader.StorePart(
+			sessionBucket,
+			solutionArchiveFromManifest,
+			part,
+		)
+		_ = body.Close() // nolint: errcheck // Return path uses StorePart err; Close releases the connection.
 		if err != nil {
 			return errors.Intercept(err).
 				WithProperty("instance", fmt.Sprintf("%s/downloads/%s", uc.rootAPIPath, solutionArchive.Name)).
@@ -189,7 +171,6 @@ func (uc *GetExternalSolutionArchive) Execute(
 				WithProperty("instance", fmt.Sprintf("%s/downloads/%s", uc.rootAPIPath, solutionArchive.Name)).
 				Throw()
 		}
-
 	}
 
 	if !solutionArchiveStatus.IsComplete() {

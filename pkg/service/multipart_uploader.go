@@ -18,10 +18,14 @@ type MultipartUploader interface {
 		solutionArchiveMeta *domain.SolutionArchive,
 	) (*domain.SolutionArchiveStatus, error)
 
-	// WritePartToRecipientFile properly writes the content of the given part
+	// StorePart properly writes the content of the given part
 	// into the recipient file on the bucket indicated by the given
 	// bucketName.
-	WritePartToRecipientFile(bucketName string, part *domain.Part) (*domain.SolutionArchiveStatus, error)
+	StorePart(
+		bucketName string,
+		solutionArchiveFromManifest *domain.SolutionArchive,
+		part *domain.Part,
+	) (*domain.SolutionArchiveStatus, error)
 
 	// CommitPart properly updates the parts synthesis file
 	// with the metadata of the given part.
@@ -49,11 +53,4 @@ type MultipartUploader interface {
 	// MoveFileToRoot moves a file from a bucket to the root location in the
 	// storage.
 	MoveFileToRoot(bucketName, fileName, newFileName string) error
-
-	// StorePart stores a part into a bucket.
-	StorePart(
-		sessionBucket string,
-		solutionArchiveFromManifest *domain.SolutionArchive,
-		part *domain.Part,
-	) (*domain.SolutionArchiveStatus, error)
 }

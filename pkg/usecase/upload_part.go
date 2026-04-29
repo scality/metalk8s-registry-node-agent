@@ -88,27 +88,11 @@ func (uc *UploadPart) Execute(part *domain.Part) (*domain.SolutionArchiveStatus,
 			Throw()
 	}
 
-	// When this is the first stored part for a solution archive, the size is not set in the manifest
-	// so we use the size from the part
-	if solutionArchiveFromManifest.Size == 0 {
-		solutionArchiveFromManifest.Size = part.SolutionArchive.Size
-
-		if err := uc.multipartRemover.DeleteMultipartFile(sessionBucket, solutionArchiveFromManifest); err != nil {
-			return nil, errors.Intercept(err).
-				WithProperty("instance", fmt.Sprintf("%s/uploads/%s", uc.rootAPIPath, part.SolutionArchive.Name)).
-				Throw()
-		}
-
-		if _, err := uc.multipartUploader.CreateMultipartFiles(sessionBucket, solutionArchiveFromManifest); err != nil {
-			return nil, errors.Intercept(err).
-				WithProperty("instance", fmt.Sprintf("%s/uploads/%s", uc.rootAPIPath, part.SolutionArchive.Name)).
-				Throw()
-		}
-	}
-
-	part.SolutionArchive = solutionArchiveFromManifest
-
-	solutionArchiveStatus, err := uc.multipartUploader.WritePartToRecipientFile(sessionBucket, part)
+	solutionArchiveStatus, err := uc.multipartUploader.StorePart(
+		sessionBucket,
+		solutionArchiveFromManifest,
+		part,
+	)
 	if err != nil {
 		return nil, errors.Intercept(err).
 			WithProperty("instance", fmt.Sprintf("%s/uploads/%s", uc.rootAPIPath, part.SolutionArchive.Name)).
