@@ -3,6 +3,7 @@ package api
 import (
 	"bytes"
 	"context"
+	"crypto/sha256"
 	"errors"
 	"fmt"
 	"log"
@@ -52,6 +53,17 @@ var (
 
 	timeout  = time.Second * 5
 	interval = time.Millisecond * 250
+)
+
+var (
+	// "artesca-base-4.0.0-preview.1.iso" was pre-loaded in BeforeSuite
+	// with content "platform2\nplatform1\nplatform0\n" (30 bytes)
+	solutionArchiveContent = []byte("platform2\nplatform1\nplatform0\n")
+	solutionArchive        = &domain.SolutionArchive{
+		Name:    "artesca-base",
+		Version: "4.0.0-preview.1",
+		Hash:    fmt.Sprintf("%x", sha256.Sum256(solutionArchiveContent)),
+	}
 )
 
 func TestAPI(t *testing.T) {
@@ -166,7 +178,7 @@ var _ = BeforeSuite(func() {
 		Initialize with some solution archives
 	*/
 	for fileName, content := range map[string]string{
-		"artesca-base-4.0.0-preview.1.iso": "platform2\nplatform1\nplatform0\n",
+		solutionArchive.Name + "-" + solutionArchive.Version + ".iso": string(solutionArchiveContent),
 	} {
 		fullFileName := filepath.Join(
 			testingSuite.SolutionArchiveStorageDirectory,

@@ -230,6 +230,19 @@ func (f *MockFileSystem) StorePart(
 	solutionArchiveFromManifest *domain.SolutionArchive,
 	part *domain.Part,
 ) (*domain.SolutionArchiveStatus, error) {
+	// Drain the part body so any wrapping reader (e.g. the external downloader's
+	// digest-verifying tee reader) observes the full payload. Without this the
+	// trailer-based Content-Digest check on Close() always sees an empty hash.
+	if part.Content != nil {
+		if _, err := io.Copy(io.Discard, part.Content); err != nil {
+			return nil, errors.From(domain.ErrStorageProviderInternal).
+				WithIdentifier(500000).
+				WithDetail("unable to read the part content").
+				CausedBy(err).
+				Throw()
+		}
+	}
+
 	if solutionArchiveFromManifest.Size == 0 {
 		solutionArchiveFromManifest.Size = part.SolutionArchive.Size
 		f.multipartMeta[bucketName] = solutionArchiveFromManifest
