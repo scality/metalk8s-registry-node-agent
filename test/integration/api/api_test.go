@@ -64,6 +64,15 @@ var (
 		Version: "4.0.0-preview.1",
 		Hash:    fmt.Sprintf("%x", sha256.Sum256(solutionArchiveContent)),
 	}
+
+	// In order to test the multipart download, we generate a random content solution archive
+	// with more than 10MB size (default size chunk).
+	solutionArchiveContentBigSize = []byte(utils.RandomString(12 * 1024 * 1024)) // 12MB
+	solutionArchiveBigSize        = &domain.SolutionArchive{
+		Name:    "artesca-base",
+		Version: "4.0.0-preview.2",
+		Hash:    fmt.Sprintf("%x", sha256.Sum256(solutionArchiveContentBigSize)),
+	}
 )
 
 func TestAPI(t *testing.T) {
@@ -178,7 +187,8 @@ var _ = BeforeSuite(func() {
 		Initialize with some solution archives
 	*/
 	for fileName, content := range map[string]string{
-		solutionArchive.Name + "-" + solutionArchive.Version + ".iso": string(solutionArchiveContent),
+		solutionArchive.Name + "-" + solutionArchive.Version + ".iso":               string(solutionArchiveContent),
+		solutionArchiveBigSize.Name + "-" + solutionArchiveBigSize.Version + ".iso": string(solutionArchiveContentBigSize),
 	} {
 		fullFileName := filepath.Join(
 			testingSuite.SolutionArchiveStorageDirectory,
