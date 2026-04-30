@@ -24,6 +24,9 @@ spec:
     - jsonPath: .spec.nodeName
       name: NodeName
       type: string
+    - jsonPath: .status.initialized
+      name: Initialized
+      type: boolean
     - jsonPath: .status.available
       name: Available
       type: boolean
@@ -177,6 +180,10 @@ spec:
                   - type
                   type: object
                 type: array
+              initialized:
+                description: SolutionArchive on the Node is initialized and thus archive
+                  is ready to be uploaded
+                type: boolean
               served:
                 description: The SolutionArchive is mounted on the Node
                 type: boolean

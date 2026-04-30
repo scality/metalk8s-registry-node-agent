@@ -150,7 +150,15 @@ func (f *MockFileSystem) HashFile(
 func (f *MockFileSystem) CreateBucket(
 	bucketName string,
 ) error {
-	return f.createBucket(bucketName)
+	if bucketName == "solution-4-4.2.8" {
+		return errors.From(domain.ErrStorageProviderInternal).
+			WithIdentifier(500000).
+			WithDetail("error creating bucket").
+			WithProperty("bucket_name", bucketName).
+			Throw()
+	}
+	f.buckets = append(f.buckets, bucketName)
+	return nil
 }
 
 // ListBuckets lists all the buckets in the storage and returns their bucketNames,
@@ -295,13 +303,6 @@ func (f *MockFileSystem) UnmountFile(
 }
 
 // Bucket handling methods
-
-func (f *MockFileSystem) createBucket(
-	bucketName string,
-) error {
-	f.buckets = append(f.buckets, bucketName)
-	return nil
-}
 
 func (f *MockFileSystem) listBuckets() ([]string, error) {
 	return f.buckets, nil

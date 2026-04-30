@@ -82,6 +82,7 @@ var _ = Describe("NodeSolutionArchive Controller", func() {
 			}, timeout, interval).Should(BeTrue())
 
 			Expect(createdResource.Spec).To(Equal(resource.Spec))
+			Expect(*createdResource.Status.Initialized).To(BeTrue())
 			Expect(*createdResource.Status.Available).To(BeFalse())
 			Expect(*createdResource.Status.Served).To(BeFalse())
 		})
@@ -131,6 +132,7 @@ var _ = Describe("NodeSolutionArchive Controller", func() {
 			}, timeout, interval).Should(BeTrue())
 
 			Expect(createdResource.Spec).To(Equal(resource.Spec))
+			Expect(*createdResource.Status.Initialized).To(BeTrue())
 			Expect(*createdResource.Status.Available).To(BeTrue())
 			Expect(*createdResource.Status.Served).To(BeTrue())
 		})
@@ -180,6 +182,7 @@ var _ = Describe("NodeSolutionArchive Controller", func() {
 			}, timeout, interval).Should(BeTrue())
 
 			Expect(createdResource.Spec).To(Equal(resource.Spec))
+			Expect(*createdResource.Status.Initialized).To(BeTrue())
 			Expect(*createdResource.Status.Available).To(BeFalse())
 			Expect(*createdResource.Status.Served).To(BeFalse())
 		})
@@ -220,10 +223,11 @@ var _ = Describe("NodeSolutionArchive Controller", func() {
 
 			Expect(err).NotTo(HaveOccurred())
 
-			By("updating its status to available")
+			By("updating its status to initialized and available")
 			otherResource.Status = metalk8sv1alpha1.NodeSolutionArchiveStatus{
-				Available: ptr.To(true),
-				URL:       "https://example.com:5002/api/v1/downloads/solution-3/4.2.1",
+				Initialized: ptr.To(true),
+				Available:   ptr.To(true),
+				URL:         "https://example.com:5002/api/v1/downloads/solution-3/4.2.1",
 			}
 			err = k8sClient.Status().Update(ctx, otherResource)
 
@@ -266,9 +270,64 @@ var _ = Describe("NodeSolutionArchive Controller", func() {
 			}, timeout, interval).Should(BeTrue())
 
 			Expect(createdResource.Spec).To(Equal(resource.Spec))
+			Expect(*createdResource.Status.Initialized).To(BeTrue())
 			Expect(*createdResource.Status.Available).To(BeTrue())
 			Expect(*createdResource.Status.Served).To(BeTrue())
 		})
 	})
 
+	Context("When reconciling a resource with error during initialization", func() {
+		It("should fail to initialize the resource", func() {
+			resourceName := "test-not-initialized-resource"
+			typeNamespacedName := types.NamespacedName{
+				Name: resourceName,
+			}
+
+			By("creating the custom resource for the Kind NodeSolutionArchive")
+			resource := &metalk8sv1alpha1.NodeSolutionArchive{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: resourceName,
+				},
+			}
+
+			_, err := controllerutil.CreateOrUpdate(ctx, k8sClient, resource, func() error {
+				resource.Spec = metalk8sv1alpha1.NodeSolutionArchiveSpec{
+					SolutionArchiveSpec: metalk8sv1alpha1.SolutionArchiveSpec{
+						Name:    "solution-4",
+						Version: "4.2.8",
+						Validation: &metalk8sv1alpha1.SolutionArchiveValidation{
+							Checksum: metalk8sv1alpha1.SolutionArchiveChecksum{
+								Type:  "sha256",
+								Value: "a51ae4b357df473f4f5c84fde00e22c66206c5d41a0c9d8f2cadd4e5cb6d06c4",
+							},
+						},
+					},
+					NodeName: nodeName,
+				}
+				return nil
+			})
+
+			Expect(err).NotTo(HaveOccurred())
+
+			// Wait for all reconciliations loop to be done
+			time.Sleep(1 * time.Second)
+
+			By("checking the custom resource for the Kind NodeSolutionArchive")
+			createdResource := &metalk8sv1alpha1.NodeSolutionArchive{}
+			Eventually(func() bool {
+				err := k8sClient.Get(ctx, typeNamespacedName, createdResource)
+				return err == nil
+			}, timeout, interval).Should(BeTrue())
+
+			Expect(createdResource.Spec).To(Equal(resource.Spec))
+			Expect(*createdResource.Status.Initialized).To(BeFalse())
+
+			By("deleting the NodeSolutionArchive")
+			err = k8sClient.Delete(ctx, resource)
+			Expect(err).NotTo(HaveOccurred())
+
+			// Wait for all reconciliations loop to be done
+			time.Sleep(1 * time.Second)
+		})
+	})
 })

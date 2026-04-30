@@ -121,6 +121,14 @@ func (r *NodeSolutionArchiveReconciler) Reconcile(ctx context.Context, req ctrl.
 		return ctrl.Result{}, nil
 	}
 
+	original := nodeSolutionArchive.DeepCopy()
+	// Ensure we update the status in case of early return
+	defer func() {
+		if err := r.Status().Patch(ctx, nodeSolutionArchive, client.MergeFrom(original)); err != nil {
+			log.Error(err, "unable to patch NodeSolutionArchive status")
+		}
+	}()
+
 	// Retrieve the Status of the NodeSolutionArchive
 	isAvailable := nodeSolutionArchive.Status.Available != nil && *nodeSolutionArchive.Status.Available
 
@@ -135,9 +143,11 @@ func (r *NodeSolutionArchiveReconciler) Reconcile(ctx context.Context, req ctrl.
 	log.V(1).Info("Initializing session, if needed")
 	_, err := r.Container.GetInitializeSessionUseCase().Execute(solutionArchive)
 	if err != nil {
+		nodeSolutionArchive.SetNotInitialized()
 		log.Error(err, "error initializing session")
 		return ctrl.Result{}, err
 	}
+	nodeSolutionArchive.SetInitialized()
 
 	// 4. Check if an existing solution archive is already available on another node
 	//    in order to download it
@@ -186,14 +196,6 @@ func (r *NodeSolutionArchiveReconciler) Reconcile(ctx context.Context, req ctrl.
 		log.Error(err, "error validating solution archive")
 		return ctrl.Result{RequeueAfter: 30 * time.Second}, nil
 	}
-	original := nodeSolutionArchive.DeepCopy()
-
-	// Ensure we update the status in case of early return
-	defer func() {
-		if err := r.Status().Patch(ctx, nodeSolutionArchive, client.MergeFrom(original)); err != nil {
-			log.Error(err, "unable to patch NodeSolutionArchive status")
-		}
-	}()
 
 	if !isValid {
 		log.V(1).Info("solution archive is not valid")

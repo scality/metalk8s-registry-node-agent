@@ -62,6 +62,8 @@ type NodeSolutionArchiveSpec struct {
 
 // NodeSolutionArchiveStatus defines the observed state of NodeSolutionArchive.
 type NodeSolutionArchiveStatus struct {
+	// SolutionArchive on the Node is initialized and thus archive is ready to be uploaded
+	Initialized *bool `json:"initialized,omitempty"`
 	// Availability of the SolutionArchive on the Node
 	Available *bool `json:"available,omitempty"`
 	// The SolutionArchive is mounted on the Node
@@ -78,6 +80,7 @@ type NodeSolutionArchiveStatus struct {
 // +kubebuilder:printcolumn:name="Name",type="string",JSONPath=".spec.name"
 // +kubebuilder:printcolumn:name="Version",type="string",JSONPath=".spec.version"
 // +kubebuilder:printcolumn:name="NodeName",type="string",JSONPath=".spec.nodeName"
+// +kubebuilder:printcolumn:name="Initialized",type="boolean",JSONPath=".status.initialized"
 // +kubebuilder:printcolumn:name="Available",type="boolean",JSONPath=".status.available"
 // +kubebuilder:printcolumn:name="Served",type="boolean",JSONPath=".status.served"
 // NodeSolutionArchive is the Schema for the nodesolutionarchives API.
@@ -100,6 +103,32 @@ type NodeSolutionArchiveList struct {
 
 func init() {
 	SchemeBuilder.Register(&NodeSolutionArchive{}, &NodeSolutionArchiveList{})
+}
+
+func (na *NodeSolutionArchive) SetInitialized() {
+	condition := metav1.Condition{
+		Type:               "Initialized",
+		Status:             metav1.ConditionTrue,
+		LastTransitionTime: metav1.Now(),
+		Reason:             "UploadReady",
+		Message:            "The solution archive is ready to be uploaded.",
+		ObservedGeneration: na.Generation,
+	}
+	meta.SetStatusCondition(&na.Status.Conditions, condition)
+	na.Status.Initialized = ptr.To(true)
+}
+
+func (na *NodeSolutionArchive) SetNotInitialized() {
+	condition := metav1.Condition{
+		Type:               "Initialized",
+		Status:             metav1.ConditionFalse,
+		LastTransitionTime: metav1.Now(),
+		Reason:             "UploadNotReady",
+		Message:            "The solution archive is not ready to be uploaded.",
+		ObservedGeneration: na.Generation,
+	}
+	meta.SetStatusCondition(&na.Status.Conditions, condition)
+	na.Status.Initialized = ptr.To(false)
 }
 
 func (na *NodeSolutionArchive) SetAvailable() {

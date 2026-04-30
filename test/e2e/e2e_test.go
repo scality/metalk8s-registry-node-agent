@@ -1108,7 +1108,10 @@ func (nsa *NodeSolutionArchiveForTest) createAndApplyOnNodes(nodeNames []string)
 	By("waiting for the controller to initialize the upload session")
 	// The controller automatically initializes a session when it reconciles the NodeSolutionArchive
 	// Give it a moment to complete
-	time.Sleep(5 * time.Second)
+	for _, nodeName := range nodeNames {
+		Expect(nsa.isInitializedOnNode(nodeName)).To(BeTrue(),
+			"NodeSolutionArchive should be initialized after creation")
+	}
 
 	By("uploading the solution archive to the first node")
 	primaryNode := nodeNames[0]
@@ -1204,6 +1207,11 @@ func (nsa *NodeSolutionArchiveForTest) isNotPresentOnNode(nodeName string) bool 
 	return true
 }
 
+// isInitializedOnNode means: initialized status is true
+func (nsa *NodeSolutionArchiveForTest) isInitializedOnNode(nodeName string) bool {
+	return nsa.initializedStatusOnNode(nodeName, Equal("true"))
+}
+
 // isAvailableOnNode means: available status, has a download URL and file exists in /archives directory")
 func (nsa *NodeSolutionArchiveForTest) isAvailableOnNode(nodeName string) bool {
 	available := nsa.availableStatusOnNode(nodeName, Equal("true"))
@@ -1220,6 +1228,22 @@ func (nsa *NodeSolutionArchiveForTest) isUnavailableOnNode(nodeName string) bool
 	fileExists := nsa.fileNotExistsOnNode(nodeName)
 
 	return available && downloadURL && fileExists
+}
+
+// initializedStatusOnNode checks if the NodeSolutionArchive has initialized status for the given node.
+func (nsa *NodeSolutionArchiveForTest) initializedStatusOnNode(nodeName string, expected types.GomegaMatcher) bool {
+	timeout := 1 * time.Minute
+	interval := 50 * time.Millisecond
+	Eventually(func(g Gomega) {
+		cmd := exec.Command("kubectl", "get", "nodesolutionarchive", fmt.Sprintf("na-%s-%s-%s",
+			nsa.name, nsa.version, nodeName),
+			"-o", "jsonpath={.status.initialized}")
+		output, err := utils.Run(cmd)
+		g.Expect(err).NotTo(HaveOccurred())
+		g.Expect(output).To(expected)
+	}, timeout, interval).Should(Succeed())
+
+	return true
 }
 
 // availableStatusOnNode checks if the NodeSolutionArchive has available status for the given node.
