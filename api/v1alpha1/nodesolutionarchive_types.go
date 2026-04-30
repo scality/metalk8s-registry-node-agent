@@ -46,12 +46,13 @@ type SolutionArchiveSpec struct {
 	// Version of the SolutionArchive
 	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
 	Version string `json:"version"`
-	// Validation details for the SolutionArchive
-	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
-	Validation SolutionArchiveValidation `json:"validation"`
+	// Validation details for the SolutionArchive (optional, but immutable)
+	// +kubebuilder:validation:Optional
+	Validation *SolutionArchiveValidation `json:"validation,omitempty"`
 }
 
 // NodeSolutionArchiveSpec defines the desired state of NodeSolutionArchive.
+// +kubebuilder:validation:XValidation:rule="(!has(self.validation) && !has(oldSelf.validation)) || ((has(self.validation) && has(oldSelf.validation)) && (self.validation == oldSelf.validation))",message="Validation cannot be updated"
 type NodeSolutionArchiveSpec struct {
 	SolutionArchiveSpec `json:",inline"`
 	// Name of the Node

@@ -124,8 +124,10 @@ func (uc *GetExternalSolutionArchive) Execute(
 	partSolutionArchive := &domain.SolutionArchive{
 		Name:    solutionArchive.Name,
 		Version: solutionArchive.Version,
-		Hash:    solutionArchive.Hash,
 		Size:    solutionArchiveSize,
+	}
+	if solutionArchive.Hash != nil {
+		partSolutionArchive.Hash = solutionArchive.Hash
 	}
 	for chunkIndex := range numChunks {
 		start := chunkIndex * uc.chunkSize
@@ -209,15 +211,13 @@ func (uc *GetExternalSolutionArchive) checkManifestFile(
 ) error {
 	// Test if a session related to the solution archive from the part exists
 	if solutionArchiveFromManifest.Name != solutionArchive.Name ||
-		solutionArchiveFromManifest.Version != solutionArchive.Version ||
-		solutionArchiveFromManifest.Hash != solutionArchive.Hash {
+		solutionArchiveFromManifest.Version != solutionArchive.Version {
 		return errors.From(domain.ErrPartUploaderNotFound).
 			WithIdentifier(404000).
 			WithDetail("solution archive not found in the current session manifest").
 			WithProperty("instance", fmt.Sprintf("%s/downloads/%s", uc.rootAPIPath, solutionArchive.Name)).
 			WithProperty("component", solutionArchive.Name).
 			WithProperty("version", solutionArchive.Version).
-			WithProperty("hash", solutionArchive.Hash).
 			Throw()
 	}
 	return nil

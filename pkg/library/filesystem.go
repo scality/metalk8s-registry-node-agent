@@ -450,8 +450,12 @@ func CompareSolutionArchiveMetas(
 		problems["problem_size_mismatch"] = fmt.Sprintf("%d != %d", a.Size, b.Size)
 	}
 
-	if a.Hash != b.Hash {
-		problems["problem_hash_mismatch"] = fmt.Sprintf("%s != %s", a.Hash, b.Hash)
+	if (a.Hash != nil && b.Hash == nil) || (a.Hash == nil && b.Hash != nil) {
+		problems["problem_hash_mismatch"] = "One hash is nil, the other is not"
+	}
+
+	if a.Hash != nil && b.Hash != nil && *a.Hash != *b.Hash {
+		problems["problem_hash_mismatch"] = fmt.Sprintf("%s != %s", *a.Hash, *b.Hash)
 	}
 
 	if len(problems) > 0 {

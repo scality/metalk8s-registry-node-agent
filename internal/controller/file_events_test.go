@@ -194,7 +194,7 @@ var _ = Describe("FileEvents", func() {
 					SolutionArchiveSpec: metalk8sv1alpha1.SolutionArchiveSpec{
 						Name:    "test-solution",
 						Version: "1.0.0",
-						Validation: metalk8sv1alpha1.SolutionArchiveValidation{
+						Validation: &metalk8sv1alpha1.SolutionArchiveValidation{
 							Checksum: metalk8sv1alpha1.SolutionArchiveChecksum{
 								Type:  "sha256",
 								Value: "abc123",
@@ -216,7 +216,7 @@ var _ = Describe("FileEvents", func() {
 					SolutionArchiveSpec: metalk8sv1alpha1.SolutionArchiveSpec{
 						Name:    "test-solution-under-deletion",
 						Version: "1.0.1",
-						Validation: metalk8sv1alpha1.SolutionArchiveValidation{
+						Validation: &metalk8sv1alpha1.SolutionArchiveValidation{
 							Checksum: metalk8sv1alpha1.SolutionArchiveChecksum{
 								Type:  "sha256",
 								Value: "abc123",
@@ -713,7 +713,7 @@ var _ = Describe("FileEvents", func() {
 					SolutionArchiveSpec: metalk8sv1alpha1.SolutionArchiveSpec{
 						Name:    "test-solution-under-deletion",
 						Version: "1.0.0",
-						Validation: metalk8sv1alpha1.SolutionArchiveValidation{
+						Validation: &metalk8sv1alpha1.SolutionArchiveValidation{
 							Checksum: metalk8sv1alpha1.SolutionArchiveChecksum{
 								Type:  "sha256",
 								Value: "def456",
@@ -738,7 +738,7 @@ var _ = Describe("FileEvents", func() {
 					SolutionArchiveSpec: metalk8sv1alpha1.SolutionArchiveSpec{
 						Name:    "test-solution-under-deletion",
 						Version: "2.0.0",
-						Validation: metalk8sv1alpha1.SolutionArchiveValidation{
+						Validation: &metalk8sv1alpha1.SolutionArchiveValidation{
 							Checksum: metalk8sv1alpha1.SolutionArchiveChecksum{
 								Type:  "sha256",
 								Value: "abc123",
@@ -762,7 +762,7 @@ var _ = Describe("FileEvents", func() {
 					SolutionArchiveSpec: metalk8sv1alpha1.SolutionArchiveSpec{
 						Name:    "test-solution-mixed",
 						Version: "1.0.0",
-						Validation: metalk8sv1alpha1.SolutionArchiveValidation{
+						Validation: &metalk8sv1alpha1.SolutionArchiveValidation{
 							Checksum: metalk8sv1alpha1.SolutionArchiveChecksum{
 								Type:  "sha256",
 								Value: "abc123",
@@ -787,7 +787,7 @@ var _ = Describe("FileEvents", func() {
 					SolutionArchiveSpec: metalk8sv1alpha1.SolutionArchiveSpec{
 						Name:    "test-solution-mixed",
 						Version: "2.0.0",
-						Validation: metalk8sv1alpha1.SolutionArchiveValidation{
+						Validation: &metalk8sv1alpha1.SolutionArchiveValidation{
 							Checksum: metalk8sv1alpha1.SolutionArchiveChecksum{
 								Type:  "sha256",
 								Value: "def456",
@@ -811,7 +811,7 @@ var _ = Describe("FileEvents", func() {
 					SolutionArchiveSpec: metalk8sv1alpha1.SolutionArchiveSpec{
 						Name:    "test-solution-mixed",
 						Version: "3.0.0",
-						Validation: metalk8sv1alpha1.SolutionArchiveValidation{
+						Validation: &metalk8sv1alpha1.SolutionArchiveValidation{
 							Checksum: metalk8sv1alpha1.SolutionArchiveChecksum{
 								Type:  "sha256",
 								Value: "abc123",

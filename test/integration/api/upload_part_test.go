@@ -9,6 +9,7 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"k8s.io/utils/ptr"
 
 	"github.com/scality/metalk8s-registry-node-agent/pkg/domain"
 	"github.com/scality/metalk8s-registry-node-agent/pkg/library"
@@ -25,7 +26,7 @@ var _ = Describe("Upload Part API", func() {
 			solutionArchive := &domain.SolutionArchive{
 				Name:    "artesca-base",
 				Version: "3.0.0-preview.2",
-				Hash:    "sha",
+				Hash:    ptr.To("sha"),
 			}
 			_, err := testingSuite.container.GetInitializeSessionUseCase().Execute(solutionArchive)
 			Expect(err).NotTo(HaveOccurred())
@@ -76,7 +77,7 @@ var _ = Describe("Upload Part API", func() {
 			solutionArchive := &domain.SolutionArchive{
 				Name:    "platform",
 				Version: "127.0.2-tiny",
-				Hash:    "a2c60bdd4a4fd806fe368bacc30819173ecb9d5f109127bf35dfeaa927b275f0",
+				Hash:    ptr.To("a2c60bdd4a4fd806fe368bacc30819173ecb9d5f109127bf35dfeaa927b275f0"),
 			}
 			_, err := testingSuite.container.GetInitializeSessionUseCase().Execute(solutionArchive)
 			Expect(err).NotTo(HaveOccurred())
@@ -164,7 +165,7 @@ var _ = Describe("Upload Part API", func() {
 			solutionArchive := &domain.SolutionArchive{
 				Name:    "platform",
 				Version: "127.0.3-tiny",
-				Hash:    "a2c60bdd4a4fd806fe368bacc30819173ecb9d5f109127bf35dfeaa927b275f1",
+				Hash:    ptr.To("a2c60bdd4a4fd806fe368bacc30819173ecb9d5f109127bf35dfeaa927b275f1"),
 			}
 			_, err := testingSuite.container.GetInitializeSessionUseCase().Execute(solutionArchive)
 			Expect(err).NotTo(HaveOccurred())
@@ -235,7 +236,7 @@ var _ = Describe("Upload Part API", func() {
 			solutionArchive := &domain.SolutionArchive{
 				Name:    "artesca-base",
 				Version: "3.0.0-preview.4",
-				Hash:    "sha",
+				Hash:    ptr.To("sha"),
 			}
 			_, err := testingSuite.container.GetInitializeSessionUseCase().Execute(solutionArchive)
 			Expect(err).NotTo(HaveOccurred())
@@ -265,7 +266,7 @@ var _ = Describe("Upload Part API", func() {
 			solutionArchive := &domain.SolutionArchive{
 				Name:    "platform",
 				Version: "127.0.3-small",
-				Hash:    "c8db76b15eda867f25a4baa791cd14a673944fda1298cc440abe8568f33edef7",
+				Hash:    ptr.To("c8db76b15eda867f25a4baa791cd14a673944fda1298cc440abe8568f33edef7"),
 			}
 			_, err := testingSuite.container.GetInitializeSessionUseCase().Execute(solutionArchive)
 			Expect(err).NotTo(HaveOccurred())
@@ -366,12 +367,80 @@ var _ = Describe("Upload Part API", func() {
 		})
 	})
 
+	Context("When uploading a new complete solution archive with no checksum provided", func() {
+		It("should successfully upload the chunks and aggregate the solution archive", func() {
+			solutionArchive := &domain.SolutionArchive{
+				Name:    "platform",
+				Version: "127.0.2-unchecked",
+			}
+			_, err := testingSuite.container.GetInitializeSessionUseCase().Execute(solutionArchive)
+			Expect(err).NotTo(HaveOccurred())
+
+			By("successfully uploading all the chunks and responding adequately")
+			var resUpl *extern.UploadChunkResponse
+			for i := range 3 {
+				resUpl, err = testingSuite.ExternClientWithResponse.UploadChunkWithBodyWithResponse(
+					ctx,
+					"platform",
+					&extern.UploadChunkParams{
+						XTargetVersion: "127.0.2-unchecked",
+						ContentRange:   fmt.Sprintf("bytes %d-%d/30", i*10, (i*10)+9),
+					},
+					"application/octet-stream",
+					bytes.NewReader(fmt.Appendf(nil, "platform%d\n", i)),
+				)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(resUpl.HTTPResponse.StatusCode).To(Equal(200))
+			}
+
+			By("returning a documented http/200 response")
+			Expect(*resUpl.JSON200.IsCompleted).To(BeTrue())
+
+			By("aggregating and storing the solution archive")
+			solutionArchiveNameVersion := library.GenBucketName(solutionArchive)
+			solutionArchiveFile, err := os.Open(
+				path.Join(
+					testingSuite.SolutionArchiveStorageDirectory,
+					solutionArchiveNameVersion+".iso",
+				),
+			)
+			Expect(err).NotTo(HaveOccurred())
+
+			defer solutionArchiveFile.Close() // nolint: errcheck
+
+			solutionArchiveBytes := make([]byte, 31)
+			_, err = solutionArchiveFile.Read(solutionArchiveBytes)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(uploadCompleteTestString).To(Equal(string(solutionArchiveBytes)))
+
+			By("removing the session")
+			// Verify directory/files creation
+			solutionArchiveRootDir := path.Join(testingSuite.SolutionArchiveStorageDirectory, library.FileSystemBucketPrefix+solutionArchiveNameVersion)
+			_, err = os.Stat(solutionArchiveRootDir)
+			Expect(err).To(HaveOccurred())
+
+			// Checking work files
+			metaFilePath := path.Join(solutionArchiveRootDir, solutionArchive.Name+library.FileSystemMultipartMetaSuffix)
+			partsFilePath := path.Join(solutionArchiveRootDir, solutionArchive.Name+library.FileSystemMultipartPartsSuffix)
+			recipientFilePath := path.Join(solutionArchiveRootDir, solutionArchive.Name+library.FileSystemMultipartRecipientSuffix)
+
+			err = library.CheckFile(metaFilePath)
+			Expect(err).To(HaveOccurred())
+
+			err = library.CheckFile(partsFilePath)
+			Expect(err).To(HaveOccurred())
+
+			err = library.CheckFile(recipientFilePath)
+			Expect(err).To(HaveOccurred())
+		})
+	})
+
 	Context("When uploading a chunk with an invalid Content-Range format", func() {
 		It("should return a 400 bad request error", func() {
 			solutionArchive := &domain.SolutionArchive{
 				Name:    "platform",
 				Version: "127.0.4-badrange",
-				Hash:    "sha",
+				Hash:    ptr.To("sha"),
 			}
 			_, err := testingSuite.container.GetInitializeSessionUseCase().Execute(solutionArchive)
 			Expect(err).NotTo(HaveOccurred())
@@ -400,7 +469,7 @@ var _ = Describe("Upload Part API", func() {
 			solutionArchive := &domain.SolutionArchive{
 				Name:    "platform",
 				Version: "127.0.4-invertedrange",
-				Hash:    "sha",
+				Hash:    ptr.To("sha"),
 			}
 			_, err := testingSuite.container.GetInitializeSessionUseCase().Execute(solutionArchive)
 			Expect(err).NotTo(HaveOccurred())
@@ -449,7 +518,7 @@ var _ = Describe("Upload Part API", func() {
 			solutionArchive := &domain.SolutionArchive{
 				Name:    "platform",
 				Version: "127.0.4-overlap",
-				Hash:    "sha",
+				Hash:    ptr.To("sha"),
 			}
 			_, err := testingSuite.container.GetInitializeSessionUseCase().Execute(solutionArchive)
 			Expect(err).NotTo(HaveOccurred())

@@ -6,6 +6,7 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"k8s.io/utils/ptr"
 
 	"github.com/scality/metalk8s-registry-node-agent/pkg/domain"
 	"github.com/scality/metalk8s-registry-node-agent/pkg/library"
@@ -17,7 +18,7 @@ var _ = Describe("Init Session API", func() {
 			solutionArchive := &domain.SolutionArchive{
 				Name:    "test1",
 				Version: "1.0.0",
-				Hash:    "1234567890",
+				Hash:    ptr.To("1234567890"),
 			}
 			By("successfully initialize the session")
 			_, err := testingSuite.container.GetInitializeSessionUseCase().Execute(solutionArchive)
@@ -51,7 +52,7 @@ var _ = Describe("Init Session API", func() {
 			solutionArchive := &domain.SolutionArchive{
 				Name:    "test2",
 				Version: "1.0.0",
-				Hash:    "1234567890",
+				Hash:    ptr.To("1234567890"),
 			}
 
 			// Create initial session
@@ -70,7 +71,7 @@ var _ = Describe("Init Session API", func() {
 			solutionArchive := &domain.SolutionArchive{
 				Name:    "test3",
 				Version: "1.0.0",
-				Hash:    "1234567890",
+				Hash:    ptr.To("1234567890"),
 			}
 
 			solutionArchiveNameVersion := library.GenBucketName(solutionArchive)

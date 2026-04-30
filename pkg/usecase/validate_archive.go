@@ -52,18 +52,19 @@ func (uc *ValidateSolutionArchive) Execute(solutionArchive *domain.SolutionArchi
 		return false, nil
 	}
 
-	hash, err := uc.archiveLister.GetArchiveHash(library.GenSolutionArchiveFileName(solutionArchive))
-	if err != nil {
-		return false, errors.Stamp(err)
-	}
-	if hash != solutionArchive.Hash {
-		err := uc.archiveRemover.DeleteFile(library.GenSolutionArchiveFileName(solutionArchive))
+	if solutionArchive.Hash != nil {
+		hash, err := uc.archiveLister.GetArchiveHash(library.GenSolutionArchiveFileName(solutionArchive))
 		if err != nil {
 			return false, errors.Stamp(err)
 		}
-		return false, nil
+		if hash != *solutionArchive.Hash {
+			err := uc.archiveRemover.DeleteFile(library.GenSolutionArchiveFileName(solutionArchive))
+			if err != nil {
+				return false, errors.Stamp(err)
+			}
+			return false, nil
+		}
 	}
-
 	uc.logger.Debug().Any("solution_archive", solutionArchive).Msg("Solution archive validation ended")
 
 	return true, nil
