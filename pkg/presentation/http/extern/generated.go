@@ -115,10 +115,7 @@ type Unauthorized = ProblemDetails
 
 // UploadChunkParams defines parameters for UploadChunk.
 type UploadChunkParams struct {
-	// XTargetVersion Version of the solution archive
-	XTargetVersion string `json:"X-Target-Version"`
-
-	// ContentRange Range of the chunk to upload. Should repect the format `bytes <start-index>-<end-index>/<total-size-in-bytes>`
+	// ContentRange Range of the chunk to upload. Should respect the format `bytes <start-index>-<end-index>/<total-size-in-bytes>`
 	ContentRange string `json:"Content-Range"`
 }
 
@@ -196,11 +193,11 @@ func WithRequestEditorFn(fn RequestEditorFn) ClientOption {
 // The interface specification for the client above.
 type ClientInterface interface {
 	// UploadChunkWithBody request with any body
-	UploadChunkWithBody(ctx context.Context, solutionArchive string, params *UploadChunkParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+	UploadChunkWithBody(ctx context.Context, solutionArchive string, version string, params *UploadChunkParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
 }
 
-func (c *Client) UploadChunkWithBody(ctx context.Context, solutionArchive string, params *UploadChunkParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewUploadChunkRequestWithBody(c.Server, solutionArchive, params, contentType, body)
+func (c *Client) UploadChunkWithBody(ctx context.Context, solutionArchive string, version string, params *UploadChunkParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewUploadChunkRequestWithBody(c.Server, solutionArchive, version, params, contentType, body)
 	if err != nil {
 		return nil, err
 	}
@@ -212,7 +209,7 @@ func (c *Client) UploadChunkWithBody(ctx context.Context, solutionArchive string
 }
 
 // NewUploadChunkRequestWithBody generates requests for UploadChunk with any type of body
-func NewUploadChunkRequestWithBody(server string, solutionArchive string, params *UploadChunkParams, contentType string, body io.Reader) (*http.Request, error) {
+func NewUploadChunkRequestWithBody(server string, solutionArchive string, version string, params *UploadChunkParams, contentType string, body io.Reader) (*http.Request, error) {
 	var err error
 
 	var pathParam0 string
@@ -222,12 +219,19 @@ func NewUploadChunkRequestWithBody(server string, solutionArchive string, params
 		return nil, err
 	}
 
+	var pathParam1 string
+
+	pathParam1, err = runtime.StyleParamWithLocation("simple", false, "version", runtime.ParamLocationPath, version)
+	if err != nil {
+		return nil, err
+	}
+
 	serverURL, err := url.Parse(server)
 	if err != nil {
 		return nil, err
 	}
 
-	operationPath := fmt.Sprintf("/uploads/%s", pathParam0)
+	operationPath := fmt.Sprintf("/uploads/%s/%s", pathParam0, pathParam1)
 	if operationPath[0] == '/' {
 		operationPath = "." + operationPath
 	}
@@ -248,21 +252,12 @@ func NewUploadChunkRequestWithBody(server string, solutionArchive string, params
 
 		var headerParam0 string
 
-		headerParam0, err = runtime.StyleParamWithLocation("simple", false, "X-Target-Version", runtime.ParamLocationHeader, params.XTargetVersion)
+		headerParam0, err = runtime.StyleParamWithLocation("simple", false, "Content-Range", runtime.ParamLocationHeader, params.ContentRange)
 		if err != nil {
 			return nil, err
 		}
 
-		req.Header.Set("X-Target-Version", headerParam0)
-
-		var headerParam1 string
-
-		headerParam1, err = runtime.StyleParamWithLocation("simple", false, "Content-Range", runtime.ParamLocationHeader, params.ContentRange)
-		if err != nil {
-			return nil, err
-		}
-
-		req.Header.Set("Content-Range", headerParam1)
+		req.Header.Set("Content-Range", headerParam0)
 
 	}
 
@@ -313,7 +308,7 @@ func WithBaseURL(baseURL string) ClientOption {
 // ClientWithResponsesInterface is the interface specification for the client with responses above.
 type ClientWithResponsesInterface interface {
 	// UploadChunkWithBodyWithResponse request with any body
-	UploadChunkWithBodyWithResponse(ctx context.Context, solutionArchive string, params *UploadChunkParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*UploadChunkResponse, error)
+	UploadChunkWithBodyWithResponse(ctx context.Context, solutionArchive string, version string, params *UploadChunkParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*UploadChunkResponse, error)
 }
 
 type UploadChunkResponse struct {
@@ -345,8 +340,8 @@ func (r UploadChunkResponse) StatusCode() int {
 }
 
 // UploadChunkWithBodyWithResponse request with arbitrary body returning *UploadChunkResponse
-func (c *ClientWithResponses) UploadChunkWithBodyWithResponse(ctx context.Context, solutionArchive string, params *UploadChunkParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*UploadChunkResponse, error) {
-	rsp, err := c.UploadChunkWithBody(ctx, solutionArchive, params, contentType, body, reqEditors...)
+func (c *ClientWithResponses) UploadChunkWithBodyWithResponse(ctx context.Context, solutionArchive string, version string, params *UploadChunkParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*UploadChunkResponse, error) {
+	rsp, err := c.UploadChunkWithBody(ctx, solutionArchive, version, params, contentType, body, reqEditors...)
 	if err != nil {
 		return nil, err
 	}
@@ -424,8 +419,8 @@ func ParseUploadChunkResponse(rsp *http.Response) (*UploadChunkResponse, error) 
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
 	// Upload the chunk of the solution archive.
-	// (PUT /uploads/{solutionArchive})
-	UploadChunk(w http.ResponseWriter, r *http.Request, solutionArchive string, params UploadChunkParams)
+	// (PUT /uploads/{solutionArchive}/{version})
+	UploadChunk(w http.ResponseWriter, r *http.Request, solutionArchive string, version string, params UploadChunkParams)
 }
 
 // ServerInterfaceWrapper converts contexts to parameters.
@@ -451,33 +446,19 @@ func (siw *ServerInterfaceWrapper) UploadChunk(w http.ResponseWriter, r *http.Re
 		return
 	}
 
+	// ------------- Path parameter "version" -------------
+	var version string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "version", r.PathValue("version"), &version, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "version", Err: err})
+		return
+	}
+
 	// Parameter object where we will unmarshal all parameters from the context
 	var params UploadChunkParams
 
 	headers := r.Header
-
-	// ------------- Required header parameter "X-Target-Version" -------------
-	if valueList, found := headers[http.CanonicalHeaderKey("X-Target-Version")]; found {
-		var XTargetVersion string
-		n := len(valueList)
-		if n != 1 {
-			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "X-Target-Version", Count: n})
-			return
-		}
-
-		err = runtime.BindStyledParameterWithOptions("simple", "X-Target-Version", valueList[0], &XTargetVersion, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true})
-		if err != nil {
-			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "X-Target-Version", Err: err})
-			return
-		}
-
-		params.XTargetVersion = XTargetVersion
-
-	} else {
-		err := fmt.Errorf("Header parameter X-Target-Version is required, but not found")
-		siw.ErrorHandlerFunc(w, r, &RequiredHeaderError{ParamName: "X-Target-Version", Err: err})
-		return
-	}
 
 	// ------------- Required header parameter "Content-Range" -------------
 	if valueList, found := headers[http.CanonicalHeaderKey("Content-Range")]; found {
@@ -503,7 +484,7 @@ func (siw *ServerInterfaceWrapper) UploadChunk(w http.ResponseWriter, r *http.Re
 	}
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.UploadChunk(w, r, solutionArchive, params)
+		siw.Handler.UploadChunk(w, r, solutionArchive, version, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -633,7 +614,7 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 		ErrorHandlerFunc:   options.ErrorHandlerFunc,
 	}
 
-	m.HandleFunc("PUT "+options.BaseURL+"/uploads/{solutionArchive}", wrapper.UploadChunk)
+	m.HandleFunc("PUT "+options.BaseURL+"/uploads/{solutionArchive}/{version}", wrapper.UploadChunk)
 
 	return m
 }
@@ -652,6 +633,7 @@ type UnauthorizedApplicationProblemPlusJSONResponse ProblemDetails
 
 type UploadChunkRequestObject struct {
 	SolutionArchive string `json:"solutionArchive"`
+	Version         string `json:"version"`
 	Params          UploadChunkParams
 	Body            io.Reader
 }
@@ -738,7 +720,7 @@ func (response UploadChunk507ApplicationProblemPlusJSONResponse) VisitUploadChun
 // StrictServerInterface represents all server handlers.
 type StrictServerInterface interface {
 	// Upload the chunk of the solution archive.
-	// (PUT /uploads/{solutionArchive})
+	// (PUT /uploads/{solutionArchive}/{version})
 	UploadChunk(ctx context.Context, request UploadChunkRequestObject) (UploadChunkResponseObject, error)
 }
 
@@ -772,10 +754,11 @@ type strictHandler struct {
 }
 
 // UploadChunk operation middleware
-func (sh *strictHandler) UploadChunk(w http.ResponseWriter, r *http.Request, solutionArchive string, params UploadChunkParams) {
+func (sh *strictHandler) UploadChunk(w http.ResponseWriter, r *http.Request, solutionArchive string, version string, params UploadChunkParams) {
 	var request UploadChunkRequestObject
 
 	request.SolutionArchive = solutionArchive
+	request.Version = version
 	request.Params = params
 
 	request.Body = r.Body
@@ -803,53 +786,53 @@ func (sh *strictHandler) UploadChunk(w http.ResponseWriter, r *http.Request, sol
 // Base64 encoded, gzipped, json marshaled Swagger object
 var swaggerSpec = []string{
 
-	"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",
+	"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",
 }
 
 // GetSwagger returns the content of the embedded swagger specification file

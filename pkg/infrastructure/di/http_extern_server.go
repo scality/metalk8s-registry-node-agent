@@ -2,6 +2,7 @@
 package di
 
 import (
+	"context"
 	"net/http"
 
 	middleware "github.com/oapi-codegen/nethttp-middleware"
@@ -28,13 +29,24 @@ func (c *Container) GetHTTPExternServer() *http.Server {
 		extern.HandlerFromMux(extern.NewStrictHandler(c.getHTTPResolver(), nil), apiRouter)
 
 		validatorOptions := &middleware.Options{
-			ErrorHandler: func(writer http.ResponseWriter, message string, statusCode int) {
+			ErrorHandlerWithOpts: func(
+				ctx context.Context,
+				err error,
+				w http.ResponseWriter,
+				r *http.Request,
+				opts middleware.ErrorHandlerOpts,
+			) {
+				statusCode := opts.StatusCode
+				if opts.MatchedRoute == nil {
+					// request URL is probably missing solutionArchive and/or version parameter(s)
+					statusCode = http.StatusBadRequest
+				}
 				c.GetLogger().Error().
-					Str("message", message).
+					Str("message", err.Error()).
 					Int("status_code", statusCode).
 					Msg("OAPI request validation error")
 
-				http.Error(writer, message, statusCode)
+				http.Error(w, err.Error(), statusCode)
 			},
 			DoNotValidateServers: true,
 		}

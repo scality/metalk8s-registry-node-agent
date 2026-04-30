@@ -73,20 +73,6 @@ func fillPartFromUploadChunkRequestObject(
 			Throw()
 	}
 
-	if src.SolutionArchive == "" {
-		return errors.From(domain.ErrHandlerMissingRequestParameter).
-			WithIdentifier(400003).
-			WithDetail("parameter 'solution-archive' is missing").
-			Throw()
-	}
-
-	if src.Params.XTargetVersion == "" {
-		return errors.From(domain.ErrHandlerMissingRequestHeader).
-			WithIdentifier(400002).
-			WithDetail("header 'X-Target-Version' is missing").
-			Throw()
-	}
-
 	start, end, total, err := ParseContentRange(src.Params.ContentRange)
 	if err != nil {
 		return errors.Stamp(err)
@@ -94,7 +80,7 @@ func fillPartFromUploadChunkRequestObject(
 
 	dst.SolutionArchive = &domain.SolutionArchive{
 		Name:    src.SolutionArchive,
-		Version: src.Params.XTargetVersion,
+		Version: src.Version,
 		Size:    total,
 	}
 
