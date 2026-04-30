@@ -134,38 +134,38 @@ func (f *FileSystem) CreateMultipartFiles(
 	}, nil
 }
 
-// WritePartToMultipartFile writes the content of the given part into the multipart file recipient
+// StorePart writes the content of the given part into the multipart file recipient
 // on the bucket indicated by the given bucketName.
-func (f *FileSystem) WritePartToMultipartFile(bucketName string,
+func (f *FileSystem) StorePart(
+	bucketName string,
+	solutionArchiveFromManifest *domain.SolutionArchive,
 	part *domain.Part,
 ) (*domain.SolutionArchiveStatus, error) {
+	// When this is the first stored part for a solution archive, the size is not set in the manifest
+	// so we use the size from the part. We need to recreate the multipart files with the correct size.
+	if solutionArchiveFromManifest.Size == 0 {
+		solutionArchiveFromManifest.Size = part.SolutionArchive.Size
+
+		if err := f.multipartRemover.DeleteMultipartFile(bucketName, solutionArchiveFromManifest); err != nil {
+			return nil, errors.Stamp(err)
+		}
+
+		if _, err := f.CreateMultipartFiles(bucketName, solutionArchiveFromManifest); err != nil {
+			return nil, errors.Stamp(err)
+		}
+	}
+	part.SolutionArchive = solutionArchiveFromManifest
+
 	solutionArchiveStatus, err := f.multipartInspector.GetMultipartFileStatus(bucketName, part.SolutionArchive)
 	if err != nil {
 		return nil, errors.Stamp(err)
 	}
 
-	partsFilePath := library.GenMultipartPartsFilePath(
-		f.solutionArchivesLocation,
-		bucketName,
-		part.SolutionArchive.Name,
-	)
 	recipientFilePath := library.GenMultipartRecipientFilePath(
 		f.solutionArchivesLocation,
 		bucketName,
 		part.SolutionArchive.Name,
 	)
-
-	partsFile, err := os.OpenFile(partsFilePath, os.O_WRONLY, library.FileSystemDefaultFileMode)
-	if err != nil {
-		return nil, errors.From(domain.ErrStorageProviderInternal).
-			WithIdentifier(500000).
-			WithDetail("unable to open the parts file").
-			WithProperty("file_path", partsFilePath).
-			CausedBy(err).
-			Throw()
-	}
-
-	defer partsFile.Close() // nolint: errcheck // No error check on defer.
 
 	recipientFile, err := os.OpenFile(recipientFilePath, os.O_RDWR, library.FileSystemDefaultFileMode)
 	if err != nil {
@@ -211,9 +211,35 @@ func (f *FileSystem) WritePartToMultipartFile(bucketName string,
 			Throw()
 	}
 
+	solutionArchiveStatus.Parts[part.Meta.Start] = part.Meta
+
+	return solutionArchiveStatus, nil
+}
+
+// CommitPart properly updates the .part files
+// with the metadata of the given part.
+func (f *FileSystem) CommitPart(bucketName string, part *domain.Part) error {
+	partsFilePath := library.GenMultipartPartsFilePath(
+		f.solutionArchivesLocation,
+		bucketName,
+		part.SolutionArchive.Name,
+	)
+
+	partsFile, err := os.OpenFile(partsFilePath, os.O_WRONLY, library.FileSystemDefaultFileMode)
+	if err != nil {
+		return errors.From(domain.ErrStorageProviderInternal).
+			WithIdentifier(500000).
+			WithDetail("unable to open the parts file").
+			WithProperty("file_path", partsFilePath).
+			CausedBy(err).
+			Throw()
+	}
+
+	defer partsFile.Close() // nolint: errcheck // No error check on defer.
+
 	_, err = partsFile.Seek(0, io.SeekEnd)
 	if err != nil {
-		return nil, errors.From(domain.ErrStorageProviderInternal).
+		return errors.From(domain.ErrStorageProviderInternal).
 			WithIdentifier(500000).
 			WithDetail("unable to move to the end of the parts file").
 			WithProperty("file_path", partsFilePath).
@@ -223,7 +249,7 @@ func (f *FileSystem) WritePartToMultipartFile(bucketName string,
 
 	err = binary.Write(partsFile, binary.LittleEndian, part.Meta)
 	if err != nil {
-		return nil, errors.From(domain.ErrStorageProviderInternal).
+		return errors.From(domain.ErrStorageProviderInternal).
 			WithIdentifier(500000).
 			WithDetail("unable to write the part metadata to the parts file").
 			WithProperty("file_path", partsFilePath).
@@ -231,14 +257,12 @@ func (f *FileSystem) WritePartToMultipartFile(bucketName string,
 			Throw()
 	}
 
-	solutionArchiveStatus.Parts[part.Meta.Start] = part.Meta
-
-	return solutionArchiveStatus, nil
+	return nil
 }
 
-// ConsolidateMultipartFile consolidates all the parts of a multipart file in a single flat file
+// consolidateMultipartFile consolidates all the parts of a multipart file in a single flat file
 // into the same bucket it is located.
-func (f *FileSystem) ConsolidateMultipartFile(
+func (f *FileSystem) consolidateMultipartFile(
 	bucketName string,
 	solutionArchive *domain.SolutionArchive,
 	perm os.FileMode,
@@ -328,8 +352,8 @@ func (f *FileSystem) ConsolidateMultipartFile(
 	return nil
 }
 
-// MoveFileToRoot moves a file from a bucket to the root location in the storage.
-func (f *FileSystem) MoveFileToRoot(
+// moveFileToRoot moves a file from a bucket to the root location in the storage.
+func (f *FileSystem) moveFileToRoot(
 	bucketName, fileName, newFileName string,
 ) error {
 	if err := library.EnforceNamingConventions(newFileName); err != nil {
@@ -372,72 +396,47 @@ func (f *FileSystem) MoveFileToRoot(
 	return nil
 }
 
-// StorePart stores a part into a bucket.
-func (f *FileSystem) StorePart(
-	sessionBucket string,
-	solutionArchiveFromManifest *domain.SolutionArchive,
-	part *domain.Part,
-) (*domain.SolutionArchiveStatus, error) {
-	// When this is the first stored part for a solution archive, the size is not set in the manifest
-	// so we use the size from the part
-	if solutionArchiveFromManifest.Size == 0 {
-		solutionArchiveFromManifest.Size = part.SolutionArchive.Size
-
-		err := f.multipartRemover.DeleteMultipartFile(sessionBucket, solutionArchiveFromManifest)
-		if err != nil {
-			return nil, errors.Stamp(err)
-		}
-
-		_, err = f.CreateMultipartFiles(sessionBucket, solutionArchiveFromManifest)
-		if err != nil {
-			return nil, errors.Stamp(err)
-		}
-	}
-
-	part.SolutionArchive = solutionArchiveFromManifest
-
-	solutionArchiveStatus, err := f.WritePartToMultipartFile(sessionBucket, part)
-	if err != nil {
-		return nil, errors.Stamp(err)
-	}
-
-	if !solutionArchiveStatus.IsComplete() {
-		return solutionArchiveStatus, nil
-	}
-
-	// Solution archive is complete, so let's consolidate it,
-	// move it to the storage root location and then
-	// remove the bucket.
+// Consolidate consolidates all the parts of a multipart file
+// in a single flat file into the same bucket it is located and moves it to the root location.
+func (f *FileSystem) Consolidate(
+	bucketName string,
+	solutionArchive *domain.SolutionArchive,
+	perm os.FileMode,
+) error {
 	cleanUpCorrupted := func() {
-		if err := f.multipartRemover.DeleteMultipartFile(sessionBucket, part.SolutionArchive); err != nil {
-			f.logger.Error().Err(err).Any("solution archive", part.SolutionArchive).Msg("failed to delete multipart file")
+		if err := f.multipartRemover.DeleteMultipartFile(bucketName, solutionArchive); err != nil {
+			f.logger.Error().Err(err).
+				Any("solution archive", solutionArchive).
+				Msg("failed to delete multipart file")
 		}
 
-		if _, err := f.CreateMultipartFiles(sessionBucket, part.SolutionArchive); err != nil {
-			f.logger.Error().Err(err).Any("solution archive", part.SolutionArchive).Msg("failed to create multipart file")
+		if _, err := f.CreateMultipartFiles(bucketName, solutionArchive); err != nil {
+			f.logger.Error().Err(err).
+				Any("solution archive", solutionArchive).
+				Msg("failed to create multipart file")
 		}
 	}
 
-	err = f.ConsolidateMultipartFile(
-		sessionBucket,
-		part.SolutionArchive,
-		library.FileSystemDefaultFileMode,
+	err := f.consolidateMultipartFile(
+		bucketName,
+		solutionArchive,
+		perm,
 	)
 	if err != nil {
 		cleanUpCorrupted()
-		return nil, errors.Stamp(err)
+		return errors.Stamp(err)
 	}
 
-	solutionArchiveFileName := library.GenSolutionArchiveFileName(part.SolutionArchive)
-	err = f.MoveFileToRoot(sessionBucket, part.SolutionArchive.Name, solutionArchiveFileName)
+	solutionArchiveFileName := library.GenSolutionArchiveFileName(solutionArchive)
+	err = f.moveFileToRoot(bucketName, solutionArchive.Name, solutionArchiveFileName)
 	if err != nil {
 		cleanUpCorrupted()
-		return nil, errors.Stamp(err)
+		return errors.Stamp(err)
 	}
-	err = f.bucketManager.DeleteBucket(sessionBucket)
+	err = f.bucketManager.DeleteBucket(bucketName)
 	if err != nil {
-		return nil, errors.Stamp(err)
+		return errors.Stamp(err)
 	}
 
-	return solutionArchiveStatus, nil
+	return nil
 }

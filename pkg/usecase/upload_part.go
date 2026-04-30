@@ -85,7 +85,36 @@ func (uc *UploadPart) Execute(part *domain.Part) (*domain.SolutionArchiveStatus,
 			Throw()
 	}
 
-	solutionArchiveStatus, err := uc.multipartUploader.StorePart(sessionBucket, solutionArchiveFromManifest, part)
+	solutionArchiveStatus, err := uc.multipartUploader.StorePart(
+		sessionBucket,
+		solutionArchiveFromManifest,
+		part,
+	)
+	if err != nil {
+		return nil, errors.Intercept(err).
+			WithProperty("instance", fmt.Sprintf("%s/uploads/%s", uc.rootAPIPath, part.SolutionArchive.Name)).
+			Throw()
+	}
+
+	err = uc.multipartUploader.CommitPart(sessionBucket, part)
+	if err != nil {
+		return nil, errors.Intercept(err).
+			WithProperty("instance", fmt.Sprintf("%s/uploads/%s", uc.rootAPIPath, part.SolutionArchive.Name)).
+			Throw()
+	}
+
+	if !solutionArchiveStatus.IsComplete() {
+		return solutionArchiveStatus, nil
+	}
+
+	// Solution archive is complete, so let's consolidate it,
+	// move it to the storage root location and then
+	// remove the bucket.
+	err = uc.multipartUploader.Consolidate(
+		sessionBucket,
+		solutionArchiveFromManifest,
+		library.FileSystemDefaultFileMode,
+	)
 	if err != nil {
 		return nil, errors.Intercept(err).
 			WithProperty("instance", fmt.Sprintf("%s/uploads/%s", uc.rootAPIPath, part.SolutionArchive.Name)).

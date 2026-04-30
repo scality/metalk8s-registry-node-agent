@@ -312,7 +312,7 @@ func DeleteFile(
 	return nil
 }
 
-// hashFile calculates the hash of the file.
+// HashFile calculates the hash of the file.
 func HashFile(
 	filePath string,
 ) (string, error) {
@@ -323,11 +323,11 @@ func HashFile(
 
 	defer file.Close() // nolint: errcheck // No error check on defer.
 
-	return HashReader(file)
+	return hashReader(file)
 }
 
 // hashReader calculates the hash of the reader.
-func HashReader(
+func hashReader(
 	reader io.Reader,
 ) (string, error) {
 	hasher := crypto.SHA256.New()

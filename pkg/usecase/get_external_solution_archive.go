@@ -150,13 +150,46 @@ func (uc *GetExternalSolutionArchive) Execute(
 
 		// Store the chunk in the file (streams via io.Copy); then close the HTTP body this iteration.
 		part.Content = body
-		solutionArchiveStatus, err = uc.multipartUploader.StorePart(sessionBucket, solutionArchiveFromManifest, part)
+
+		solutionArchiveStatus, err = uc.multipartUploader.StorePart(
+			sessionBucket,
+			solutionArchiveFromManifest,
+			part,
+		)
 		_ = body.Close() // nolint: errcheck // Return path uses StorePart err; Close releases the connection.
 		if err != nil {
 			return errors.Intercept(err).
 				WithProperty("instance", fmt.Sprintf("%s/downloads/%s", uc.rootAPIPath, solutionArchive.Name)).
 				Throw()
 		}
+
+		if err := uc.multipartUploader.CommitPart(sessionBucket, part); err != nil {
+			return errors.Intercept(err).
+				WithProperty("instance", fmt.Sprintf("%s/downloads/%s", uc.rootAPIPath, solutionArchive.Name)).
+				Throw()
+		}
+	}
+
+	if !solutionArchiveStatus.IsComplete() {
+		return errors.From(domain.ErrGetExternalSolutionArchiveNotComplete).
+			WithIdentifier(404001).
+			WithDetail("unable to get external solution archive because it is not complete").
+			WithProperty("instance", fmt.Sprintf("%s/downloads/%s", uc.rootAPIPath, solutionArchive.Name)).
+			Throw()
+	}
+
+	// Solution archive is complete, so let's consolidate it,
+	// move it to the storage root location and then
+	// remove the bucket.
+	err = uc.multipartUploader.Consolidate(
+		sessionBucket,
+		solutionArchiveFromManifest,
+		library.FileSystemDefaultFileMode,
+	)
+	if err != nil {
+		return errors.Intercept(err).
+			WithProperty("instance", fmt.Sprintf("%s/downloads/%s", uc.rootAPIPath, solutionArchive.Name)).
+			Throw()
 	}
 
 	uc.logger.Debug().Any("solution_archive", solutionArchive).Msg("External solution archive retrieved")
