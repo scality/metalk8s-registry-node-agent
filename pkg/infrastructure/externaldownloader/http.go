@@ -1,10 +1,15 @@
 package externaldownloader
 
 import (
+	"bytes"
 	"context"
+	"crypto"
+	"encoding/base64"
 	"fmt"
+	"hash"
 	"io"
 	"net/http"
+	"regexp"
 
 	"github.com/rs/zerolog"
 	"github.com/scality/go-errors"
@@ -43,7 +48,6 @@ func (h *HTTP) Download(
 			CausedBy(err).
 			Throw()
 	}
-	// Add Headers on the request
 	// According to RFC9110, the header should be bytes=%d-%d, without total size
 	req.Header.Set("Range", fmt.Sprintf("bytes=%d-%d", start, end))
 
@@ -56,7 +60,6 @@ func (h *HTTP) Download(
 			Throw()
 	}
 
-	// 2. Check for a successful status code
 	if resp.StatusCode != http.StatusPartialContent {
 		_ = resp.Body.Close() // nolint: errcheck // Best-effort; body must be closed on error paths.
 		return nil, errors.From(domain.ErrExternalDownloaderNotFound).
@@ -66,7 +69,6 @@ func (h *HTTP) Download(
 			Throw()
 	}
 
-	// Check range and size through the Content-Range header
 	contentRange := resp.Header.Get("Content-Range")
 	if contentRange == "" {
 		_ = resp.Body.Close() // nolint: errcheck // Best-effort; body must be closed on error paths.
@@ -94,8 +96,59 @@ func (h *HTTP) Download(
 			Throw()
 	}
 
-	// Stream via io.Copy in the storage layer; do not buffer the chunk in memory.
-	return resp.Body, nil
+	return newDigestVerifyingReader(resp), nil
+}
+
+// digestVerifyingReader wraps a response body with io.TeeReader to compute SHA-256
+// on-the-fly. On Close, it reads the Content-Digest trailer and verifies integrity.
+type digestVerifyingReader struct {
+	tee    io.Reader
+	body   io.ReadCloser
+	hasher hash.Hash
+	resp   *http.Response
+}
+
+func newDigestVerifyingReader(resp *http.Response) *digestVerifyingReader {
+	hasher := crypto.SHA256.New()
+	return &digestVerifyingReader{
+		tee:    io.TeeReader(resp.Body, hasher),
+		body:   resp.Body,
+		hasher: hasher,
+		resp:   resp,
+	}
+}
+
+func (r *digestVerifyingReader) Read(p []byte) (int, error) {
+	return r.tee.Read(p)
+}
+
+func (r *digestVerifyingReader) Close() error {
+	defer r.body.Close() // nolint: errcheck // Best-effort close of underlying body.
+
+	contentDigest := r.resp.Trailer.Get("Content-Digest")
+	if contentDigest == "" {
+		return errors.From(domain.ErrExternalDownloaderInternal).
+			WithIdentifier(500000).
+			WithDetail("Content-Digest trailer is missing in the response").
+			Throw()
+	}
+
+	expected, err := parseAndDecodeContentDigest(contentDigest)
+	if err != nil {
+		return errors.Stamp(err)
+	}
+
+	computed := r.hasher.Sum(nil)
+	if !bytes.Equal(expected, computed) {
+		return errors.From(domain.ErrExternalDownloaderInternal).
+			WithIdentifier(500000).
+			WithDetail("the hash of the downloaded part does not match the Content-Digest trailer").
+			WithProperty("expected_hash", expected).
+			WithProperty("computed_hash", computed).
+			Throw()
+	}
+
+	return nil
 }
 
 func (h *HTTP) GetDescription(ctx context.Context, downloadURL string) (int64, error) {
@@ -135,4 +188,31 @@ func (h *HTTP) GetDescription(ctx context.Context, downloadURL string) (int64, e
 	}
 
 	return resp.ContentLength, nil
+}
+
+// contentDigestRegexp is used to parse the Content-Digest header, conform to RFC 9530.
+var contentDigestRegexp = regexp.MustCompile(
+	`^sha-256=:(?P<hash>[A-Za-z0-9+\/=]{44}):$`,
+)
+
+// parseAndDecodeContentDigest parses and decodes the Content-Digest header.
+func parseAndDecodeContentDigest(contentDigest string) ([]byte, error) {
+	matched := contentDigestRegexp.FindStringSubmatch(contentDigest)
+	if len(matched) != 2 {
+		return nil, errors.From(domain.ErrExternalDownloaderInternal).
+			WithIdentifier(500000).
+			WithDetail("Content-Digest header is not in the expected format").
+			Throw()
+	}
+
+	decoded, err := base64.StdEncoding.DecodeString(matched[1])
+	if err != nil {
+		return nil, errors.From(domain.ErrExternalDownloaderInternal).
+			WithIdentifier(500000).
+			WithDetail("failed to decode the Content-Digest header").
+			CausedBy(err).
+			Throw()
+	}
+
+	return decoded, nil
 }

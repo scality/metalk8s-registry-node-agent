@@ -2,28 +2,25 @@ package api
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/base64"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
-	"github.com/scality/metalk8s-registry-node-agent/pkg/domain"
 	"github.com/scality/metalk8s-registry-node-agent/pkg/presentation/http/intern"
 )
 
 var _ = Describe("Download Archive API", func() {
 	Context("When downloading an existing solution archive", func() {
 		It("should successfully download the solution archive", func() {
-			solutionArchive := &domain.SolutionArchive{
-				Name:    "artesca-base",
-				Version: "4.0.0-preview.1",
-				Hash:    "0fac9ac77b2915515aa726a1197536087e69123d49d29d0e397fa4931e7da29e",
-			}
-			solutionArchiveContent := []byte("platform2\nplatform1\nplatform0\n")
+			solutionArchiveContentHash := sha256.Sum256(solutionArchiveContent[0:3])
+			contentDigest := base64.StdEncoding.EncodeToString(solutionArchiveContentHash[:])
 
 			By("successfully downloading the solution archive")
 			resDl, err := testingSuite.InternClientWithResponse.DownloadSolutionArchiveWithResponse(
 				context.TODO(),
-				"artesca-base",
+				solutionArchive.Name,
 				solutionArchive.Version,
 				&intern.DownloadSolutionArchiveParams{
 					Range: "bytes=0-2",
@@ -38,6 +35,9 @@ var _ = Describe("Download Archive API", func() {
 
 			By("verifying the downloaded content matches the original solution archive")
 			Expect(resDl.Body).To(Equal(solutionArchiveContent[0:3]))
+
+			By("verifying the Content-Digest trailer")
+			Expect(resDl.HTTPResponse.Trailer.Get("Content-Digest")).To(Equal("sha-256=:" + contentDigest + ":"))
 		})
 	})
 
@@ -62,14 +62,14 @@ var _ = Describe("Download Archive API", func() {
 
 	Context("When downloading the full content of an existing solution archive", func() {
 		It("should return the complete file content", func() {
-			// "artesca-base-4.0.0-preview.1.iso" has content "platform2\nplatform1\nplatform0\n" (30 bytes)
-			solutionArchiveContent := []byte("platform2\nplatform1\nplatform0\n")
+			solutionArchiveContentHash := sha256.Sum256(solutionArchiveContent[0:30])
+			contentDigest := base64.StdEncoding.EncodeToString(solutionArchiveContentHash[:])
 
 			By("successfully downloading the full range")
 			resDl, err := testingSuite.InternClientWithResponse.DownloadSolutionArchiveWithResponse(
 				context.TODO(),
-				"artesca-base",
-				"4.0.0-preview.1",
+				solutionArchive.Name,
+				solutionArchive.Version,
 				&intern.DownloadSolutionArchiveParams{
 					Range: "bytes=0-29",
 				},
@@ -82,6 +82,9 @@ var _ = Describe("Download Archive API", func() {
 
 			By("verifying the full content matches")
 			Expect(resDl.Body).To(Equal(solutionArchiveContent))
+
+			By("verifying the Content-Digest trailer")
+			Expect(resDl.HTTPResponse.Trailer.Get("Content-Digest")).To(Equal("sha-256=:" + contentDigest + ":"))
 		})
 	})
 
@@ -90,8 +93,8 @@ var _ = Describe("Download Archive API", func() {
 			By("sending a malformed Content-Range header")
 			resDl, err := testingSuite.InternClientWithResponse.DownloadSolutionArchiveWithResponse(
 				context.TODO(),
-				"artesca-base",
-				"4.0.0-preview.1",
+				solutionArchive.Name,
+				solutionArchive.Version,
 				&intern.DownloadSolutionArchiveParams{
 					Range: "invalid-range-format",
 				},
@@ -109,8 +112,8 @@ var _ = Describe("Download Archive API", func() {
 			By("sending a Content-Range with start greater than end")
 			resDl, err := testingSuite.InternClientWithResponse.DownloadSolutionArchiveWithResponse(
 				context.TODO(),
-				"artesca-base",
-				"4.0.0-preview.1",
+				solutionArchive.Name,
+				solutionArchive.Version,
 				&intern.DownloadSolutionArchiveParams{
 					Range: "bytes=10-5",
 				},
@@ -129,8 +132,8 @@ var _ = Describe("Download Archive API", func() {
 			By("sending a Content-Range beyond the file size")
 			resDl, err := testingSuite.InternClientWithResponse.DownloadSolutionArchiveWithResponse(
 				context.TODO(),
-				"artesca-base",
-				"4.0.0-preview.1",
+				solutionArchive.Name,
+				solutionArchive.Version,
 				&intern.DownloadSolutionArchiveParams{
 					Range: "bytes=0-99",
 				},
@@ -148,7 +151,7 @@ var _ = Describe("Download Archive API", func() {
 			resDl, err := testingSuite.InternClientWithResponse.DownloadSolutionArchiveWithResponse(
 				context.TODO(),
 				"wrong-name",
-				"4.0.0-preview.1",
+				solutionArchive.Version,
 				&intern.DownloadSolutionArchiveParams{
 					Range: "bytes=0-2",
 				},

@@ -10,13 +10,11 @@ import (
 var _ = Describe("Describe Archive API", func() {
 	Context("When describing an existing solution archive", func() {
 		It("should return the size of the solution archive", func() {
-			// "artesca-base-4.0.0-preview.1.iso" was pre-loaded in BeforeSuite
-			// with content "platform2\nplatform1\nplatform0\n" (30 bytes)
 			By("successfully describing the solution archive")
 			res, err := testingSuite.InternClientWithResponse.DescribeSolutionArchiveWithResponse(
 				context.TODO(),
-				"artesca-base",
-				"4.0.0-preview.1",
+				solutionArchive.Name,
+				solutionArchive.Version,
 			)
 			Expect(err).NotTo(HaveOccurred())
 
