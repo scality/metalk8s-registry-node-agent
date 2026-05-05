@@ -78,7 +78,7 @@ openssl req -newkey rsa:4096 -nodes \
   -out "${CERT_DIR}/server/external/tls.csr" \
   -subj "/CN=localhost/O=MetalK8s-Test"
 
-# Create SAN config for localhost
+# Create SAN config for localhost and NodeIPs (adapt to your cluster)
 cat > "${CERT_DIR}/server/external/san.cnf" <<EOF
 [v3_req]
 keyUsage = keyEncipherment, dataEncipherment, digitalSignature
@@ -90,6 +90,14 @@ DNS.1 = localhost
 DNS.2 = *.localhost
 IP.1 = 127.0.0.1
 IP.2 = ::1
+IP.3 = 172.19.0.2
+IP.4 = 172.19.0.3
+IP.5 = 172.19.0.4
+IP.6 = 172.19.0.5
+IP.7 = 172.19.0.6
+IP.8 = 172.19.0.7
+IP.9 = 172.19.0.8
+IP.10 = 172.19.0.9
 EOF
 
 # Sign external server certificate
@@ -147,7 +155,7 @@ openssl req -newkey rsa:4096 -nodes \
   -out "${CERT_DIR}/server/internal/tls.csr" \
   -subj "/CN=localhost/O=MetalK8s-Test"
 
-# Use same SAN config pattern for internal server
+# Create SAN config for internal server (adapt to your cluster)
 cat > "${CERT_DIR}/server/internal/san.cnf" <<EOF
 [v3_req]
 keyUsage = keyEncipherment, dataEncipherment, digitalSignature
@@ -159,26 +167,14 @@ DNS.1 = localhost
 DNS.2 = *.localhost
 IP.1 = 127.0.0.1
 IP.2 = ::1
-IP.3 = 172.18.0.1
-IP.4 = 172.18.0.2
-IP.5 = 172.18.0.3
-IP.6 = 172.18.0.4
-IP.7 = 172.19.0.1
-IP.8 = 172.19.0.2
-IP.9 = 172.19.0.3
-IP.10 = 172.19.0.4
-IP.11 = 172.20.0.1
-IP.12 = 172.20.0.2
-IP.13 = 172.20.0.3
-IP.14 = 172.20.0.4
-IP.15 = 172.21.0.1
-IP.16 = 172.21.0.2
-IP.17 = 172.21.0.3
-IP.18 = 172.21.0.4
-IP.19 = 172.22.0.1
-IP.20 = 172.22.0.2
-IP.21 = 172.22.0.3
-IP.22 = 172.22.0.4
+IP.3 = 172.19.0.2
+IP.4 = 172.19.0.3
+IP.5 = 172.19.0.4
+IP.6 = 172.19.0.5
+IP.7 = 172.19.0.6
+IP.8 = 172.19.0.7
+IP.9 = 172.19.0.8
+IP.10 = 172.19.0.9
 EOF
 
 # Sign internal server certificate
@@ -266,23 +262,47 @@ make run
 make install
 
 # Deploy certificates
-kubectl create ns metalk8s-registry-node-agent-system
-kubectl apply -n metalk8s-registry-node-agent-system -f test/e2e/e2e-certs.yaml
-export CERT_DIR="/tmp/certs"
-kubectl get secret -n metalk8s-registry-node-agent-system tls-cert -o jsonpath="{.data.tls\.crt}" | base64 -d > ${CERT_DIR}/tls.crt
-kubectl get secret -n metalk8s-registry-node-agent-system tls-cert -o jsonpath="{.data.tls\.key}" | base64 -d > ${CERT_DIR}/tls.key
-kubectl get secret -n metalk8s-registry-node-agent-system tls-cert -o jsonpath="{.data.ca\.crt}" | base64 -d > ${CERT_DIR}/ca.crt
+kubectl create ns metalk8s-registry
+export CERT_DIR="/certs"
+
+kubectl create secret generic -n metalk8s-registry tls-server-extern-certs \
+  --from-file=tls.crt=${CERT_DIR}/server/external/tls.crt \
+  --from-file=tls.key=${CERT_DIR}/server/external/tls.key \
+  --from-file=ca.crt=${CERT_DIR}/server/external/ca.crt
+
+kubectl create secret generic -n metalk8s-registry tls-client-extern-certs \
+  --from-file=tls.crt=${CERT_DIR}/client/external/tls.crt \
+  --from-file=tls.key=${CERT_DIR}/client/external/tls.key \
+  --from-file=ca.crt=${CERT_DIR}/client/external/ca.crt
+
+kubectl create secret generic -n metalk8s-registry tls-server-intern-certs \
+  --from-file=tls.crt=${CERT_DIR}/server/internal/tls.crt \
+  --from-file=tls.key=${CERT_DIR}/server/internal/tls.key \
+  --from-file=ca.crt=${CERT_DIR}/server/internal/ca.crt
+
+kubectl create secret generic -n metalk8s-registry tls-client-intern-certs \
+  --from-file=tls.crt=${CERT_DIR}/client/internal/tls.crt \
+  --from-file=tls.key=${CERT_DIR}/client/internal/tls.key \
+  --from-file=ca.crt=${CERT_DIR}/client/internal/ca.crt
 
 # Deploy the operator
 make deploy IMG=registry.localhost:5000/nodeagent:0.1.0
 
+# Label Node to deploy registry Pods
+kubectl label node k3d-k3d-agent-0 "node-role.kubernetes.io/registry="
+
 # Check deployment status
-kubectl get pods -n metalk8s-registry-node-agent-system
+kubectl get pods -n metalk8s-registry
 
 # Activate port-forward to upload
-kubectl port-forward -n metalk8s-registry-node-agent-system \
-  $(kubectl get pod -n metalk8s-registry-node-agent-system -o name) \
-  5001.5001
+kubectl port-forward -n metalk8s-registry \
+  $(kubectl get pod -n metalk8s-registry -o name) \
+  5001:5001
+
+# Activate port-forward to download
+kubectl port-forward -n metalk8s-registry \
+  $(kubectl get pod -n metalk8s-registry -o name) \
+  5002:5002
 ```
 
 ## Complete example
