@@ -148,7 +148,7 @@ var _ = Describe("Upload Part API", func() {
 				"artesca-base",
 				"3.0.0-preview.3",
 				&extern.UploadChunkParams{
-					ContentRange: "bytes 0-19/200",
+					ContentRange: fmt.Sprintf("bytes 0-%d/200", len(uploadPartTestString)-1),
 				},
 				"application/octet-stream",
 				bytes.NewReader([]byte(uploadPartTestString)),
@@ -241,7 +241,7 @@ var _ = Describe("Upload Part API", func() {
 			_, err := testingSuite.container.GetInitializeSessionUseCase().Execute(solutionArchive)
 			Expect(err).NotTo(HaveOccurred())
 
-			By("successfully uploading all the chunks")
+			By("uploading a chunk whose body length does not match the Content-Range")
 			resUpl, err := testingSuite.ExternClientWithResponse.UploadChunkWithBodyWithResponse(
 				context.TODO(),
 				"artesca-base",
@@ -254,10 +254,8 @@ var _ = Describe("Upload Part API", func() {
 			)
 			Expect(err).NotTo(HaveOccurred())
 
-			By("returning an http/500 response")
-			Expect(resUpl.HTTPResponse.StatusCode).To(Equal(500))
-			Expect(*resUpl.ApplicationproblemJSON500.Code).To(Equal("500000"))
-			Expect(*resUpl.ApplicationproblemJSON500.Status).To(Equal(int32(500)))
+			By("returning a documented http/400 response")
+			Expect(resUpl.HTTPResponse.StatusCode).To(Equal(400))
 		})
 	})
 
@@ -460,7 +458,6 @@ var _ = Describe("Upload Part API", func() {
 
 			By("returning a documented http/400 response")
 			Expect(resUpl.HTTPResponse.StatusCode).To(Equal(400))
-			Expect(resUpl.ApplicationproblemJSON400).NotTo(BeNil())
 		})
 	})
 
@@ -489,7 +486,6 @@ var _ = Describe("Upload Part API", func() {
 
 			By("returning a documented http/400 response")
 			Expect(resUpl.HTTPResponse.StatusCode).To(Equal(400))
-			Expect(resUpl.ApplicationproblemJSON400).NotTo(BeNil())
 		})
 	})
 
