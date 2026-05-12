@@ -6,6 +6,8 @@ import (
 	"net/http"
 
 	middleware "github.com/oapi-codegen/nethttp-middleware"
+	"github.com/scality/go-errors"
+	"github.com/scality/metalk8s-registry-node-agent/pkg/domain"
 	"github.com/scality/metalk8s-registry-node-agent/pkg/presentation/http/extern"
 	"github.com/scality/metalk8s-registry-node-agent/pkg/presentation/http/handler"
 )
@@ -34,14 +36,20 @@ func (c *Container) GetHTTPExternServer() *http.Server {
 				contentRange := request.Header.Get("Content-Range")
 				headerStart, headerEnd, _, err := handler.ParseContentRange(contentRange)
 				if err != nil {
-					http.Error(writer, "Invalid Content-Range", http.StatusBadRequest)
+					handler.WriteExternProblemDetails(c.GetLogger(), writer, err, "Invalid Content-Range header")
 					return
 				}
 				rangeSize := headerEnd - headerStart + 1
 				// golang net/http library deals with missing or malformed Content-Length headers
 				// by setting request.ContentLength to 0 or -1 so the comparison below is sufficient.
 				if rangeSize != request.ContentLength {
-					http.Error(writer, "Content-Range header does not match the body size", http.StatusBadRequest)
+					bodySizeErr := errors.From(domain.ErrHandlerBadRequest).
+						WithIdentifier(400007).
+						WithDetail("Content-Range header does not match the body size").
+						WithProperty("content_range_size", rangeSize).
+						WithProperty("content_length", request.ContentLength).
+						Throw()
+					handler.WriteExternProblemDetails(c.GetLogger(), writer, bodySizeErr, "Body size does not match Content-Range")
 					return
 				}
 

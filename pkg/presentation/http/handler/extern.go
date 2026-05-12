@@ -2,9 +2,12 @@
 package handler
 
 import (
+	"encoding/json"
 	"fmt"
+	"net/http"
 	"strings"
 
+	"github.com/rs/zerolog"
 	"github.com/scality/go-errors"
 	"github.com/scality/metalk8s-registry-node-agent/pkg/domain"
 	"github.com/scality/metalk8s-registry-node-agent/pkg/presentation/http/extern"
@@ -94,12 +97,14 @@ func fillPartFromUploadChunkRequestObject(
 	return nil
 }
 
-// fillProblemDetailsFromAPIErrorsError fills the ProblemDetails object from the apierrors.Error object.
-func (h *UploadPart) fillProblemDetailsFromAPIErrorsError(
+// fillExternProblemDetailsFromAPIErrorsError fills the ProblemDetails object from the apierrors.Error object.
+func fillExternProblemDetailsFromAPIErrorsError(
+	logger *zerolog.Logger,
 	dst *extern.ProblemDetails,
 	src *errors.Error,
+	logMsg string,
 ) {
-	h.logger.Error().Err(src).Msg("Uploads API error")
+	logger.Error().Err(src).Msg(logMsg)
 
 	status := src.Identifier / 1000 // nolint: gosec // TODO: Refactor this in the "polishing" sprint.
 	code := fmt.Sprintf("%d", src.Identifier)
@@ -127,6 +132,51 @@ func (h *UploadPart) fillProblemDetailsFromAPIErrorsError(
 		fillExternErrorDetailsFromPropertiesMap(&errs, src.Properties)
 
 		dst.Errors = &errs
+	}
+}
+
+func (h *UploadPart) fillProblemDetailsFromAPIErrorsError(
+	dst *extern.ProblemDetails,
+	src *errors.Error,
+) {
+	fillExternProblemDetailsFromAPIErrorsError(h.logger, dst, src, "Uploads API error")
+}
+
+// WriteExternProblemDetails writes a ProblemDetails JSON response to w based
+// on the given error. The HTTP status code is derived from the error
+// identifier (status = identifier / 1000). If err does not wrap an
+// *errors.Error, a generic 500 ProblemDetails is returned instead.
+func WriteExternProblemDetails(
+	logger *zerolog.Logger,
+	w http.ResponseWriter,
+	err error,
+	logMsg string,
+) {
+	var apiErr *errors.Error
+	if !errors.As(err, &apiErr) {
+		apiErr = errors.From(domain.ErrUnknown).
+			WithIdentifier(500000).
+			WithDetail(err.Error()).
+			Throw().(*errors.Error)
+	}
+
+	var problemDetails extern.ProblemDetails
+
+	fillExternProblemDetailsFromAPIErrorsError(logger, &problemDetails, apiErr, logMsg)
+
+	var status int
+	if problemDetails.Status != nil {
+		status = int(*problemDetails.Status)
+	}
+	if status < 100 || status > 599 {
+		status = http.StatusInternalServerError
+	}
+
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(status)
+
+	if encErr := json.NewEncoder(w).Encode(problemDetails); encErr != nil {
+		logger.Error().Err(encErr).Msg("failed to encode ProblemDetails response")
 	}
 }
 

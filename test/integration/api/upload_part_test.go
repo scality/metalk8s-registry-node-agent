@@ -256,6 +256,8 @@ var _ = Describe("Upload Part API", func() {
 
 			By("returning a documented http/400 response")
 			Expect(resUpl.HTTPResponse.StatusCode).To(Equal(400))
+			Expect(*resUpl.ApplicationproblemJSON400.Code).To(Equal("400007"))
+			Expect(*resUpl.ApplicationproblemJSON400.Status).To(Equal(int32(400)))
 		})
 	})
 
@@ -458,6 +460,7 @@ var _ = Describe("Upload Part API", func() {
 
 			By("returning a documented http/400 response")
 			Expect(resUpl.HTTPResponse.StatusCode).To(Equal(400))
+			Expect(resUpl.ApplicationproblemJSON400).NotTo(BeNil())
 		})
 	})
 
@@ -486,6 +489,7 @@ var _ = Describe("Upload Part API", func() {
 
 			By("returning a documented http/400 response")
 			Expect(resUpl.HTTPResponse.StatusCode).To(Equal(400))
+			Expect(resUpl.ApplicationproblemJSON400).NotTo(BeNil())
 		})
 	})
 
