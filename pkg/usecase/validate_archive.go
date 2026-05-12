@@ -44,7 +44,7 @@ func (uc *ValidateSolutionArchive) Execute(solutionArchive *domain.SolutionArchi
 	// matching solutionArchiveStorageNamePattern
 	fileNames, err := uc.archiveLister.ListFiles()
 	if err != nil {
-		return false, errors.Stamp(err)
+		return false, errors.Wrap(err)
 	}
 
 	// Check if the solution archive exists in the storage
@@ -55,12 +55,12 @@ func (uc *ValidateSolutionArchive) Execute(solutionArchive *domain.SolutionArchi
 	if solutionArchive.Hash != nil {
 		hash, err := uc.archiveLister.GetArchiveHash(library.GenSolutionArchiveFileName(solutionArchive))
 		if err != nil {
-			return false, errors.Stamp(err)
+			return false, errors.Wrap(err)
 		}
 		if hash != *solutionArchive.Hash {
 			err := uc.archiveRemover.DeleteFile(library.GenSolutionArchiveFileName(solutionArchive))
 			if err != nil {
-				return false, errors.Stamp(err)
+				return false, errors.Wrap(err)
 			}
 			return false, nil
 		}

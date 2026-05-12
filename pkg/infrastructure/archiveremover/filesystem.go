@@ -35,16 +35,16 @@ func (f *FileSystem) DeleteFile(
 	fileName string,
 ) error {
 	if err := library.EnforceNamingConventions(fileName); err != nil {
-		return errors.Stamp(err)
+		return errors.Wrap(err)
 	}
 
 	filePath := filepath.Join(f.solutionArchivesLocation, fileName)
 	if err := library.CheckFile(filePath); err != nil {
-		return errors.Stamp(err)
+		return errors.Wrap(err)
 	}
 
 	if err := library.DeleteFile(filePath); err != nil {
-		return errors.Stamp(err)
+		return errors.Wrap(err)
 	}
 
 	return nil

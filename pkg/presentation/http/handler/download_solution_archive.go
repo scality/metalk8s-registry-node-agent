@@ -42,12 +42,12 @@ func (h *DownloadSolutionArchive) DownloadSolutionArchive(
 	var solutionArchivePart domain.Part
 
 	if err := fillSolutionArchiveFromDownloadSolutionArchiveRequestObject(&solutionArchivePart, &request); err != nil {
-		return h.genDownloadSolutionArchiveResponseObjectFromError(errors.Stamp(err))
+		return h.genDownloadSolutionArchiveResponseObjectFromError(errors.Wrap(err))
 	}
 
 	partFile, err := h.uc.Execute(&solutionArchivePart)
 	if err != nil {
-		return h.genDownloadSolutionArchiveResponseObjectFromError(errors.Stamp(err))
+		return h.genDownloadSolutionArchiveResponseObjectFromError(errors.Wrap(err))
 	}
 
 	// As oapi-codegen does not handle HTTP Trailers, we need to manually implement this point,
@@ -144,6 +144,6 @@ func (h *DownloadSolutionArchive) genDownloadSolutionArchiveResponseObjectFromEr
 		}, nil
 
 	default:
-		return nil, errors.Stamp(err)
+		return nil, errors.Wrap(err)
 	}
 }

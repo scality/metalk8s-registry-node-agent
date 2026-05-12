@@ -37,9 +37,9 @@ func (r *ExternRoot) UploadChunk(
 ) (extern.UploadChunkResponseObject, error) {
 	response, err := r.UploadPart.UploadChunk(ctx, request)
 	if err != nil {
-		return nil, errors.Intercept(err).
-			WithDetail("failed to resolve upload chunk request").
-			Throw()
+		return nil, errors.Wrap(err,
+			errors.WithDetail("failed to resolve upload chunk request"),
+		)
 	}
 
 	return response, nil

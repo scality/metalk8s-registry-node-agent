@@ -39,12 +39,12 @@ func (h *UploadPart) UploadChunk(
 	var part domain.Part
 
 	if err := fillPartFromUploadChunkRequestObject(&part, &request); err != nil {
-		return h.genUploadChunkResponseObjectFromError(errors.Stamp(err))
+		return h.genUploadChunkResponseObjectFromError(errors.Wrap(err))
 	}
 
 	solutionArchiveStatus, err := h.uc.Execute(&part)
 	if err != nil {
-		return h.genUploadChunkResponseObjectFromError(errors.Stamp(err))
+		return h.genUploadChunkResponseObjectFromError(errors.Wrap(err))
 	}
 
 	var response extern.UploadChunkSuccessResponse
@@ -116,6 +116,6 @@ func (h *UploadPart) genUploadChunkResponseObjectFromError(
 		}, nil
 
 	default:
-		return nil, errors.Stamp(err)
+		return nil, errors.Wrap(err)
 	}
 }

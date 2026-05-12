@@ -43,12 +43,12 @@ func (c *Container) GetHTTPExternServer() *http.Server {
 				// golang net/http library deals with missing or malformed Content-Length headers
 				// by setting request.ContentLength to 0 or -1 so the comparison below is sufficient.
 				if rangeSize != request.ContentLength {
-					bodySizeErr := errors.From(domain.ErrHandlerBadRequest).
-						WithIdentifier(400007).
-						WithDetail("Content-Range header does not match the body size").
-						WithProperty("content_range_size", rangeSize).
-						WithProperty("content_length", request.ContentLength).
-						Throw()
+					bodySizeErr := errors.Wrap(domain.ErrHandlerBadRequest,
+						errors.WithIdentifier(400007),
+						errors.WithDetail("Content-Range header does not match the body size"),
+						errors.WithProperty("content_range_size", rangeSize),
+						errors.WithProperty("content_length", request.ContentLength),
+					)
 					handler.WriteExternProblemDetails(c.GetLogger(), writer, bodySizeErr, "Body size does not match Content-Range")
 					return
 				}

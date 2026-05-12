@@ -39,7 +39,7 @@ func (uc *UnmountSolutionArchive) Execute(solutionArchive *domain.SolutionArchiv
 
 	err := uc.archiveMounter.UnmountFile(library.GenSolutionDirName(solutionArchive))
 	if err != nil {
-		return errors.Stamp(err)
+		return errors.Wrap(err)
 	}
 
 	uc.logger.Debug().Any("solution_archive", solutionArchive).Msg("Solution archive unmounting ended")

@@ -37,17 +37,17 @@ var _ service.ArchiveReader = &FileSystem{}
 // The caller should close the content reader as early as possible.
 func (f *FileSystem) GetFile(fileName string) (io.ReadCloser, error) {
 	if err := library.EnforceNamingConventions(fileName); err != nil {
-		return nil, errors.Stamp(err)
+		return nil, errors.Wrap(err)
 	}
 
 	filePath := filepath.Join(f.solutionArchivesLocation, fileName)
 	if err := library.CheckFile(filePath); err != nil {
-		return nil, errors.Stamp(err)
+		return nil, errors.Wrap(err)
 	}
 
 	file, err := library.GetFile(filePath)
 	if err != nil {
-		return nil, errors.Stamp(err)
+		return nil, errors.Wrap(err)
 	}
 
 	return file, nil
@@ -59,17 +59,17 @@ func (f *FileSystem) GetFile(fileName string) (io.ReadCloser, error) {
 // The caller should close the content reader as early as possible.
 func (f *FileSystem) GetPart(fileName string, start int64, end int64) (io.ReadCloser, error) {
 	if err := library.EnforceNamingConventions(fileName); err != nil {
-		return nil, errors.Stamp(err)
+		return nil, errors.Wrap(err)
 	}
 
 	filePath := filepath.Join(f.solutionArchivesLocation, fileName)
 	if err := library.CheckFile(filePath); err != nil {
-		return nil, errors.Stamp(err)
+		return nil, errors.Wrap(err)
 	}
 
 	file, err := library.GetPart(filePath, start, end)
 	if err != nil {
-		return nil, errors.Stamp(err)
+		return nil, errors.Wrap(err)
 	}
 
 	return file, nil

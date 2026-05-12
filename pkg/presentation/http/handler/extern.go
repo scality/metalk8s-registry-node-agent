@@ -70,15 +70,15 @@ func fillPartFromUploadChunkRequestObject(
 	src *extern.UploadChunkRequestObject,
 ) error {
 	if src.Body == nil {
-		return errors.From(domain.ErrHandlerBadRequest).
-			WithIdentifier(400000).
-			WithDetail("body is missing").
-			Throw()
+		return errors.Wrap(domain.ErrHandlerBadRequest,
+			errors.WithIdentifier(400000),
+			errors.WithDetail("body is missing"),
+		)
 	}
 
 	start, end, total, err := ParseContentRange(src.Params.ContentRange)
 	if err != nil {
-		return errors.Stamp(err)
+		return errors.Wrap(err)
 	}
 
 	dst.SolutionArchive = &domain.SolutionArchive{
@@ -154,10 +154,10 @@ func WriteExternProblemDetails(
 ) {
 	var apiErr *errors.Error
 	if !errors.As(err, &apiErr) {
-		apiErr = errors.From(domain.ErrUnknown).
-			WithIdentifier(500000).
-			WithDetail(err.Error()).
-			Throw().(*errors.Error)
+		apiErr = errors.Wrap(domain.ErrUnknown,
+			errors.WithIdentifier(500000),
+			errors.WithDetail(err.Error()),
+		).(*errors.Error)
 	}
 
 	var problemDetails extern.ProblemDetails

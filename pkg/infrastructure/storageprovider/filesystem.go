@@ -73,32 +73,32 @@ func (f *FileSystem) Init() error {
 	defer f.Unlock()
 
 	if err := os.MkdirAll(f.solutionArchivesLocation, library.FileSystemDefaultDirMode); err != nil {
-		return errors.From(domain.ErrStorageProviderInit).
-			WithIdentifier(500000).
-			CausedBy(err).
-			WithDetail("failed to create solution archive location").
-			WithProperty("solution_archive_location", f.solutionArchivesLocation).
-			Throw()
+		return errors.Wrap(domain.ErrStorageProviderInit,
+			errors.WithIdentifier(500000),
+			errors.WithDetail("failed to create solution archive location"),
+			errors.WithProperty("solution_archives_location_path", f.solutionArchivesLocation),
+			errors.CausedBy(err),
+		)
 	}
 
 	if err := os.MkdirAll(f.solutionsLocation, library.FileSystemDefaultDirMode); err != nil {
-		return errors.From(domain.ErrStorageProviderInit).
-			WithIdentifier(500000).
-			CausedBy(err).
-			WithDetail("failed to create solution location").
-			WithProperty("solution_location", f.solutionsLocation).
-			Throw()
+		return errors.Wrap(domain.ErrStorageProviderInit,
+			errors.WithIdentifier(500000),
+			errors.WithDetail("failed to create solution location"),
+			errors.WithProperty("solutions_location_path", f.solutionsLocation),
+			errors.CausedBy(err),
+		)
 	}
 
 	controlDirectoryPath := filepath.Join(f.solutionArchivesLocation, controlDir)
 
 	if err := os.MkdirAll(controlDirectoryPath, library.FileSystemDefaultDirMode); err != nil {
-		return errors.From(domain.ErrStorageProviderInit).
-			WithIdentifier(500000).
-			CausedBy(err).
-			WithDetail("failed to create control directory").
-			WithProperty("control_directory", controlDirectoryPath).
-			Throw()
+		return errors.Wrap(domain.ErrStorageProviderInit,
+			errors.WithIdentifier(500000),
+			errors.WithDetail("failed to create control directory"),
+			errors.WithProperty("control_directory_path", controlDirectoryPath),
+			errors.CausedBy(err),
+		)
 	}
 
 	return nil
@@ -144,17 +144,17 @@ func (f *FileSystem) genWatchedFileInfo(fileEntry os.DirEntry) (*watchedFileInfo
 
 	hash, err := library.HashFile(filePath)
 	if err != nil {
-		return nil, errors.Stamp(err)
+		return nil, errors.Wrap(err)
 	}
 
 	fileInfo, err := fileEntry.Info()
 	if err != nil {
-		return nil, errors.From(domain.ErrStorageProviderInternal).
-			WithIdentifier(500000).
-			CausedBy(err).
-			WithDetail("failed to get file info").
-			WithProperty("file_path", filePath).
-			Throw()
+		return nil, errors.Wrap(domain.ErrStorageProviderInternal,
+			errors.WithIdentifier(500000),
+			errors.WithDetail("failed to get file info"),
+			errors.WithProperty("file_path", filePath),
+			errors.CausedBy(err),
+		)
 	}
 
 	return &watchedFileInfo{
@@ -213,22 +213,23 @@ func (f *FileSystem) loadWatchedFileInfos() (watchedFilesMap, error) {
 	watchedFileMap := make(map[string]*watchedFileInfo)
 	watchedFileInfosFile, err := library.GetFile(f.genWatchedFilesPath())
 	if err != nil {
-		if errors.Is(err,
-			errors.Intercept(domain.ErrStorageProviderNotFound).
-				WithIdentifier(404000).
-				Throw()) {
+		//		if errors.Is(err,
+		//			errors.Intercept(domain.ErrStorageProviderNotFound).
+		//				WithIdentifier(404000).
+		//				Throw()) {
+		if errors.Is(err, domain.ErrStorageProviderNotFound) {
 			return watchedFileMap, nil
 		}
-		return nil, errors.Stamp(err)
+		return nil, errors.Wrap(err)
 	}
 
 	jsonDecoder := json.NewDecoder(watchedFileInfosFile)
 	if err := jsonDecoder.Decode(&watchedFileMap); err != nil {
-		return nil, errors.From(domain.ErrStorageProviderInternal).
-			WithIdentifier(500000).
-			CausedBy(err).
-			WithDetail("failed to decode watched file infos").
-			Throw()
+		return nil, errors.Wrap(domain.ErrStorageProviderInternal,
+			errors.WithIdentifier(500000),
+			errors.WithDetail("failed to decode watched file infos"),
+			errors.CausedBy(err),
+		)
 	}
 
 	return watchedFileMap, nil
@@ -239,11 +240,11 @@ func (f *FileSystem) saveWatchedFileInfos(watchedFileInfos watchedFilesMap) erro
 
 	watchedFileInfosBytes, err := json.Marshal(watchedFileInfos)
 	if err != nil {
-		return errors.From(domain.ErrStorageProviderInternal).
-			WithIdentifier(500000).
-			CausedBy(err).
-			WithDetail("failed to marshal watched file infos").
-			Throw()
+		return errors.Wrap(domain.ErrStorageProviderInternal,
+			errors.WithIdentifier(500000),
+			errors.WithDetail("failed to marshal watched file infos"),
+			errors.CausedBy(err),
+		)
 	}
 
 	if err := library.SaveFile(
@@ -251,7 +252,7 @@ func (f *FileSystem) saveWatchedFileInfos(watchedFileInfos watchedFilesMap) erro
 		bytes.NewBuffer(watchedFileInfosBytes),
 		library.FileSystemDefaultFileMode,
 	); err != nil {
-		return errors.Stamp(err)
+		return errors.Wrap(err)
 	}
 
 	return nil
@@ -284,7 +285,7 @@ func (f *FileSystem) updateWatchedFileInfos(saveFunc func(watchedFilesMap) error
 	// List actual interest content.
 	fileEntries, err := library.ListDirContent(f.solutionArchivesLocation, f.interestContentFilter)
 	if err != nil {
-		return errors.Stamp(err)
+		return errors.Wrap(err)
 	}
 
 	fileNames := library.ExtractNames(fileEntries)
@@ -328,7 +329,7 @@ func (f *FileSystem) updateWatchedFileInfos(saveFunc func(watchedFilesMap) error
 
 	// Save watched file infos to disk.
 	if err := saveFunc(watchedFileInfos); err != nil {
-		return errors.Stamp(err)
+		return errors.Wrap(err)
 	}
 
 	return nil

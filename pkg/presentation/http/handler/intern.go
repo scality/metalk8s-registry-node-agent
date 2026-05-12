@@ -19,24 +19,27 @@ func fillSolutionArchiveFromDownloadSolutionArchiveRequestObject(
 ) error {
 
 	if src.SolutionArchive == "" {
-		return errors.From(domain.ErrHandlerMissingRequestParameter).
-			WithDetail("parameter 'solution-archive' is missing").
-			Throw()
+		return errors.Wrap(domain.ErrHandlerMissingRequestParameter,
+			errors.WithIdentifier(400003),
+			errors.WithDetail("parameter 'solution-archive' is missing"),
+		)
 	}
 
 	if src.Version == "" {
-		return errors.From(domain.ErrHandlerMissingRequestParameter).
-			WithDetail("parameter 'version' is missing").
-			Throw()
+		return errors.Wrap(domain.ErrHandlerMissingRequestParameter,
+			errors.WithIdentifier(400003),
+			errors.WithDetail("parameter 'version' is missing"),
+		)
 	}
 	if src.Params.Range == "" {
-		return errors.From(domain.ErrHandlerMissingRequestHeader).
-			WithDetail("header 'Range' is missing").
-			Throw()
+		return errors.Wrap(domain.ErrHandlerMissingRequestHeader,
+			errors.WithIdentifier(400002),
+			errors.WithDetail("header 'Range' is missing"),
+		)
 	}
 	start, end, _, err := parseRange(src.Params.Range)
 	if err != nil {
-		return errors.Stamp(err)
+		return errors.Wrap(err)
 	}
 
 	solutionArchive := &domain.SolutionArchive{
@@ -60,15 +63,17 @@ func fillSolutionArchiveFromDescribeSolutionArchiveRequestObject(
 	src *intern.DescribeSolutionArchiveRequestObject,
 ) error {
 	if src.SolutionArchive == "" {
-		return errors.From(domain.ErrHandlerMissingRequestParameter).
-			WithDetail("parameter 'solution-archive' is missing").
-			Throw()
+		return errors.Wrap(domain.ErrHandlerMissingRequestParameter,
+			errors.WithIdentifier(400003),
+			errors.WithDetail("parameter 'solution-archive' is missing"),
+		)
 	}
 
 	if src.Version == "" {
-		return errors.From(domain.ErrHandlerMissingRequestParameter).
-			WithDetail("parameter 'version' is missing").
-			Throw()
+		return errors.Wrap(domain.ErrHandlerMissingRequestParameter,
+			errors.WithIdentifier(400003),
+			errors.WithDetail("parameter 'version' is missing"),
+		)
 	}
 
 	dst.Name = src.SolutionArchive

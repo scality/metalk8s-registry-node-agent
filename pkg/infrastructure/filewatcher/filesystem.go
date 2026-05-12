@@ -46,11 +46,11 @@ var _ service.FileWatcher = &FileSystem{}
 func (f *FileSystem) Init() error {
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
-		return errors.From(domain.ErrStorageProviderInit).
-			WithIdentifier(500000).
-			CausedBy(err).
-			WithDetail("failed to create watcher").
-			Throw()
+		return errors.Wrap(domain.ErrStorageProviderInit,
+			errors.WithIdentifier(500000),
+			errors.WithDetail("failed to create watcher"),
+			errors.CausedBy(err),
+		)
 	}
 	f.watcher = watcher
 	return nil
@@ -149,7 +149,7 @@ func (f *FileSystem) watchFiles(filenameChan chan domain.FileEventDetails) {
 
 func (f *FileSystem) StartWatchFiles(filenameChan chan domain.FileEventDetails) error {
 	if err := f.store.InitWatchedFileInfos(); err != nil {
-		return errors.Stamp(err)
+		return errors.Wrap(err)
 	}
 
 	f.Add(1)
@@ -157,32 +157,32 @@ func (f *FileSystem) StartWatchFiles(filenameChan chan domain.FileEventDetails) 
 	go f.watchFiles(filenameChan)
 
 	if err := f.watcher.Add(f.solutionArchivesLocation); err != nil {
-		return errors.From(domain.ErrStorageProviderInternal).
-			WithIdentifier(500000).
-			CausedBy(err).
-			WithDetail("failed to add solution archive location to watcher").
-			WithProperty("solution_archive_location", f.solutionArchivesLocation).
-			Throw()
+		return errors.Wrap(domain.ErrStorageProviderInternal,
+			errors.WithIdentifier(500000),
+			errors.CausedBy(err),
+			errors.WithDetail("failed to add solution archive location to watcher"),
+			errors.WithProperty("solution_archives_location_path", f.solutionArchivesLocation),
+		)
 	}
 
 	if err := f.watcher.Add(f.solutionsLocation); err != nil {
-		return errors.From(domain.ErrStorageProviderInternal).
-			WithIdentifier(500000).
-			CausedBy(err).
-			WithDetail("failed to add solutions location to watcher").
-			WithProperty("solutions_location", f.solutionsLocation).
-			Throw()
+		return errors.Wrap(domain.ErrStorageProviderInternal,
+			errors.WithIdentifier(500000),
+			errors.CausedBy(err),
+			errors.WithDetail("failed to add solutions location to watcher"),
+			errors.WithProperty("solutions_location_path", f.solutionsLocation),
+		)
 	}
 
 	// Below, we clean the fake objects created before the controller started
 	dirEntries, err := os.ReadDir(f.solutionArchivesLocation)
 	if err != nil {
-		return errors.From(domain.ErrStorageProviderInternal).
-			WithIdentifier(500000).
-			CausedBy(err).
-			WithDetail("failed to read solution archives location").
-			WithProperty("solution_archives_location", f.solutionArchivesLocation).
-			Throw()
+		return errors.Wrap(domain.ErrStorageProviderInternal,
+			errors.WithIdentifier(500000),
+			errors.CausedBy(err),
+			errors.WithDetail("failed to read solution archives location"),
+			errors.WithProperty("solution_archives_location_path", f.solutionArchivesLocation),
+		)
 	}
 	go func(dEntries []os.DirEntry) {
 		for _, dirEntry := range dEntries {
@@ -199,24 +199,24 @@ func (f *FileSystem) StartWatchFiles(filenameChan chan domain.FileEventDetails) 
 	dirEntriesToAnalyze := []string{}
 	dirEntries, err = os.ReadDir(f.solutionsLocation)
 	if err != nil {
-		return errors.From(domain.ErrStorageProviderInternal).
-			WithIdentifier(500000).
-			CausedBy(err).
-			WithDetail("failed to read solutions location").
-			WithProperty("solutions_location", f.solutionsLocation).
-			Throw()
+		return errors.Wrap(domain.ErrStorageProviderInternal,
+			errors.WithIdentifier(500000),
+			errors.CausedBy(err),
+			errors.WithDetail("failed to read solutions location"),
+			errors.WithProperty("solutions_location_path", f.solutionsLocation),
+		)
 	}
 	for _, dirEntry := range dirEntries {
 		dirEntriesToAnalyze = append(dirEntriesToAnalyze, filepath.Join(f.solutionsLocation, dirEntry.Name()))
 		if dirEntry.IsDir() {
 			subDirEntries, err := os.ReadDir(filepath.Join(f.solutionsLocation, dirEntry.Name()))
 			if err != nil {
-				return errors.From(domain.ErrStorageProviderInternal).
-					WithIdentifier(500000).
-					CausedBy(err).
-					WithDetail("failed to read sub directory").
-					WithProperty("sub_directory", filepath.Join(f.solutionsLocation, dirEntry.Name())).
-					Throw()
+				return errors.Wrap(domain.ErrStorageProviderInternal,
+					errors.WithIdentifier(500000),
+					errors.CausedBy(err),
+					errors.WithDetail("failed to read sub directory"),
+					errors.WithProperty("sub_directory_path", filepath.Join(f.solutionsLocation, dirEntry.Name())),
+				)
 			}
 			for _, subDirEntry := range subDirEntries {
 				dirEntriesToAnalyze = append(
@@ -244,11 +244,11 @@ func (f *FileSystem) StopWatchFiles() error {
 	defer f.Wait()
 
 	if err := f.watcher.Close(); err != nil {
-		return errors.From(domain.ErrStorageProviderInternal).
-			WithIdentifier(500000).
-			CausedBy(err).
-			WithDetail("failed to close watcher").
-			Throw()
+		return errors.Wrap(domain.ErrStorageProviderInternal,
+			errors.WithIdentifier(500000),
+			errors.CausedBy(err),
+			errors.WithDetail("failed to close watcher"),
+		)
 	}
 
 	return nil
@@ -279,12 +279,12 @@ func isDirectory(origin domain.FileOrigin, e fsnotify.Event) (bool, error) {
 			}
 			// We cannot determine if it is a directory or a file
 			// We raise an error to the caller to handle it
-			return false, errors.From(domain.ErrStorageProviderInternal).
-				WithDetail("failed to determine if the object is a directory").
-				WithProperty("object_name", e.Name).
-				WithProperty("origin", origin).
-				WithProperty("event_type", e.Op.String()).
-				Throw()
+			return false, errors.Wrap(domain.ErrStorageProviderInternal,
+				errors.WithDetail("failed to determine if the object is a directory"),
+				errors.WithProperty("object_name", e.Name),
+				errors.WithProperty("origin", origin),
+				errors.WithProperty("event_type", e.Op.String()),
+			)
 		}
 		// We consider that the directory is a solution directory
 		// In that case, we consider that it is a directory
@@ -294,20 +294,20 @@ func isDirectory(origin domain.FileOrigin, e fsnotify.Event) (bool, error) {
 		fileEventStat, err := os.Stat(e.Name)
 		if err != nil {
 			if os.IsNotExist(err) {
-				return false, errors.From(domain.ErrStorageProviderNotFound).
-					WithDetail("object not found to determine if it is a directory").
-					WithProperty("object_name", e.Name).
-					WithProperty("origin", origin).
-					WithProperty("event_type", e.Op.String()).
-					Throw()
+				return false, errors.Wrap(domain.ErrStorageProviderNotFound,
+					errors.WithDetail("object not found to determine if it is a directory"),
+					errors.WithProperty("object_name", e.Name),
+					errors.WithProperty("origin", origin),
+					errors.WithProperty("event_type", e.Op.String()),
+				)
 			}
-			return false, errors.From(domain.ErrStorageProviderInternal).
-				WithDetail("failed to determine if the object is a directory").
-				WithProperty("object_name", e.Name).
-				WithProperty("origin", origin).
-				WithProperty("event_type", e.Op.String()).
-				CausedBy(err).
-				Throw()
+			return false, errors.Wrap(domain.ErrStorageProviderInternal,
+				errors.WithDetail("failed to determine if the object is a directory"),
+				errors.WithProperty("object_name", e.Name),
+				errors.WithProperty("origin", origin),
+				errors.WithProperty("event_type", e.Op.String()),
+				errors.CausedBy(err),
+			)
 		}
 		return fileEventStat.IsDir(), nil
 	}

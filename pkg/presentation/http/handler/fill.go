@@ -77,10 +77,10 @@ func parseContentHeader(
 
 	// Check if the Content-Range header is missing
 	if headerContent == "" {
-		err = errors.From(domain.ErrHandlerMissingRequestHeader).
-			WithIdentifier(400002).
-			WithDetailf("header %s is missing", contentRegexp.name).
-			Throw()
+		err = errors.Wrap(domain.ErrHandlerMissingRequestHeader,
+			errors.WithIdentifier(400002),
+			errors.WithDetailf("header %s is missing", contentRegexp.name),
+		)
 
 		return start, end, total, err
 	}
@@ -88,14 +88,14 @@ func parseContentHeader(
 	matched := contentRegexp.regexp.FindStringSubmatch(headerContent)
 
 	if len(matched) != contentRegexp.submatches {
-		err = errors.From(domain.ErrHandlerInvalidRequestHeaderFormat).
-			WithIdentifier(400006).
-			WithDetailf("header %s is not in the expected format", contentRegexp.name).
-			WithProperty("received_header", headerContent).
-			WithProperty("expected_format", contentRegexp.format).
-			WithProperty("example_header", contentRegexp.example).
-			WithProperty("validation_regex", contentRegexp.regexp.String()).
-			Throw()
+		err = errors.Wrap(domain.ErrHandlerInvalidRequestHeaderFormat,
+			errors.WithIdentifier(400006),
+			errors.WithDetailf("header %s is not in the expected format", contentRegexp.name),
+			errors.WithProperty("received_header", headerContent),
+			errors.WithProperty("expected_format", contentRegexp.format),
+			errors.WithProperty("example_header", contentRegexp.example),
+			errors.WithProperty("validation_regex", contentRegexp.regexp.String()),
+		)
 
 		return start, end, total, err
 	}
@@ -132,15 +132,15 @@ func parseContentHeader(
 	}
 
 	if len(problems) > 0 {
-		err = errors.From(domain.ErrHandlerInvalidRequestHeaderFormat).
-			WithIdentifier(400006).
-			WithDetailf("header %s is not in the expected format", contentRegexp.name).
-			WithProperties(problems).
-			WithProperty("received_header", headerContent).
-			WithProperty("expected_format", contentRegexp.format).
-			WithProperty("example_header", contentRegexp.example).
-			WithProperty("validation_regex", contentRegexp.regexp.String()).
-			Throw()
+		err = errors.Wrap(domain.ErrHandlerInvalidRequestHeaderFormat,
+			errors.WithIdentifier(400006),
+			errors.WithDetailf("header %s is not in the expected format", contentRegexp.name),
+			errors.WithProperty("problems", problems),
+			errors.WithProperty("received_header", headerContent),
+			errors.WithProperty("expected_format", contentRegexp.format),
+			errors.WithProperty("example_header", contentRegexp.example),
+			errors.WithProperty("validation_regex", contentRegexp.regexp.String()),
+		)
 
 		start, end, total = 0, 0, 0
 

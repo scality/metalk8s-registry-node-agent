@@ -37,24 +37,24 @@ func EnforceNamingConventions(
 	objectName string,
 ) error {
 	if !namingRegexp.MatchString(objectName) {
-		return errors.From(domain.ErrBusinessRuleViolation).
-			WithIdentifier(422001).
-			WithDetail("object name does not match the naming regex").
-			WithProperty("object_name", objectName).
-			WithProperty("naming_regex", namingRegexp.String()).
-			Throw()
+		return errors.Wrap(domain.ErrBusinessRuleViolation,
+			errors.WithIdentifier(422001),
+			errors.WithDetail("object name does not match the naming regex"),
+			errors.WithProperty("object_name", objectName),
+			errors.WithProperty("naming_regex", namingRegexp.String()),
+		)
 	}
 
 	for _, forbidden := range []string{
 		"__", "--", "..",
 	} {
 		if strings.Contains(objectName, forbidden) {
-			return errors.From(domain.ErrBusinessRuleViolation).
-				WithIdentifier(422001).
-				WithDetail("object name contains a forbidden particle").
-				WithProperty("object_name", objectName).
-				WithProperty("forbidden_particle", forbidden).
-				Throw()
+			return errors.Wrap(domain.ErrBusinessRuleViolation,
+				errors.WithIdentifier(422001),
+				errors.WithDetail("object name contains a forbidden particle"),
+				errors.WithProperty("object_name", objectName),
+				errors.WithProperty("forbidden_particle", forbidden),
+			)
 		}
 	}
 
@@ -65,12 +65,12 @@ func EnforceNamingConventions(
 		FileSystemMultipartRecipientSuffix,
 	} {
 		if strings.Contains(objectName, reserved) {
-			return errors.From(domain.ErrBusinessRuleViolation).
-				WithIdentifier(422001).
-				WithDetail("object name contains a reserved word").
-				WithProperty("object_name", objectName).
-				WithProperty("reserved_word", reserved).
-				Throw()
+			return errors.Wrap(domain.ErrBusinessRuleViolation,
+				errors.WithIdentifier(422001),
+				errors.WithDetail("object name contains a reserved word"),
+				errors.WithProperty("object_name", objectName),
+				errors.WithProperty("reserved_word", reserved),
+			)
 		}
 	}
 
@@ -90,28 +90,28 @@ func CheckDir(
 ) error {
 	stat, err := os.Stat(dirPath)
 	if os.IsNotExist(err) {
-		return errors.From(domain.ErrNotFound).
-			WithIdentifier(404000).
-			WithDetail("directory not found").
-			WithProperty("dir_path", dirPath).
-			Throw()
+		return errors.Wrap(domain.ErrNotFound,
+			errors.WithIdentifier(404000),
+			errors.WithDetail("directory not found"),
+			errors.WithProperty("dir_path", dirPath),
+		)
 	}
 
 	if err != nil {
-		return errors.From(domain.ErrInternal).
-			WithIdentifier(500000).
-			WithDetail("unexpected error while checking the directory").
-			WithProperty("dir_path", dirPath).
-			CausedBy(err).
-			Throw()
+		return errors.Wrap(domain.ErrInternal,
+			errors.WithIdentifier(500000),
+			errors.WithDetail("unexpected error while checking the directory"),
+			errors.WithProperty("dir_path", dirPath),
+			errors.CausedBy(err),
+		)
 	}
 
 	if !stat.IsDir() {
-		return errors.From(domain.ErrConflict).
-			WithIdentifier(409000).
-			WithDetail("the directory is a file").
-			WithProperty("dir_path", dirPath).
-			Throw()
+		return errors.Wrap(domain.ErrConflict,
+			errors.WithIdentifier(409000),
+			errors.WithDetail("the directory is a file"),
+			errors.WithProperty("dir_path", dirPath),
+		)
 	}
 
 	return nil
@@ -124,28 +124,28 @@ func CheckFile(
 ) error {
 	stat, err := os.Stat(filePath)
 	if os.IsNotExist(err) {
-		return errors.From(domain.ErrNotFound).
-			WithIdentifier(404000).
-			WithDetail("file system not found").
-			WithProperty("file_path", filePath).
-			Throw()
+		return errors.Wrap(domain.ErrNotFound,
+			errors.WithIdentifier(404000),
+			errors.WithDetail("file system not found"),
+			errors.WithProperty("file_path", filePath),
+		)
 	}
 
 	if err != nil {
-		return errors.From(domain.ErrInternal).
-			WithIdentifier(500000).
-			WithDetail("unexpected error while checking the file").
-			WithProperty("file_path", filePath).
-			CausedBy(err).
-			Throw()
+		return errors.Wrap(domain.ErrInternal,
+			errors.WithIdentifier(500000),
+			errors.WithDetail("unexpected error while checking the file"),
+			errors.WithProperty("file_path", filePath),
+			errors.CausedBy(err),
+		)
 	}
 
 	if stat.IsDir() {
-		return errors.From(domain.ErrConflict).
-			WithIdentifier(409000).
-			WithDetail("the file is a directory").
-			WithProperty("file_path", filePath).
-			Throw()
+		return errors.Wrap(domain.ErrConflict,
+			errors.WithIdentifier(409000),
+			errors.WithDetail("the file is a directory"),
+			errors.WithProperty("file_path", filePath),
+		)
 	}
 
 	return nil
@@ -159,26 +159,26 @@ func SaveFile(
 ) error {
 	file, err := os.OpenFile(filePath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, perm)
 	if err != nil {
-		return errors.From(domain.ErrInternal).
-			WithIdentifier(500000).
-			WithDetail("unable to save file").
-			WithProperty("file_path", filePath).
-			WithProperty("while", "opening the file").
-			CausedBy(err).
-			Throw()
+		return errors.Wrap(domain.ErrInternal,
+			errors.WithIdentifier(500000),
+			errors.WithDetail("unable to save file"),
+			errors.WithProperty("file_path", filePath),
+			errors.WithProperty("while", "opening the file"),
+			errors.CausedBy(err),
+		)
 	}
 
 	defer file.Close() // nolint: errcheck // No error check on defer.
 
 	_, err = io.Copy(file, content)
 	if err != nil {
-		return errors.From(domain.ErrInternal).
-			WithIdentifier(500000).
-			WithDetail("unable to save file").
-			WithProperty("file_path", filePath).
-			WithProperty("while", "writing the file").
-			CausedBy(err).
-			Throw()
+		return errors.Wrap(domain.ErrInternal,
+			errors.WithIdentifier(500000),
+			errors.WithDetail("unable to save file"),
+			errors.WithProperty("file_path", filePath),
+			errors.WithProperty("while", "writing the file"),
+			errors.CausedBy(err),
+		)
 	}
 
 	if closer, ok := content.(io.Closer); ok {
@@ -196,26 +196,26 @@ func CreateEmptyFile(
 ) error {
 	file, err := os.OpenFile(filePath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, perm)
 	if err != nil {
-		return errors.From(domain.ErrInternal).
-			WithIdentifier(500000).
-			WithDetail("unable to save file").
-			WithProperty("file_path", filePath).
-			WithProperty("while", "opening the file").
-			CausedBy(err).
-			Throw()
+		return errors.Wrap(domain.ErrInternal,
+			errors.WithIdentifier(500000),
+			errors.WithDetail("unable to save file"),
+			errors.WithProperty("file_path", filePath),
+			errors.WithProperty("while", "opening the file"),
+			errors.CausedBy(err),
+		)
 	}
 
 	defer file.Close() // nolint: errcheck // No error check on defer.
 
 	if err := file.Truncate(size); err != nil {
-		return errors.From(domain.ErrInternal).
-			WithIdentifier(500000).
-			WithDetail("unable to truncate file").
-			WithProperty("file_path", filePath).
-			WithProperty("size", size).
-			WithProperty("while", "truncating the file").
-			CausedBy(err).
-			Throw()
+		return errors.Wrap(domain.ErrInternal,
+			errors.WithIdentifier(500000),
+			errors.WithDetail("unable to truncate file"),
+			errors.WithProperty("file_path", filePath),
+			errors.WithProperty("size", size),
+			errors.WithProperty("while", "truncating the file"),
+			errors.CausedBy(err),
+		)
 	}
 
 	return nil
@@ -227,22 +227,22 @@ func GetFile(
 ) (io.ReadCloser, error) {
 	err := CheckFile(filePath)
 	if err != nil {
-		return nil, errors.From(domain.ErrNotFound).
-			WithIdentifier(404000).
-			WithDetail("file not found").
-			WithProperty("file_path", filePath).
-			CausedBy(err).
-			Throw()
+		return nil, errors.Wrap(domain.ErrNotFound,
+			errors.WithIdentifier(404000),
+			errors.WithDetail("file not found"),
+			errors.WithProperty("file_path", filePath),
+			errors.CausedBy(err),
+		)
 	}
 
 	file, err := os.Open(filePath)
 	if err != nil {
-		return nil, errors.From(domain.ErrInternal).
-			WithIdentifier(500000).
-			WithDetail("unexpected error while opening the file").
-			WithProperty("file_path", filePath).
-			CausedBy(err).
-			Throw()
+		return nil, errors.Wrap(domain.ErrInternal,
+			errors.WithIdentifier(500000),
+			errors.WithDetail("unexpected error while opening the file"),
+			errors.WithProperty("file_path", filePath),
+			errors.CausedBy(err),
+		)
 	}
 
 	return file, nil
@@ -255,32 +255,32 @@ func GetPart(
 	end int64,
 ) (io.ReadCloser, error) {
 	if end < start {
-		return nil, errors.From(domain.ErrBadRequest).
-			WithIdentifier(400000).
-			WithDetail("end is less than start").
-			WithProperty("file_path", filePath).
-			WithProperty("end", end).
-			WithProperty("start", start).
-			Throw()
+		return nil, errors.Wrap(domain.ErrBadRequest,
+			errors.WithIdentifier(400000),
+			errors.WithDetail("end is less than start"),
+			errors.WithProperty("file_path", filePath),
+			errors.WithProperty("end", end),
+			errors.WithProperty("start", start),
+		)
 	}
 	err := CheckFile(filePath)
 	if err != nil {
-		return nil, errors.From(domain.ErrNotFound).
-			WithIdentifier(404000).
-			WithDetail("file not found").
-			WithProperty("file_path", filePath).
-			CausedBy(err).
-			Throw()
+		return nil, errors.Wrap(domain.ErrNotFound,
+			errors.WithIdentifier(404000),
+			errors.WithDetail("file not found"),
+			errors.WithProperty("file_path", filePath),
+			errors.CausedBy(err),
+		)
 	}
 
 	file, err := os.Open(filePath)
 	if err != nil {
-		return nil, errors.From(domain.ErrInternal).
-			WithIdentifier(500000).
-			WithDetail("unexpected error while opening the file").
-			WithProperty("file_path", filePath).
-			CausedBy(err).
-			Throw()
+		return nil, errors.Wrap(domain.ErrInternal,
+			errors.WithIdentifier(500000),
+			errors.WithDetail("unexpected error while opening the file"),
+			errors.WithProperty("file_path", filePath),
+			errors.CausedBy(err),
+		)
 	}
 
 	// Stream the byte range via SectionReader (ReaderAt) instead of buffering the full part.
@@ -301,12 +301,12 @@ func DeleteFile(
 ) error {
 	err := os.Remove(filePath)
 	if err != nil && !os.IsNotExist(err) {
-		return errors.From(domain.ErrInternal).
-			WithIdentifier(500000).
-			WithDetail("unexpected error while deleting the file").
-			WithProperty("file_path", filePath).
-			CausedBy(err).
-			Throw()
+		return errors.Wrap(domain.ErrInternal,
+			errors.WithIdentifier(500000),
+			errors.WithDetail("unexpected error while deleting the file"),
+			errors.WithProperty("file_path", filePath),
+			errors.CausedBy(err),
+		)
 	}
 
 	return nil
@@ -318,7 +318,7 @@ func HashFile(
 ) (string, error) {
 	file, err := GetFile(filePath)
 	if err != nil {
-		return "", errors.Stamp(err)
+		return "", errors.Wrap(err)
 	}
 
 	defer file.Close() // nolint: errcheck // No error check on defer.
@@ -333,11 +333,11 @@ func hashReader(
 	hasher := crypto.SHA256.New()
 
 	if _, err := io.Copy(hasher, reader); err != nil {
-		return "", errors.From(domain.ErrInternal).
-			WithIdentifier(500000).
-			WithDetail("unexpected error while hashing the reader").
-			CausedBy(err).
-			Throw()
+		return "", errors.Wrap(domain.ErrInternal,
+			errors.WithIdentifier(500000),
+			errors.WithDetail("unexpected error while hashing the reader"),
+			errors.CausedBy(err),
+		)
 	}
 
 	return fmt.Sprintf("%x", hasher.Sum(nil)), nil
@@ -362,12 +362,12 @@ func GenSolutionDirName(solutionArchive *domain.SolutionArchive) string {
 func IsEmpty(path string) (bool, error) {
 	entries, err := os.ReadDir(path)
 	if err != nil {
-		return false, errors.From(domain.ErrInternal).
-			WithIdentifier(500000).
-			WithDetail("unexpected error while checkng the content of the directory").
-			WithProperty("path", path).
-			CausedBy(err).
-			Throw()
+		return false, errors.Wrap(domain.ErrInternal,
+			errors.WithIdentifier(500000),
+			errors.WithDetail("unexpected error while checkng the content of the directory"),
+			errors.WithProperty("path", path),
+			errors.CausedBy(err),
+		)
 
 	}
 	// Check if the slice of entries is empty
@@ -398,15 +398,15 @@ func ExtractSessionBucket(buckets []string, solutionArchive *domain.SolutionArch
 
 	// Check if we have the right number of session buckets
 	if len(sessionBuckets) < 1 {
-		return "", errors.From(domain.ErrNotFound).
-			WithIdentifier(404000).
-			WithDetail("no session bucket found").
-			Throw()
+		return "", errors.Wrap(domain.ErrNotFound,
+			errors.WithIdentifier(404000),
+			errors.WithDetail("no session bucket found"),
+		)
 	} else if len(sessionBuckets) > 1 {
-		return "", errors.From(domain.ErrInternal).
-			WithIdentifier(500000).
-			WithDetail("multiple session buckets found").
-			Throw()
+		return "", errors.Wrap(domain.ErrInternal,
+			errors.WithIdentifier(500000),
+			errors.WithDetail("multiple session buckets found"),
+		)
 	}
 
 	return sessionBuckets[0], nil
@@ -459,11 +459,11 @@ func CompareSolutionArchiveMetas(
 	}
 
 	if len(problems) > 0 {
-		return errors.From(domain.ErrConflict).
-			WithIdentifier(409000).
-			WithDetail("solution archive metas do not match").
-			WithProperty("problems", problems).
-			Throw()
+		return errors.Wrap(domain.ErrConflict,
+			errors.WithIdentifier(409000),
+			errors.WithDetail("solution archive metas do not match"),
+			errors.WithProperty("problems", problems),
+		)
 	}
 
 	return nil
@@ -480,32 +480,37 @@ func IsMounted(filePath string, mountPath string) (bool, error) {
 		if errors.Is(err, domain.ErrNotFound) {
 			entries, err := os.ReadDir(mountPath)
 			if err != nil {
-				return false, errors.Stamp(err)
+				return false, errors.Wrap(err)
 			}
 			if len(entries) > 0 {
-				return false, errors.From(domain.ErrMountSolutionArchiveNotEmptyDir).Throw()
+				return false, errors.Wrap(domain.ErrMountSolutionArchiveNotEmptyDir,
+					errors.WithIdentifier(500000),
+					errors.WithDetail("mount point is not empty"),
+					errors.WithProperty("mount_path", mountPath),
+				)
 			}
 			return false, nil
 		}
-		return false, errors.Stamp(err)
+		return false, errors.Wrap(err)
 	}
 
 	// Step 2: Find the backing file from the loop device
 	backingFile, err := GetBackingFile(loopDevice)
 	if err != nil {
-		return false, errors.Stamp(err)
+		return false, errors.Wrap(err)
 	}
 
 	if backingFile == filePath {
 		return true, nil
 	}
 
-	return false, errors.From(domain.ErrMountSolutionArchiveIncorrectMount).
-		WithDetail("incorrect mount point").
-		WithProperty("mount_path", mountPath).
-		WithProperty("backing_file", backingFile).
-		WithProperty("file_path", filePath).
-		Throw()
+	return false, errors.Wrap(domain.ErrMountSolutionArchiveIncorrectMount,
+		errors.WithIdentifier(500000),
+		errors.WithDetail("incorrect mount point"),
+		errors.WithProperty("mount_path", mountPath),
+		errors.WithProperty("backing_file_path", backingFile),
+		errors.WithProperty("file_path", filePath),
+	)
 }
 
 // MountISO mounts the ISO file to the given mount point.
@@ -609,10 +614,11 @@ func UnmountISO(mountPoint string) error {
 func GetBackingFile(loopDevice string) (string, error) {
 	if !strings.HasPrefix(loopDevice, fmt.Sprintf("%s/loop", devDir)) &&
 		!strings.HasPrefix(loopDevice, fmt.Sprintf("%s/loop", devicesDir)) {
-		return "", errors.From(domain.ErrInternal).
-			WithDetail("input is not a loop device").
-			WithProperty("loop_device", loopDevice).
-			Throw()
+		return "", errors.Wrap(domain.ErrInternal,
+			errors.WithIdentifier(500000),
+			errors.WithDetail("input is not a loop device"),
+			errors.WithProperty("loop_device", loopDevice),
+		)
 	}
 
 	// Extract the loop device number (e.g., "loop0" from "/dev/loop0")
@@ -635,10 +641,11 @@ func GetBackingFile(loopDevice string) (string, error) {
 	// The sysfs file contains the backing file path with a newline at the end
 	backingFile := strings.TrimSpace(string(backingFileBytes))
 	if backingFile == "" {
-		return "", errors.From(domain.ErrInternal).
-			WithDetail("loop device is not associated with a file").
-			WithProperty("loop_device", loopDevice).
-			Throw()
+		return "", errors.Wrap(domain.ErrInternal,
+			errors.WithIdentifier(500000),
+			errors.WithDetail("loop device is not associated with a file"),
+			errors.WithProperty("loop_device", loopDevice),
+		)
 	}
 
 	return backingFile, nil
@@ -650,11 +657,12 @@ func getBackingFileViaIoctl(loopDevice string) (string, error) {
 	// Open the loop device file
 	file, err := os.Open(loopDevice)
 	if err != nil {
-		return "", errors.From(domain.ErrInternal).
-			WithDetail("failed to open loop device").
-			WithProperty("loop_device", loopDevice).
-			CausedBy(err).
-			Throw()
+		return "", errors.Wrap(domain.ErrInternal,
+			errors.WithIdentifier(500000),
+			errors.WithDetail("failed to open loop device"),
+			errors.WithProperty("loop_device", loopDevice),
+			errors.CausedBy(err),
+		)
 	}
 	defer file.Close() // nolint: errcheck // No error check on defer.
 
@@ -668,11 +676,12 @@ func getBackingFileViaIoctl(loopDevice string) (string, error) {
 	// This is the Go-native way to ask the kernel "what file is backing this device?"
 	info, err = unix.IoctlLoopGetStatus64(int(fd))
 	if err != nil {
-		return "", errors.From(domain.ErrInternal).
-			WithDetail("ioctl LOOP_GET_STATUS64 failed").
-			WithProperty("loop_device", loopDevice).
-			CausedBy(err).
-			Throw()
+		return "", errors.Wrap(domain.ErrInternal,
+			errors.WithIdentifier(500000),
+			errors.WithDetail("ioctl LOOP_GET_STATUS64 failed"),
+			errors.WithProperty("loop_device", loopDevice),
+			errors.CausedBy(err),
+		)
 	}
 
 	// The file name is in info.File_name, which is a fixed-size byte array.
@@ -680,10 +689,11 @@ func getBackingFileViaIoctl(loopDevice string) (string, error) {
 	// unix.ByteSliceToString handles this C-style string conversion perfectly.
 	backingFile := unix.ByteSliceToString(info.File_name[:])
 	if backingFile == "" {
-		return "", errors.From(domain.ErrInternal).
-			WithDetail("loop device is not associated with a file").
-			WithProperty("loop_device", loopDevice).
-			Throw()
+		return "", errors.Wrap(domain.ErrInternal,
+			errors.WithIdentifier(500000),
+			errors.WithDetail("loop device is not associated with a file"),
+			errors.WithProperty("loop_device", loopDevice),
+		)
 	}
 
 	return backingFile, nil
@@ -698,15 +708,20 @@ func GetLoopDeviceForMount(mountPath string) (string, error) {
 
 	mounts, err := mountinfo.GetMounts(filter)
 	if err != nil {
-		return "", errors.From(domain.ErrInternal).
-			WithDetail("unexpected error while retrieving the mounts").
-			WithProperty("mount_path", mountPath).
-			CausedBy(err).
-			Throw()
+		return "", errors.Wrap(domain.ErrInternal,
+			errors.WithIdentifier(500000),
+			errors.WithDetail("unexpected error while retrieving the mounts"),
+			errors.WithProperty("mount_path", mountPath),
+			errors.CausedBy(err),
+		)
 	}
 
 	if len(mounts) == 0 {
-		return "", errors.From(domain.ErrNotFound).Throw()
+		return "", errors.Wrap(domain.ErrNotFound,
+			errors.WithIdentifier(404000),
+			errors.WithDetail("no mount found"),
+			errors.WithProperty("mount_path", mountPath),
+		)
 	}
 
 	sourceDevice := mounts[0].Source
@@ -714,11 +729,12 @@ func GetLoopDeviceForMount(mountPath string) (string, error) {
 		strings.HasPrefix(sourceDevice, fmt.Sprintf("%s/loop", devicesDir)) {
 		return sourceDevice, nil
 	}
-	return "", errors.From(domain.ErrInternal).
-		WithDetail("source device is not a loop device").
-		WithProperty("mount_path", mountPath).
-		WithProperty("source_device", sourceDevice).
-		Throw()
+	return "", errors.Wrap(domain.ErrInternal,
+		errors.WithIdentifier(500000),
+		errors.WithDetail("source device is not a loop device"),
+		errors.WithProperty("mount_path", mountPath),
+		errors.WithProperty("source_device_path", sourceDevice),
+	)
 }
 
 func GenBucketPath(solutionArchivesLocation string, bucketName string) string {

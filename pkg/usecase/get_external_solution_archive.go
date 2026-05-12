@@ -72,7 +72,7 @@ func (uc *GetExternalSolutionArchive) Execute(
 	// matching solutionArchiveStorageNamePattern
 	fileNames, err := uc.archiveLister.ListFiles()
 	if err != nil {
-		return errors.Stamp(err)
+		return errors.Wrap(err)
 	}
 
 	// Check if the solution archive exists in the storage
@@ -83,40 +83,45 @@ func (uc *GetExternalSolutionArchive) Execute(
 	// Get description of the solution archive
 	solutionArchiveSize, err := uc.externalDownloader.GetDescription(ctx, downloadURL)
 	if err != nil {
-		return errors.Stamp(err)
+		return errors.Wrap(err)
 	}
 
 	// List all the buckets
 	buckets, err := uc.bucketManager.ListBuckets()
 	if err != nil {
-		return errors.Stamp(err)
+		return errors.Wrap(err)
 	}
 
 	// Extract the session bucket
 	sessionBucket, err := library.ExtractSessionBucket(buckets, solutionArchive)
 	if err != nil {
-		return errors.Intercept(err).
-			WithDetail("failed to extract the session bucket").
-			Throw()
+		return errors.Wrap(err,
+			errors.WithDetail("failed to extract the session bucket"),
+		)
 	}
 
 	// Load the manifest from metadata file
 	solutionArchiveFromManifest, err := uc.multipartInspector.GetMultipartFile(sessionBucket)
 	if err != nil {
-		return errors.Intercept(err).
-			WithProperty("instance", fmt.Sprintf("%s/downloads/%s", uc.rootAPIPath, solutionArchive.Name)).
-			Throw()
+		return errors.Wrap(err,
+			errors.WithProperty("instance", fmt.Sprintf(
+				"%s/downloads/%s/%s",
+				uc.rootAPIPath,
+				solutionArchive.Name,
+				solutionArchive.Version,
+			)),
+		)
 	}
 
 	err = uc.checkManifestFile(solutionArchiveFromManifest, solutionArchive)
 	if err != nil {
-		return errors.Stamp(err)
+		return errors.Wrap(err)
 	}
 
 	// Load the manifest from the session bucket
 	solutionArchiveStatus, err := uc.multipartInspector.GetMultipartFileStatus(sessionBucket, solutionArchive)
 	if err != nil {
-		return errors.Stamp(err)
+		return errors.Wrap(err)
 	}
 
 	// Iterate over the chunks
@@ -147,7 +152,7 @@ func (uc *GetExternalSolutionArchive) Execute(
 
 		body, err := uc.externalDownloader.Download(ctx, downloadURL, start, end, solutionArchiveSize)
 		if err != nil {
-			return errors.Stamp(err)
+			return errors.Wrap(err)
 		}
 
 		part.Content = body
@@ -159,31 +164,51 @@ func (uc *GetExternalSolutionArchive) Execute(
 		)
 		if err != nil {
 			_ = body.Close() // nolint: errcheck // Return path uses WritePartToRecipientFile err; Close releases the connection.
-			return errors.Intercept(err).
-				WithProperty("instance", fmt.Sprintf("%s/downloads/%s", uc.rootAPIPath, solutionArchive.Name)).
-				Throw()
+			return errors.Wrap(err,
+				errors.WithProperty("instance", fmt.Sprintf(
+					"%s/downloads/%s/%s",
+					uc.rootAPIPath,
+					solutionArchive.Name,
+					solutionArchive.Version,
+				)),
+			)
 		}
 
 		// Close verifies the Content-Digest trailer against the computed hash.
 		if err := body.Close(); err != nil {
-			return errors.Intercept(err).
-				WithProperty("instance", fmt.Sprintf("%s/downloads/%s", uc.rootAPIPath, solutionArchive.Name)).
-				Throw()
+			return errors.Wrap(err,
+				errors.WithProperty("instance", fmt.Sprintf(
+					"%s/downloads/%s/%s",
+					uc.rootAPIPath,
+					solutionArchive.Name,
+					solutionArchive.Version,
+				)),
+			)
 		}
 
 		if err := uc.multipartUploader.CommitPart(sessionBucket, part); err != nil {
-			return errors.Intercept(err).
-				WithProperty("instance", fmt.Sprintf("%s/downloads/%s", uc.rootAPIPath, solutionArchive.Name)).
-				Throw()
+			return errors.Wrap(err,
+				errors.WithProperty("instance", fmt.Sprintf(
+					"%s/downloads/%s/%s",
+					uc.rootAPIPath,
+					solutionArchive.Name,
+					solutionArchive.Version,
+				)),
+			)
 		}
 	}
 
 	if !solutionArchiveStatus.IsComplete() {
-		return errors.From(domain.ErrGetExternalSolutionArchiveNotComplete).
-			WithIdentifier(404001).
-			WithDetail("unable to get external solution archive because it is not complete").
-			WithProperty("instance", fmt.Sprintf("%s/downloads/%s", uc.rootAPIPath, solutionArchive.Name)).
-			Throw()
+		return errors.Wrap(domain.ErrGetExternalSolutionArchiveNotComplete,
+			errors.WithIdentifier(404001),
+			errors.WithDetail("unable to get external solution archive because it is not complete"),
+			errors.WithProperty("instance", fmt.Sprintf(
+				"%s/downloads/%s/%s",
+				uc.rootAPIPath,
+				solutionArchive.Name,
+				solutionArchive.Version,
+			)),
+		)
 	}
 
 	// Solution archive is complete, so let's consolidate it,
@@ -195,9 +220,14 @@ func (uc *GetExternalSolutionArchive) Execute(
 		library.FileSystemDefaultFileMode,
 	)
 	if err != nil {
-		return errors.Intercept(err).
-			WithProperty("instance", fmt.Sprintf("%s/downloads/%s", uc.rootAPIPath, solutionArchive.Name)).
-			Throw()
+		return errors.Wrap(err,
+			errors.WithProperty("instance", fmt.Sprintf(
+				"%s/downloads/%s/%s",
+				uc.rootAPIPath,
+				solutionArchive.Name,
+				solutionArchive.Version,
+			)),
+		)
 	}
 
 	uc.logger.Debug().Any("solution_archive", solutionArchive).Msg("External solution archive retrieved")
@@ -212,13 +242,18 @@ func (uc *GetExternalSolutionArchive) checkManifestFile(
 	// Test if a session related to the solution archive from the part exists
 	if solutionArchiveFromManifest.Name != solutionArchive.Name ||
 		solutionArchiveFromManifest.Version != solutionArchive.Version {
-		return errors.From(domain.ErrPartUploaderNotFound).
-			WithIdentifier(404000).
-			WithDetail("solution archive not found in the current session manifest").
-			WithProperty("instance", fmt.Sprintf("%s/downloads/%s", uc.rootAPIPath, solutionArchive.Name)).
-			WithProperty("component", solutionArchive.Name).
-			WithProperty("version", solutionArchive.Version).
-			Throw()
+		return errors.Wrap(domain.ErrPartUploaderNotFound,
+			errors.WithIdentifier(404000),
+			errors.WithDetail("solution archive not found in the current session manifest"),
+			errors.WithProperty("instance", fmt.Sprintf(
+				"%s/downloads/%s/%s",
+				uc.rootAPIPath,
+				solutionArchive.Name,
+				solutionArchive.Version,
+			)),
+			errors.WithProperty("component", solutionArchive.Name),
+			errors.WithProperty("version", solutionArchive.Version),
+		)
 	}
 	return nil
 }

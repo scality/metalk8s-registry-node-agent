@@ -47,9 +47,9 @@ func (r *InternRoot) DownloadSolutionArchive(
 ) (intern.DownloadSolutionArchiveResponseObject, error) {
 	response, err := r.GetSolutionArchive.DownloadSolutionArchive(ctx, request)
 	if err != nil {
-		return nil, errors.Intercept(err).
-			WithDetail("failed to resolve download solution archive request").
-			Throw()
+		return nil, errors.Wrap(err,
+			errors.WithDetail("failed to resolve download solution archive request"),
+		)
 	}
 
 	return response, nil
@@ -61,9 +61,9 @@ func (r *InternRoot) DescribeSolutionArchive(
 ) (intern.DescribeSolutionArchiveResponseObject, error) {
 	response, err := r.HeadSolutionArchive.DescribeSolutionArchive(ctx, request)
 	if err != nil {
-		return nil, errors.Intercept(err).
-			WithDetail("failed to resolve describe solution archive request").
-			Throw()
+		return nil, errors.Wrap(err,
+			errors.WithDetail("failed to resolve describe solution archive request"),
+		)
 	}
 
 	return response, nil

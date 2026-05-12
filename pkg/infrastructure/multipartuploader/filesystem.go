@@ -51,11 +51,11 @@ func (f *FileSystem) CreateMultipartFiles(
 	solutionArchive *domain.SolutionArchive,
 ) (*domain.SolutionArchiveStatus, error) {
 	if err := library.EnforceNamingConventions(solutionArchive.Name); err != nil {
-		return nil, errors.Stamp(err)
+		return nil, errors.Wrap(err)
 	}
 
 	if err := library.CheckDir(library.GenBucketPath(f.solutionArchivesLocation, bucketName)); err != nil {
-		return nil, errors.Stamp(err)
+		return nil, errors.Wrap(err)
 	}
 
 	metaFilePath, partsFilePath, recipientFilePath := library.GenMultipartFilePaths(
@@ -68,28 +68,26 @@ func (f *FileSystem) CreateMultipartFiles(
 	if err == nil {
 		solutionArchiveStatus, err := f.multipartInspector.GetMultipartFileStatus(bucketName, solutionArchive)
 		if err != nil {
-			return nil, errors.Stamp(err)
+			return nil, errors.Wrap(err)
 		}
 
 		return solutionArchiveStatus, nil
 	}
 
-	if !errors.Is(err,
-		errors.Intercept(domain.ErrStorageProviderNotFound).
-			WithIdentifier(404000).
-			Throw()) {
-		return nil, errors.Stamp(err)
+	if !errors.Is(err, domain.ErrStorageProviderNotFound) {
+		return nil, errors.Wrap(err)
 	}
 
 	metaContentBytes, err := json.Marshal(solutionArchive)
 	if err != nil {
-		return nil, errors.From(domain.ErrStorageProviderInternal).
-			WithIdentifier(500000).
-			WithDetail("unable to save the solution archive metadata").
-			WithProperty("solution_archive", solutionArchive.Name).
-			WithProperty("version", solutionArchive.Version).
-			WithProperty("while", "marshalling the metadata to json format").
-			Throw()
+		return nil, errors.Wrap(domain.ErrStorageProviderInternal,
+			errors.WithIdentifier(500000),
+			errors.WithDetail("unable to save the solution archive metadata"),
+			errors.WithProperty("solution_archive_name", solutionArchive.Name),
+			errors.WithProperty("version", solutionArchive.Version),
+			errors.WithProperty("while", "marshalling the metadata to json format"),
+			errors.CausedBy(err),
+		)
 	}
 
 	cleanUp := func() {
@@ -105,7 +103,7 @@ func (f *FileSystem) CreateMultipartFiles(
 	); err != nil {
 		cleanUp()
 
-		return nil, errors.Stamp(err)
+		return nil, errors.Wrap(err)
 	}
 
 	if err := library.CreateEmptyFile(
@@ -115,7 +113,7 @@ func (f *FileSystem) CreateMultipartFiles(
 	); err != nil {
 		cleanUp()
 
-		return nil, errors.Stamp(err)
+		return nil, errors.Wrap(err)
 	}
 
 	if err := library.CreateEmptyFile(
@@ -125,7 +123,7 @@ func (f *FileSystem) CreateMultipartFiles(
 	); err != nil {
 		cleanUp()
 
-		return nil, errors.Stamp(err)
+		return nil, errors.Wrap(err)
 	}
 
 	return &domain.SolutionArchiveStatus{
@@ -147,18 +145,18 @@ func (f *FileSystem) StorePart(
 		solutionArchiveFromManifest.Size = part.SolutionArchive.Size
 
 		if err := f.multipartRemover.DeleteMultipartFile(bucketName, solutionArchiveFromManifest); err != nil {
-			return nil, errors.Stamp(err)
+			return nil, errors.Wrap(err)
 		}
 
 		if _, err := f.CreateMultipartFiles(bucketName, solutionArchiveFromManifest); err != nil {
-			return nil, errors.Stamp(err)
+			return nil, errors.Wrap(err)
 		}
 	}
 	part.SolutionArchive = solutionArchiveFromManifest
 
 	solutionArchiveStatus, err := f.multipartInspector.GetMultipartFileStatus(bucketName, part.SolutionArchive)
 	if err != nil {
-		return nil, errors.Stamp(err)
+		return nil, errors.Wrap(err)
 	}
 
 	recipientFilePath := library.GenMultipartRecipientFilePath(
@@ -169,46 +167,46 @@ func (f *FileSystem) StorePart(
 
 	recipientFile, err := os.OpenFile(recipientFilePath, os.O_RDWR, library.FileSystemDefaultFileMode)
 	if err != nil {
-		return nil, errors.From(domain.ErrStorageProviderInternal).
-			WithIdentifier(500000).
-			WithDetail("unable to open the recipient file").
-			WithProperty("file_path", recipientFilePath).
-			CausedBy(err).
-			Throw()
+		return nil, errors.Wrap(domain.ErrStorageProviderInternal,
+			errors.WithIdentifier(500000),
+			errors.WithDetail("unable to open the recipient file"),
+			errors.WithProperty("file_path", recipientFilePath),
+			errors.CausedBy(err),
+		)
 	}
 
 	defer recipientFile.Close() // nolint: errcheck // No error check on defer.
 
 	_, err = recipientFile.Seek(part.Meta.Start, io.SeekStart)
 	if err != nil {
-		return nil, errors.From(domain.ErrStorageProviderInternal).
-			WithIdentifier(500000).
-			WithDetail("unable to move to the start of the part in the recipient file").
-			WithProperty("file_path", recipientFilePath).
-			WithProperty("part_start", part.Meta.Start).
-			CausedBy(err).
-			Throw()
+		return nil, errors.Wrap(domain.ErrStorageProviderInternal,
+			errors.WithIdentifier(500000),
+			errors.WithDetail("unable to move to the start of the part in the recipient file"),
+			errors.WithProperty("file_path", recipientFilePath),
+			errors.WithProperty("part_start", part.Meta.Start),
+			errors.CausedBy(err),
+		)
 	}
 
 	written, err := io.Copy(recipientFile, part.Content)
 	if err != nil {
-		return nil, errors.From(domain.ErrStorageProviderInternal).
-			WithIdentifier(500000).
-			WithDetail("unable to write the part to the recipient file").
-			WithProperty("file_path", recipientFilePath).
-			WithProperty("part_size", part.Meta.Size()).
-			CausedBy(err).
-			Throw()
+		return nil, errors.Wrap(domain.ErrStorageProviderInternal,
+			errors.WithIdentifier(500000),
+			errors.WithDetail("unable to write the part to the recipient file"),
+			errors.WithProperty("file_path", recipientFilePath),
+			errors.WithProperty("part_size", part.Meta.Size()),
+			errors.CausedBy(err),
+		)
 	}
 
 	if written != part.Meta.Size() {
-		return nil, errors.From(domain.ErrStorageProviderInternal).
-			WithIdentifier(500000).
-			WithDetail("the part was not fully written to the recipient file").
-			WithProperty("file_path", recipientFilePath).
-			WithProperty("part_size", part.Meta.Size()).
-			WithProperty("written", written).
-			Throw()
+		return nil, errors.Wrap(domain.ErrStorageProviderInternal,
+			errors.WithIdentifier(500000),
+			errors.WithDetail("the part was not fully written to the recipient file"),
+			errors.WithProperty("file_path", recipientFilePath),
+			errors.WithProperty("part_size", part.Meta.Size()),
+			errors.WithProperty("written", written),
+		)
 	}
 
 	solutionArchiveStatus.Parts[part.Meta.Start] = part.Meta
@@ -227,34 +225,34 @@ func (f *FileSystem) CommitPart(bucketName string, part *domain.Part) error {
 
 	partsFile, err := os.OpenFile(partsFilePath, os.O_WRONLY, library.FileSystemDefaultFileMode)
 	if err != nil {
-		return errors.From(domain.ErrStorageProviderInternal).
-			WithIdentifier(500000).
-			WithDetail("unable to open the parts file").
-			WithProperty("file_path", partsFilePath).
-			CausedBy(err).
-			Throw()
+		return errors.Wrap(domain.ErrStorageProviderInternal,
+			errors.WithIdentifier(500000),
+			errors.WithDetail("unable to open the parts file"),
+			errors.WithProperty("file_path", partsFilePath),
+			errors.CausedBy(err),
+		)
 	}
 
 	defer partsFile.Close() // nolint: errcheck // No error check on defer.
 
 	_, err = partsFile.Seek(0, io.SeekEnd)
 	if err != nil {
-		return errors.From(domain.ErrStorageProviderInternal).
-			WithIdentifier(500000).
-			WithDetail("unable to move to the end of the parts file").
-			WithProperty("file_path", partsFilePath).
-			CausedBy(err).
-			Throw()
+		return errors.Wrap(domain.ErrStorageProviderInternal,
+			errors.WithIdentifier(500000),
+			errors.WithDetail("unable to move to the end of the parts file"),
+			errors.WithProperty("file_path", partsFilePath),
+			errors.CausedBy(err),
+		)
 	}
 
 	err = binary.Write(partsFile, binary.LittleEndian, part.Meta)
 	if err != nil {
-		return errors.From(domain.ErrStorageProviderInternal).
-			WithIdentifier(500000).
-			WithDetail("unable to write the part metadata to the parts file").
-			WithProperty("file_path", partsFilePath).
-			CausedBy(err).
-			Throw()
+		return errors.Wrap(domain.ErrStorageProviderInternal,
+			errors.WithIdentifier(500000),
+			errors.WithDetail("unable to write the part metadata to the parts file"),
+			errors.WithProperty("file_path", partsFilePath),
+			errors.CausedBy(err),
+		)
 	}
 
 	return nil
@@ -269,16 +267,16 @@ func (f *FileSystem) consolidateMultipartFile(
 ) error {
 	solutionArchiveStatus, err := f.multipartInspector.GetMultipartFileStatus(bucketName, solutionArchive)
 	if err != nil {
-		return errors.Stamp(err)
+		return errors.Wrap(err)
 	}
 
 	if !solutionArchiveStatus.IsComplete() {
-		return errors.From(domain.ErrStorageProviderBusinessRuleViolation).
-			WithIdentifier(422001).
-			WithDetail("unable to consolidate multipart file because it is not complete").
-			WithProperty("bucket_name", bucketName).
-			WithProperty("solution_archive_name", solutionArchive.Name).
-			Throw()
+		return errors.Wrap(domain.ErrStorageProviderBusinessRuleViolation,
+			errors.WithIdentifier(422001),
+			errors.WithDetail("unable to consolidate multipart file because it is not complete"),
+			errors.WithProperty("bucket_name", bucketName),
+			errors.WithProperty("solution_archive_name", solutionArchive.Name),
+		)
 	}
 
 	baseFilePath := library.GenBaseMultipartFilePath(f.solutionArchivesLocation, bucketName, solutionArchive.Name)
@@ -292,44 +290,44 @@ func (f *FileSystem) consolidateMultipartFile(
 	if solutionArchive.Hash != nil {
 		calculatedHash, err := library.HashFile(recipientFilePath)
 		if err != nil {
-			return errors.From(domain.ErrStorageProviderInternal).
-				WithIdentifier(500000).
-				WithDetail("unable to calculate the hash of the recipient file").
-				WithProperty("file_path", recipientFilePath).
-				CausedBy(err).
-				Throw()
+			return errors.Wrap(domain.ErrStorageProviderInternal,
+				errors.WithIdentifier(500000),
+				errors.WithDetail("unable to calculate the hash of the recipient file"),
+				errors.WithProperty("file_path", recipientFilePath),
+				errors.CausedBy(err),
+			)
 		}
 
 		if calculatedHash != *solutionArchive.Hash {
-			return errors.From(domain.ErrStorageProviderBusinessRuleViolation).
-				WithIdentifier(422001).
-				WithDetail("the hash of the recipient file does not match the solution archive metadata").
-				WithProperty("component", solutionArchive.Name).
-				WithProperty("version", solutionArchive.Version).
-				WithProperty("expected_hash", *solutionArchive.Hash).
-				WithProperty("calculated_hash", calculatedHash).
-				Throw()
+			return errors.Wrap(domain.ErrStorageProviderBusinessRuleViolation,
+				errors.WithIdentifier(422001),
+				errors.WithDetail("the hash of the recipient file does not match the solution archive metadata"),
+				errors.WithProperty("component", solutionArchive.Name),
+				errors.WithProperty("version", solutionArchive.Version),
+				errors.WithProperty("expected_hash", *solutionArchive.Hash),
+				errors.WithProperty("calculated_hash", calculatedHash),
+			)
 		}
 	}
 
 	if err := os.Rename(recipientFilePath, baseFilePath); err != nil {
-		return errors.From(domain.ErrStorageProviderInternal).
-			WithIdentifier(500000).
-			WithDetail("unable to rename the recipient file").
-			WithProperty("from", recipientFilePath).
-			WithProperty("to", baseFilePath).
-			CausedBy(err).
-			Throw()
+		return errors.Wrap(domain.ErrStorageProviderInternal,
+			errors.WithIdentifier(500000),
+			errors.WithDetail("unable to rename the recipient file"),
+			errors.WithProperty("from_path", recipientFilePath),
+			errors.WithProperty("to_path", baseFilePath),
+			errors.CausedBy(err),
+		)
 	}
 
 	if err := os.Chmod(baseFilePath, perm); err != nil {
-		return errors.From(domain.ErrStorageProviderInternal).
-			WithIdentifier(500000).
-			WithDetail("unable to change the permissions of the recipient file").
-			WithProperty("file_path", baseFilePath).
-			WithProperty("permissions", perm).
-			CausedBy(err).
-			Throw()
+		return errors.Wrap(domain.ErrStorageProviderInternal,
+			errors.WithIdentifier(500000),
+			errors.WithDetail("unable to change the permissions of the recipient file"),
+			errors.WithProperty("file_path", baseFilePath),
+			errors.WithProperty("permissions", perm),
+			errors.CausedBy(err),
+		)
 	}
 
 	// Remove other files
@@ -344,11 +342,11 @@ func (f *FileSystem) consolidateMultipartFile(
 	}
 
 	if len(problems) > 0 {
-		return errors.From(domain.ErrStorageProviderInternal).
-			WithIdentifier(500000).
-			WithDetail("unable to clean up multipart file bundle").
-			WithProperties(problems).
-			Throw()
+		return errors.Wrap(domain.ErrStorageProviderInternal,
+			errors.WithIdentifier(500000),
+			errors.WithDetail("unable to clean up multipart file bundle"),
+			errors.WithProperty("problems", problems),
+		)
 	}
 
 	return nil
@@ -359,40 +357,40 @@ func (f *FileSystem) moveFileToRoot(
 	bucketName, fileName, newFileName string,
 ) error {
 	if err := library.EnforceNamingConventions(newFileName); err != nil {
-		return errors.Stamp(err)
+		return errors.Wrap(err)
 	}
 
 	bucketPath := library.GenBucketPath(f.solutionArchivesLocation, bucketName)
 	if err := library.CheckDir(bucketPath); err != nil {
-		return errors.Stamp(err)
+		return errors.Wrap(err)
 	}
 
 	filePath := library.GenBaseMultipartFilePath(f.solutionArchivesLocation, bucketName, fileName)
 	if err := library.CheckFile(filePath); err != nil {
-		return errors.Stamp(err)
+		return errors.Wrap(err)
 	}
 
 	newFilePath := filepath.Join(f.solutionArchivesLocation, newFileName)
 	if err := os.Remove(newFilePath); err != nil && !os.IsNotExist(err) {
-		return errors.From(domain.ErrStorageProviderInternal).
-			WithIdentifier(500000).
-			WithDetail("unexpected error while moving the file to the root location").
-			WithProperty("current_file_path", filePath).
-			WithProperty("new_file_path", newFilePath).
-			WithProperty("while", "removing existing file from the root location").
-			CausedBy(err).
-			Throw()
+		return errors.Wrap(domain.ErrStorageProviderInternal,
+			errors.WithIdentifier(500000),
+			errors.WithDetail("unexpected error while moving the file to the root location"),
+			errors.WithProperty("current_file_path", filePath),
+			errors.WithProperty("new_file_path", newFilePath),
+			errors.WithProperty("while", "removing existing file from the root location"),
+			errors.CausedBy(err),
+		)
 	}
 
 	if err := os.Rename(filePath, newFilePath); err != nil {
-		return errors.From(domain.ErrStorageProviderInternal).
-			WithIdentifier(500000).
-			WithDetail("unexpected error while moving the file to the root location").
-			WithProperty("current_file_path", filePath).
-			WithProperty("new_file_path", newFilePath).
-			WithProperty("while", "moving the file from bucket to root location").
-			CausedBy(err).
-			Throw()
+		return errors.Wrap(domain.ErrStorageProviderInternal,
+			errors.WithIdentifier(500000),
+			errors.WithDetail("unexpected error while moving the file to the root location"),
+			errors.WithProperty("current_file_path", filePath),
+			errors.WithProperty("new_file_path", newFilePath),
+			errors.WithProperty("while", "moving the file from bucket to root location"),
+			errors.CausedBy(err),
+		)
 	}
 
 	return nil
@@ -426,18 +424,18 @@ func (f *FileSystem) Consolidate(
 	)
 	if err != nil {
 		cleanUpCorrupted()
-		return errors.Stamp(err)
+		return errors.Wrap(err)
 	}
 
 	solutionArchiveFileName := library.GenSolutionArchiveFileName(solutionArchive)
 	err = f.moveFileToRoot(bucketName, solutionArchive.Name, solutionArchiveFileName)
 	if err != nil {
 		cleanUpCorrupted()
-		return errors.Stamp(err)
+		return errors.Wrap(err)
 	}
 	err = f.bucketManager.DeleteBucket(bucketName)
 	if err != nil {
-		return errors.Stamp(err)
+		return errors.Wrap(err)
 	}
 
 	return nil

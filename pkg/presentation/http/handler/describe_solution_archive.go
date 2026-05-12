@@ -38,12 +38,12 @@ func (h *DescribeSolutionArchive) DescribeSolutionArchive(
 	var solutionArchive domain.SolutionArchive
 
 	if err := fillSolutionArchiveFromDescribeSolutionArchiveRequestObject(&solutionArchive, &request); err != nil {
-		return h.genDescribeSolutionArchiveResponseObjectFromError(errors.Stamp(err))
+		return h.genDescribeSolutionArchiveResponseObjectFromError(errors.Wrap(err))
 	}
 
 	size, err := h.uc.Execute(&solutionArchive)
 	if err != nil {
-		return h.genDescribeSolutionArchiveResponseObjectFromError(errors.Stamp(err))
+		return h.genDescribeSolutionArchiveResponseObjectFromError(errors.Wrap(err))
 	}
 
 	return intern.DescribeSolutionArchive200Response{
@@ -105,6 +105,6 @@ func (h *DescribeSolutionArchive) genDescribeSolutionArchiveResponseObjectFromEr
 		}, nil
 
 	default:
-		return nil, errors.Stamp(err)
+		return nil, errors.Wrap(err)
 	}
 }

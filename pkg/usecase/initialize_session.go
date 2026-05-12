@@ -55,7 +55,7 @@ func (uc *InitializeSession) Execute(solutionArchive *domain.SolutionArchive) (*
 	// matching solutionArchiveStorageNamePattern
 	fileNames, err := uc.archiveLister.ListFiles()
 	if err != nil {
-		return nil, errors.Stamp(err)
+		return nil, errors.Wrap(err)
 	}
 
 	// Check if the solution archive already exists in the storage
@@ -77,7 +77,7 @@ func (uc *InitializeSession) Execute(solutionArchive *domain.SolutionArchive) (*
 	if exist {
 		solutionArchiveStatus, err := uc.multipartInspector.GetMultipartFileStatus(bucketName, solutionArchive)
 		if err != nil {
-			return nil, errors.Stamp(err)
+			return nil, errors.Wrap(err)
 		}
 		return &domain.SessionStatus{
 			Version:                   solutionArchive.Version,
@@ -98,13 +98,13 @@ func (uc *InitializeSession) Execute(solutionArchive *domain.SolutionArchive) (*
 	err = uc.bucketManager.CreateBucket(bucketName)
 	if err != nil {
 		cleanup()
-		return nil, errors.Stamp(err)
+		return nil, errors.Wrap(err)
 	}
 
 	solutionArchiveStatus, err := uc.multipartUploader.CreateMultipartFiles(bucketName, solutionArchive)
 	if err != nil {
 		cleanup()
-		return nil, errors.Stamp(err)
+		return nil, errors.Wrap(err)
 	}
 
 	uc.logger.Debug().Msg("Session initialized")
@@ -121,10 +121,10 @@ func (uc *InitializeSession) Execute(solutionArchive *domain.SolutionArchive) (*
 func (uc *InitializeSession) sessionBucketAlreadyExists(name string) (bool, error) {
 	buckets, err := uc.bucketManager.ListBuckets()
 	if err != nil && !errors.Is(err,
-		errors.Intercept(domain.ErrStorageProviderNotFound).
-			WithIdentifier(404000).
-			Throw()) {
-		return false, errors.Stamp(err)
+		errors.Wrap(domain.ErrStorageProviderNotFound,
+			errors.WithIdentifier(404000),
+		)) {
+		return false, errors.Wrap(err)
 	}
 
 	return slices.Contains(buckets, name), nil

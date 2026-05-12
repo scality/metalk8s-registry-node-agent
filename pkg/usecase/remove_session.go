@@ -41,32 +41,26 @@ func (uc *RemoveSession) Execute(solutionArchive *domain.SolutionArchive) error 
 	// List all the buckets
 	buckets, err := uc.bucketManager.ListBuckets()
 	if err != nil {
-		if errors.Is(err,
-			errors.Intercept(domain.ErrSessionRemoverNotFound).
-				WithIdentifier(404000).
-				Throw()) {
+		if errors.Is(err, domain.ErrSessionRemoverNotFound) {
 			return nil
 		}
-		return errors.Stamp(err)
+		return errors.Wrap(err)
 	}
 
 	// Extract the session bucket
 	sessionBucket, err := library.ExtractSessionBucket(buckets, solutionArchive)
 	if err != nil {
-		if errors.Is(err,
-			errors.Intercept(domain.ErrSessionRemoverNotFound).
-				WithIdentifier(404000).
-				Throw()) {
+		if errors.Is(err, domain.ErrSessionRemoverNotFound) {
 			return nil
 		}
-		return errors.Intercept(err).
-			WithDetail("failed to extract the session bucket").
-			Throw()
+		return errors.Wrap(err,
+			errors.WithDetail("failed to extract the session bucket"),
+		)
 	}
 
 	err = uc.bucketManager.DeleteBucket(sessionBucket)
 	if err != nil {
-		return errors.Stamp(err)
+		return errors.Wrap(err)
 	}
 
 	uc.logger.Debug().Any("solution_archive", solutionArchive).Msg("Session removed")

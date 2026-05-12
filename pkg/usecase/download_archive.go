@@ -53,36 +53,41 @@ func (uc *DownloadSolutionArchive) Execute(
 	// matching solutionArchiveStorageNamePattern
 	fileNames, err := uc.archiveLister.ListFiles()
 	if err != nil {
-		return nil, errors.Stamp(err)
+		return nil, errors.Wrap(err)
 	}
 
 	// Check if the solution archive exists in the storage
 	if !library.SolutionArchiveExists(solutionArchivePart.SolutionArchive, fileNames) {
-		return nil, errors.From(domain.ErrNotFound).
-			WithIdentifier(404000).
-			WithDetail("solution archive not found").
-			WithProperty("instance", fmt.Sprintf("%s/downloads/%s", uc.rootAPIPath, solutionArchivePart.SolutionArchive.Name)).
-			WithProperty("solution_archive_name", solutionArchivePart.SolutionArchive.Name).
-			WithProperty("solution_archive_version", solutionArchivePart.SolutionArchive.Version).
-			Throw()
+		return nil, errors.Wrap(domain.ErrNotFound,
+			errors.WithIdentifier(404000),
+			errors.WithDetail("solution archive not found"),
+			errors.WithProperty("instance", fmt.Sprintf(
+				"%s/downloads/%s/%s",
+				uc.rootAPIPath,
+				solutionArchivePart.SolutionArchive.Name,
+				solutionArchivePart.SolutionArchive.Version,
+			)),
+			errors.WithProperty("solution_archive_name", solutionArchivePart.SolutionArchive.Name),
+			errors.WithProperty("solution_archive_version", solutionArchivePart.SolutionArchive.Version),
+		)
 	}
 
 	solutionArchiveFileName := library.GenSolutionArchiveFileName(solutionArchivePart.SolutionArchive)
 	fileSize, err := uc.archiveLister.GetArchiveSize(solutionArchiveFileName)
 	if err != nil {
-		return nil, errors.Stamp(err)
+		return nil, errors.Wrap(err)
 	}
 
 	start := solutionArchivePart.Meta.Start
 	end := solutionArchivePart.Meta.End
 	if start >= fileSize || end >= fileSize {
-		return nil, errors.From(domain.ErrHandlerInvalidRequestHeaderFormat).
-			WithIdentifier(400006).
-			WithDetail("requested byte range exceeds the solution archive size").
-			WithProperty("range_start", start).
-			WithProperty("range_end", end).
-			WithProperty("file_size_bytes", fileSize).
-			Throw()
+		return nil, errors.Wrap(domain.ErrHandlerInvalidRequestHeaderFormat,
+			errors.WithIdentifier(400006),
+			errors.WithDetail("requested byte range exceeds the solution archive size"),
+			errors.WithProperty("range_start", start),
+			errors.WithProperty("range_end", end),
+			errors.WithProperty("file_size_bytes", fileSize),
+		)
 	}
 
 	// Retrieve the requested part of the solution archive from the storage
@@ -92,7 +97,7 @@ func (uc *DownloadSolutionArchive) Execute(
 		solutionArchivePart.Meta.End,
 	)
 	if err != nil {
-		return nil, errors.Stamp(err)
+		return nil, errors.Wrap(err)
 	}
 
 	uc.logger.Debug().Any("solution_archive_part", solutionArchivePart).Msg("Solution archive chunk downloaded")

@@ -44,14 +44,14 @@ func (uc *RemoveSolutionArchive) Execute(solutionArchive *domain.SolutionArchive
 	// matching solutionArchiveStorageNamePattern
 	fileNames, err := uc.archiveLister.ListFiles()
 	if err != nil {
-		return errors.Stamp(err)
+		return errors.Wrap(err)
 	}
 
 	// Check if the solution archive exists in the storage
 	if library.SolutionArchiveExists(solutionArchive, fileNames) {
 		err := uc.archiveRemover.DeleteFile(library.GenSolutionArchiveFileName(solutionArchive))
 		if err != nil {
-			return errors.Stamp(err)
+			return errors.Wrap(err)
 		}
 	}
 

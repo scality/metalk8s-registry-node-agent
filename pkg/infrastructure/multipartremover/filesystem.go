@@ -37,7 +37,7 @@ func (f *FileSystem) DeleteMultipartFile(
 	solutionArchive *domain.SolutionArchive,
 ) error {
 	if err := library.CheckDir(library.GenBucketPath(f.solutionArchivesLocation, bucketName)); err != nil {
-		return errors.Stamp(err)
+		return errors.Wrap(err)
 	}
 
 	metaFilePath, partsFilePath, recipientFilePath := library.GenMultipartFilePaths(
@@ -47,15 +47,15 @@ func (f *FileSystem) DeleteMultipartFile(
 	)
 
 	if err := library.CheckFile(metaFilePath); err != nil {
-		return errors.Stamp(err)
+		return errors.Wrap(err)
 	}
 
 	if err := library.CheckFile(partsFilePath); err != nil {
-		return errors.Stamp(err)
+		return errors.Wrap(err)
 	}
 
 	if err := library.CheckFile(recipientFilePath); err != nil {
-		return errors.Stamp(err)
+		return errors.Wrap(err)
 	}
 
 	problems := make(map[string]any)
@@ -73,11 +73,11 @@ func (f *FileSystem) DeleteMultipartFile(
 	}
 
 	if len(problems) > 0 {
-		return errors.From(domain.ErrStorageProviderInternal).
-			WithIdentifier(500000).
-			WithDetail("unable to delete the multipart file").
-			WithProperties(problems).
-			Throw()
+		return errors.Wrap(domain.ErrStorageProviderInternal,
+			errors.WithIdentifier(500000),
+			errors.WithDetail("unable to delete the multipart file"),
+			errors.WithProperty("problems", problems),
+		)
 	}
 
 	return nil
