@@ -201,9 +201,6 @@ func (uc *DownloadPart) Execute(
 		Version: solutionArchive.Version,
 		Size:    solutionArchiveSize,
 	}
-	if solutionArchive.Hash != nil {
-		partSolutionArchive.Hash = solutionArchive.Hash
-	}
 	for chunkIndex := range numChunks {
 		start := chunkIndex * uc.chunkSize
 		end := min(start+uc.chunkSize, solutionArchiveSize) - 1
