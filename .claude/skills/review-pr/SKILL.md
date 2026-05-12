@@ -48,6 +48,7 @@ gh pr diff <number> --repo <owner/repo>
 | Test quality | Ginkgo/Gomega assertions, table-driven tests where appropriate, no test pollution |
 | Security | OWASP-relevant issues: path traversal in file operations, injection in shell commands, proper TLS usage |
 | Breaking changes | Changes to CRD spec, API contracts, or public Go interfaces |
+| Code changes | Check that the documentation is still relevant regarding the changes |
 
 4. **Deliver your review:**
 
