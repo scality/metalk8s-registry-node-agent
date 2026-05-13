@@ -75,7 +75,10 @@ func (f *FileEvents) Listen() {
 func (f *FileEvents) handleSolutionArchiveEvent(eventDetails domain.FileEventDetails) error {
 	foundCR, err := f.findSolutionArchiveCR(eventDetails.ObjectName)
 	if err != nil {
-		return errors.Wrap(err, errors.WithDetail("failed to contact kubernetes cluster"))
+		return errors.Wrap(err,
+			errors.WithIdentifier(5),
+			errors.WithDetail("failed to find solution archive custom resources"),
+		)
 	}
 
 	var underDeletion bool
@@ -105,7 +108,10 @@ func (f *FileEvents) handleSolutionEvent(eventDetails domain.FileEventDetails) e
 	objectIsVersioned := strings.Contains(eventDetails.ObjectName, "/")
 	nsaList, err := f.findSolutionCRs(eventDetails.ObjectName, objectIsVersioned)
 	if err != nil {
-		return errors.Wrap(err, errors.WithDetail("failed to contact kubernetes cluster"))
+		return errors.Wrap(err,
+			errors.WithIdentifier(6),
+			errors.WithDetail("failed to find solution custom resources"),
+		)
 	}
 
 	// Sometimes, multiple reconcile requests are sent, but after the first one execute,
@@ -136,7 +142,8 @@ func (f *FileEvents) findSolutionArchiveCR(objectName string) (*metalk8sv1alpha1
 	err := f.client.List(f.ctx, nsaList, client.MatchingFields{"LocalSolutionArchiveNameVersion": objectName})
 	if err != nil {
 		return nil, errors.Wrap(domain.ErrFileEventsInternal,
-			errors.WithDetail("failed to list solution archive custom resources"),
+			errors.WithIdentifier(4),
+			errors.WithDetail("failed to contact kubernetes cluster"),
 			errors.WithProperty("object_name", objectName),
 			errors.CausedBy(err),
 		)
@@ -165,7 +172,8 @@ func (f *FileEvents) findSolutionCRs(objectName string, isVersioned bool) (*meta
 
 	if err != nil {
 		return nil, errors.Wrap(domain.ErrFileEventsInternal,
-			errors.WithDetail("failed to list solution custom resources"),
+			errors.WithIdentifier(4),
+			errors.WithDetail("failed to contact kubernetes cluster"),
 			errors.WithProperty("object_name", objectName),
 			errors.CausedBy(err),
 		)
