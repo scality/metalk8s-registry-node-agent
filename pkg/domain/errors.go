@@ -11,6 +11,7 @@ var (
 	ErrConflict              error = errors.New("Conflict Error")
 	ErrBadRequest            error = errors.New("Bad Request Error")
 	ErrBusinessRuleViolation error = errors.New("Business Rule Violation Error")
+	ErrConfigurationLoading  error = errors.New("Configuration Loading Error")
 )
 
 var (
