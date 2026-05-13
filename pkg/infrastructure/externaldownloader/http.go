@@ -14,7 +14,7 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/scality/go-errors"
 	"github.com/scality/metalk8s-registry-node-agent/pkg/domain"
-	"github.com/scality/metalk8s-registry-node-agent/pkg/presentation/http/handler"
+	"github.com/scality/metalk8s-registry-node-agent/pkg/library"
 	"github.com/scality/metalk8s-registry-node-agent/pkg/service"
 )
 
@@ -78,7 +78,7 @@ func (h *HTTP) Download(
 		)
 	}
 
-	headerStart, headerEnd, headerSize, err := handler.ParseContentRange(contentRange)
+	headerStart, headerEnd, headerSize, err := library.ParseContentRange(contentRange)
 	if err != nil {
 		_ = resp.Body.Close() // nolint: errcheck // Best-effort; body must be closed on error paths.
 		return nil, errors.Wrap(err)

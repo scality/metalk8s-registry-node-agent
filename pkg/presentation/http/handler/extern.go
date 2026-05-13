@@ -9,6 +9,7 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/scality/go-errors"
 	"github.com/scality/metalk8s-registry-node-agent/pkg/domain"
+	"github.com/scality/metalk8s-registry-node-agent/pkg/library"
 	"github.com/scality/metalk8s-registry-node-agent/pkg/presentation/http/extern"
 	"k8s.io/utils/ptr"
 )
@@ -76,7 +77,7 @@ func fillPartFromUploadChunkRequestObject(
 		)
 	}
 
-	start, end, total, err := ParseContentRange(src.Params.ContentRange)
+	start, end, total, err := library.ParseContentRange(src.Params.ContentRange)
 	if err != nil {
 		return errors.Wrap(err)
 	}

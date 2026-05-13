@@ -7,6 +7,7 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/scality/go-errors"
 	"github.com/scality/metalk8s-registry-node-agent/pkg/domain"
+	"github.com/scality/metalk8s-registry-node-agent/pkg/library"
 	"github.com/scality/metalk8s-registry-node-agent/pkg/presentation/http/intern"
 	"k8s.io/utils/ptr"
 )
@@ -37,7 +38,7 @@ func fillSolutionArchiveFromDownloadSolutionArchiveRequestObject(
 			errors.WithDetail("header 'Range' is missing"),
 		)
 	}
-	start, end, _, err := parseRange(src.Params.Range)
+	start, end, _, err := library.ParseRange(src.Params.Range)
 	if err != nil {
 		return errors.Wrap(err)
 	}

@@ -1,5 +1,5 @@
 //nolint:dupl,wrapcheck,funlen,lll,revive // Duplication is fine, too much wraps missing
-package handler
+package library
 
 import (
 	"fmt"
@@ -45,7 +45,7 @@ var rangeRegexp = ContentRegexp{
 // parseRange() parses the Range header and returns the start,
 // size and end values.
 // nolint:revive
-func parseRange(
+func ParseRange(
 	headerRange string,
 ) (int64, int64, int64, error) {
 	return parseContentHeader(
@@ -76,7 +76,7 @@ func parseContentHeader(
 	// Check if the Content-Range header is missing
 	if headerContent == "" {
 		err = errors.Wrap(domain.ErrHandlerMissingRequestHeader,
-			errors.WithIdentifier(400002),
+			errors.WithIdentifier(58),
 			errors.WithDetailf("header %s is missing", contentRegexp.name),
 		)
 
@@ -87,7 +87,7 @@ func parseContentHeader(
 
 	if len(matched) != contentRegexp.submatches {
 		err = errors.Wrap(domain.ErrHandlerInvalidRequestHeaderFormat,
-			errors.WithIdentifier(400006),
+			errors.WithIdentifier(59),
 			errors.WithDetailf("header %s is not in the expected format", contentRegexp.name),
 			errors.WithProperty("received_header", headerContent),
 			errors.WithProperty("expected_format", contentRegexp.format),
@@ -131,9 +131,9 @@ func parseContentHeader(
 
 	if len(problems) > 0 {
 		err = errors.Wrap(domain.ErrHandlerInvalidRequestHeaderFormat,
-			errors.WithIdentifier(400006),
+			errors.WithIdentifier(60),
 			errors.WithDetailf("header %s is not in the expected format", contentRegexp.name),
-			errors.WithProperty("problems", problems),
+			errors.WithProperties(problems),
 			errors.WithProperty("received_header", headerContent),
 			errors.WithProperty("expected_format", contentRegexp.format),
 			errors.WithProperty("example_header", contentRegexp.example),

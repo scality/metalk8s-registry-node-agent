@@ -8,6 +8,7 @@ import (
 	middleware "github.com/oapi-codegen/nethttp-middleware"
 	"github.com/scality/go-errors"
 	"github.com/scality/metalk8s-registry-node-agent/pkg/domain"
+	"github.com/scality/metalk8s-registry-node-agent/pkg/library"
 	"github.com/scality/metalk8s-registry-node-agent/pkg/presentation/http/extern"
 	"github.com/scality/metalk8s-registry-node-agent/pkg/presentation/http/handler"
 )
@@ -34,7 +35,7 @@ func (c *Container) GetHTTPExternServer() *http.Server {
 			return http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
 				// OpenAPI-codegen validation will catch the missing Content-Range header
 				contentRange := request.Header.Get("Content-Range")
-				headerStart, headerEnd, _, err := handler.ParseContentRange(contentRange)
+				headerStart, headerEnd, _, err := library.ParseContentRange(contentRange)
 				if err != nil {
 					handler.WriteExternProblemDetails(
 						c.GetLogger(),

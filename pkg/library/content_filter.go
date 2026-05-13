@@ -123,7 +123,7 @@ func ListDirContent(
 	entries, err := os.ReadDir(location)
 	if err != nil {
 		return nil, errors.Wrap(domain.ErrInternal,
-			errors.WithIdentifier(500000),
+			errors.WithIdentifier(7),
 			errors.WithDetail("unexpected error while listing the content"),
 			errors.WithProperty("location_path", location),
 			errors.CausedBy(err),
