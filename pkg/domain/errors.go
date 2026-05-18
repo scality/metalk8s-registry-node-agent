@@ -49,9 +49,12 @@ var (
 )
 
 var (
-	ErrExternalDownloaderInternal      error = errors.New("Internal Error")
-	ErrExternalDownloaderNotFound      error = errors.New("Not Found Error")
-	ErrExternalDownloaderNotConforming error = errors.New("Not Conform Error")
+	ErrExternalDownloaderInternal                      error = errors.New("Internal Error")
+	ErrExternalDownloaderWrongStatusCode               error = errors.New("Wrong Status Code Received Error")
+	ErrExternalDownloaderNotConforming                 error = errors.New("Not Conform Error")
+	ErrExternalDownloaderContentRangeMissing           error = errors.New("Content-Range Header Missing Error")
+	ErrExternalDownloaderContentDigestMissing          error = errors.New("Content-Digest Header Missing Error")
+	ErrExternalDownloaderContentLengthMissingOrUnknown error = errors.New("Content-Length Header Missing or Unknown Error")
 )
 
 var (

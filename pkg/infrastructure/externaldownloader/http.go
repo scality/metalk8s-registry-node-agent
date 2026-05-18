@@ -43,7 +43,7 @@ func (h *HTTP) Download(
 	req, err := http.NewRequestWithContext(ctx, "GET", downloadURL, nil)
 	if err != nil {
 		return nil, errors.Wrap(domain.ErrExternalDownloaderInternal,
-			errors.WithIdentifier(500000),
+			errors.WithIdentifier(126),
 			errors.WithDetail("failed to create a new HTTP request"),
 			errors.CausedBy(err),
 		)
@@ -54,7 +54,7 @@ func (h *HTTP) Download(
 	resp, err := h.client.Do(req)
 	if err != nil {
 		return nil, errors.Wrap(domain.ErrExternalDownloaderInternal,
-			errors.WithIdentifier(500000),
+			errors.WithIdentifier(127),
 			errors.WithDetail("failed to send the HTTP request"),
 			errors.CausedBy(err),
 		)
@@ -62,18 +62,19 @@ func (h *HTTP) Download(
 
 	if resp.StatusCode != http.StatusPartialContent {
 		_ = resp.Body.Close() // nolint: errcheck // Best-effort; body must be closed on error paths.
-		return nil, errors.Wrap(domain.ErrExternalDownloaderNotFound,
-			errors.WithIdentifier(404000),
-			errors.WithDetail("solution archive not found"),
-			errors.WithProperty("status", resp.StatusCode),
+		return nil, errors.Wrap(domain.ErrExternalDownloaderWrongStatusCode,
+			errors.WithIdentifier(128),
+			errors.WithDetail("wrong status code received"),
+			errors.WithProperty("received_status", resp.StatusCode),
+			errors.WithProperty("expected_status", http.StatusPartialContent),
 		)
 	}
 
 	contentRange := resp.Header.Get("Content-Range")
 	if contentRange == "" {
 		_ = resp.Body.Close() // nolint: errcheck // Best-effort; body must be closed on error paths.
-		return nil, errors.Wrap(domain.ErrExternalDownloaderInternal,
-			errors.WithIdentifier(500000),
+		return nil, errors.Wrap(domain.ErrExternalDownloaderContentRangeMissing,
+			errors.WithIdentifier(129),
 			errors.WithDetail("Content-Range header is missing in the response"),
 		)
 	}
@@ -81,13 +82,16 @@ func (h *HTTP) Download(
 	headerStart, headerEnd, headerSize, err := library.ParseContentRange(contentRange)
 	if err != nil {
 		_ = resp.Body.Close() // nolint: errcheck // Best-effort; body must be closed on error paths.
-		return nil, errors.Wrap(err)
+		return nil, errors.Wrap(err,
+			errors.WithIdentifier(130),
+			errors.WithDetail("unexpected error while parsing Content-Range header"),
+		)
 	}
 
 	if headerStart != start || headerEnd != end || headerSize != size {
 		_ = resp.Body.Close() // nolint: errcheck // Best-effort; body must be closed on error paths.
 		return nil, errors.Wrap(domain.ErrExternalDownloaderNotConforming,
-			errors.WithIdentifier(500000),
+			errors.WithIdentifier(131),
 			errors.WithDetail("received wrong range and size"),
 			errors.WithProperty("expected_range", fmt.Sprintf("bytes=%d-%d", start, end)),
 			errors.WithProperty("expected_size", size),
@@ -127,8 +131,8 @@ func (r *digestVerifyingReader) Close() error {
 
 	contentDigest := r.resp.Trailer.Get("Content-Digest")
 	if contentDigest == "" {
-		return errors.Wrap(domain.ErrExternalDownloaderInternal,
-			errors.WithIdentifier(500000),
+		return errors.Wrap(domain.ErrExternalDownloaderContentDigestMissing,
+			errors.WithIdentifier(132),
 			errors.WithDetail("Content-Digest trailer is missing in the response"),
 		)
 	}
@@ -141,7 +145,7 @@ func (r *digestVerifyingReader) Close() error {
 	computed := r.hasher.Sum(nil)
 	if !bytes.Equal(expected, computed) {
 		return errors.Wrap(domain.ErrExternalDownloaderInternal,
-			errors.WithIdentifier(500000),
+			errors.WithIdentifier(133),
 			errors.WithDetail("the hash of the downloaded part does not match the Content-Digest trailer"),
 			errors.WithProperty("expected_hash", expected),
 			errors.WithProperty("computed_hash", computed),
@@ -155,7 +159,7 @@ func (h *HTTP) GetDescription(ctx context.Context, downloadURL string) (int64, e
 	req, err := http.NewRequestWithContext(ctx, http.MethodHead, downloadURL, nil)
 	if err != nil {
 		return 0, errors.Wrap(domain.ErrExternalDownloaderInternal,
-			errors.WithIdentifier(500000),
+			errors.WithIdentifier(134),
 			errors.WithDetail("failed to create a new HTTP request"),
 			errors.CausedBy(err),
 		)
@@ -163,7 +167,7 @@ func (h *HTTP) GetDescription(ctx context.Context, downloadURL string) (int64, e
 	resp, err := h.client.Do(req)
 	if err != nil {
 		return 0, errors.Wrap(domain.ErrExternalDownloaderInternal,
-			errors.WithIdentifier(500000),
+			errors.WithIdentifier(135),
 			errors.WithDetail("failed to send the HTTP request"),
 			errors.CausedBy(err),
 		)
@@ -172,18 +176,19 @@ func (h *HTTP) GetDescription(ctx context.Context, downloadURL string) (int64, e
 
 	// 2. Check for a successful status code
 	if resp.StatusCode != http.StatusOK {
-		return 0, errors.Wrap(domain.ErrExternalDownloaderNotFound,
-			errors.WithIdentifier(404000),
-			errors.WithDetail("solution archive not found"),
-			errors.WithProperty("status", resp.Status),
+		return 0, errors.Wrap(domain.ErrExternalDownloaderWrongStatusCode,
+			errors.WithIdentifier(136),
+			errors.WithDetail("wrong status code received"),
+			errors.WithProperty("received_status", resp.StatusCode),
+			errors.WithProperty("expected_status", http.StatusOK),
 		)
 	}
 
 	if resp.ContentLength < 0 {
-		return 0, errors.Wrap(domain.ErrExternalDownloaderInternal,
-			errors.WithIdentifier(500000),
+		return 0, errors.Wrap(domain.ErrExternalDownloaderContentLengthMissingOrUnknown,
+			errors.WithIdentifier(137),
 			errors.WithDetail("Content-Length header is missing or unknown in HEAD response"),
-			errors.WithProperty("status", resp.Status),
+			errors.WithProperty("content_length", resp.ContentLength),
 		)
 	}
 
@@ -200,7 +205,7 @@ func parseAndDecodeContentDigest(contentDigest string) ([]byte, error) {
 	matched := contentDigestRegexp.FindStringSubmatch(contentDigest)
 	if len(matched) != 2 {
 		return nil, errors.Wrap(domain.ErrExternalDownloaderInternal,
-			errors.WithIdentifier(500000),
+			errors.WithIdentifier(138),
 			errors.WithDetail("Content-Digest header is not in the expected format"),
 		)
 	}
@@ -208,7 +213,7 @@ func parseAndDecodeContentDigest(contentDigest string) ([]byte, error) {
 	decoded, err := base64.StdEncoding.DecodeString(matched[1])
 	if err != nil {
 		return nil, errors.Wrap(domain.ErrExternalDownloaderInternal,
-			errors.WithIdentifier(500000),
+			errors.WithIdentifier(139),
 			errors.WithDetail("failed to decode the Content-Digest header"),
 			errors.CausedBy(err),
 		)
