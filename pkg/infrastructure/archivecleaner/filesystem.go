@@ -39,6 +39,7 @@ func (f *FileSystem) CleanUnusedSolutionArchives(path string, isDir bool) error 
 		err := os.RemoveAll(path)
 		if err != nil {
 			return errors.Wrap(domain.ErrSolutionArchiveCleanerInternal,
+				errors.WithIdentifier(61),
 				errors.WithDetail("failed to delete unused solution archive directory"),
 				errors.WithProperty("path", path),
 				errors.CausedBy(err),
@@ -54,10 +55,10 @@ func (f *FileSystem) CleanUnusedSolutionArchives(path string, isDir bool) error 
 
 	err := library.DeleteFile(path)
 	if err != nil {
-		return errors.Wrap(domain.ErrSolutionArchiveCleanerInternal,
+		return errors.Wrap(err,
+			errors.WithIdentifier(62),
 			errors.WithDetail("failed to delete unused solution archive"),
 			errors.WithProperty("path", path),
-			errors.CausedBy(err),
 		)
 	}
 
@@ -84,6 +85,7 @@ func (f *FileSystem) CleanUnusedSolutions(path string, isDir bool) error {
 		err = os.RemoveAll(path)
 		if err != nil {
 			return errors.Wrap(domain.ErrSolutionArchiveCleanerInternal,
+				errors.WithIdentifier(63),
 				errors.WithDetail("failed to delete unused solution directory"),
 				errors.WithProperty("path", path),
 				errors.CausedBy(err),
@@ -99,10 +101,10 @@ func (f *FileSystem) CleanUnusedSolutions(path string, isDir bool) error {
 
 	err := library.DeleteFile(path)
 	if err != nil {
-		return errors.Wrap(domain.ErrSolutionArchiveCleanerInternal,
+		return errors.Wrap(err,
+			errors.WithIdentifier(64),
 			errors.WithDetail("failed to delete unused solution"),
 			errors.WithProperty("path", path),
-			errors.CausedBy(err),
 		)
 	}
 
