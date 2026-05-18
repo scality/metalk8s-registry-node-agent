@@ -34,8 +34,8 @@ func (s *WatchedFileStore) GetHashFromFileInfos(filename string) (string, error)
 	info, ok := s.infos[filename]
 	if !ok {
 		return "", errors.Wrap(domain.ErrStorageProviderNotFound,
-			errors.WithIdentifier(404000),
-			errors.WithDetail("file not found"),
+			errors.WithIdentifier(77),
+			errors.WithDetail("error getting hash from file infos"),
 			errors.WithProperty("file_name", filename),
 		)
 	}
@@ -50,8 +50,8 @@ func (s *WatchedFileStore) GetSizeFromFileInfos(filename string) (int64, error) 
 	info, ok := s.infos[filename]
 	if !ok {
 		return 0, errors.Wrap(domain.ErrStorageProviderNotFound,
-			errors.WithIdentifier(404000),
-			errors.WithDetail("file not found"),
+			errors.WithIdentifier(78),
+			errors.WithDetail("error getting size from file infos"),
 			errors.WithProperty("file_name", filename),
 		)
 	}
