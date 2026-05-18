@@ -19,6 +19,9 @@ var (
 	ErrStorageProviderNotFound              error = errors.New("Not Found Error")
 	ErrStorageProviderInternal              error = errors.New("Internal Error")
 	ErrStorageProviderBusinessRuleViolation error = errors.New("Business Rule Violation Error")
+	ErrFileWatcherInit                      error = errors.New("File Watcher Init Error")
+	ErrFileWatcherAddError                  error = errors.New("Add to Watcher Error")
+	ErrFileWatcherRemoveError               error = errors.New("Remove from Watcher Error")
 )
 
 var (
