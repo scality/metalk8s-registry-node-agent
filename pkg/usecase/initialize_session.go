@@ -120,10 +120,7 @@ func (uc *InitializeSession) Execute(solutionArchive *domain.SolutionArchive) (*
 // or an error when multiple session buckets are found.
 func (uc *InitializeSession) sessionBucketAlreadyExists(name string) (bool, error) {
 	buckets, err := uc.bucketManager.ListBuckets()
-	if err != nil && !errors.Is(err,
-		errors.Wrap(domain.ErrStorageProviderNotFound,
-			errors.WithIdentifier(404000),
-		)) {
+	if err != nil && !errors.Is(err, domain.ErrBucketManagerNotFound) {
 		return false, errors.Wrap(err)
 	}
 

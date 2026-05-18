@@ -25,6 +25,11 @@ var (
 )
 
 var (
+	ErrBucketManagerInternal error = errors.New("Internal Error")
+	ErrBucketManagerNotFound error = errors.New("Not Found Error")
+)
+
+var (
 	ErrSessionInitializerInternal error = errors.New("Internal Error")
 	ErrSessionInitializerNotFound error = errors.New("Not Found Error")
 )

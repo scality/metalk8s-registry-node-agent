@@ -41,7 +41,7 @@ func (uc *RemoveSession) Execute(solutionArchive *domain.SolutionArchive) error 
 	// List all the buckets
 	buckets, err := uc.bucketManager.ListBuckets()
 	if err != nil {
-		if errors.Is(err, domain.ErrSessionRemoverNotFound) {
+		if errors.Is(err, domain.ErrBucketManagerNotFound) {
 			return nil
 		}
 		return errors.Wrap(err)
@@ -50,7 +50,7 @@ func (uc *RemoveSession) Execute(solutionArchive *domain.SolutionArchive) error 
 	// Extract the session bucket
 	sessionBucket, err := library.ExtractSessionBucket(buckets, solutionArchive)
 	if err != nil {
-		if errors.Is(err, domain.ErrSessionRemoverNotFound) {
+		if errors.Is(err, domain.ErrNotFound) {
 			return nil
 		}
 		return errors.Wrap(err,
