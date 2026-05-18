@@ -38,7 +38,9 @@ var _ service.ArchiveLister = &FileSystem{}
 func (f *FileSystem) ListFiles() ([]string, error) {
 	files, err := library.ListDirContentNames(f.solutionArchivesLocation, f.interestContentFilter)
 	if err != nil {
-		return nil, errors.Wrap(err)
+		return nil, errors.Wrap(err,
+			errors.WithIdentifier(65),
+		)
 	}
 
 	return files, nil
