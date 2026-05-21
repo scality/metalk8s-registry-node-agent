@@ -413,14 +413,14 @@ func (f *FileSystem) Consolidate(
 		if err := f.multipartRemover.DeleteMultipartFile(bucketName, solutionArchive); err != nil {
 			f.logger.ErrorContext(ctx, "failed to delete multipart file",
 				slog.Any("solution_archive", solutionArchive),
-				slog.Any("error_message", err),
+				slog.Any("error", err),
 			)
 		}
 
 		if _, err := f.CreateMultipartFiles(ctx, bucketName, solutionArchive); err != nil {
 			f.logger.ErrorContext(ctx, "failed to create multipart file",
 				slog.Any("solution_archive", solutionArchive),
-				slog.Any("error_message", err),
+				slog.Any("error", err),
 			)
 		}
 	}

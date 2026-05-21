@@ -16,7 +16,7 @@ func (c *Container) getExternTLSConfig() *tls.Config {
 				c.ctx,
 				"failed to read external client CA certificates",
 				slog.String("extern_server_authn_ca_cert_file_path", c.config.Extern.ServerAuthN.CACertFilePath),
-				slog.Any("error_message", err),
+				slog.Any("error", err),
 			)
 			os.Exit(1) //nolint:revive // Fatal-equivalent for DI initialization failure.
 		}
@@ -37,7 +37,7 @@ func (c *Container) getExternTLSConfig() *tls.Config {
 				"failed to read external server certificate file",
 				slog.String("extern_server_tls_cert_file_path", c.config.Extern.ServerTLS.CertFilePath),
 				slog.String("extern_server_tls_key_file_path", c.config.Extern.ServerTLS.KeyFilePath),
-				slog.Any("error_message", err),
+				slog.Any("error", err),
 			)
 			os.Exit(1) //nolint:revive // Fatal-equivalent for DI initialization failure.
 		}
@@ -59,7 +59,7 @@ func (c *Container) getInternTLSConfig() *tls.Config {
 				c.ctx,
 				"failed to read internal client CA certificates",
 				slog.String("intern_server_authn_ca_cert_file_path", c.config.Intern.ServerAuthN.CACertFilePath),
-				slog.Any("error_message", err),
+				slog.Any("error", err),
 			)
 			os.Exit(1) //nolint:revive // Fatal-equivalent for DI initialization failure.
 		}
@@ -80,7 +80,7 @@ func (c *Container) getInternTLSConfig() *tls.Config {
 				"failed to read internal server certificate file",
 				slog.String("intern_server_tls_cert_file_path", c.config.Intern.ServerTLS.CertFilePath),
 				slog.String("intern_server_tls_key_file_path", c.config.Intern.ServerTLS.KeyFilePath),
-				slog.Any("error_message", err),
+				slog.Any("error", err),
 			)
 			os.Exit(1) //nolint:revive // Fatal-equivalent for DI initialization failure.
 		}
@@ -106,7 +106,7 @@ func (c *Container) getInternTLSClientConfig() *tls.Config {
 				"failed to read internal client certificate files",
 				slog.String("intern_client_authn_cert_file_path", c.config.Intern.ClientAuthN.CertFilePath),
 				slog.String("intern_client_authn_key_file_path", c.config.Intern.ClientAuthN.KeyFilePath),
-				slog.Any("error_message", err),
+				slog.Any("error", err),
 			)
 			os.Exit(1) //nolint:revive // Fatal-equivalent for DI initialization failure.
 		}
@@ -117,7 +117,7 @@ func (c *Container) getInternTLSClientConfig() *tls.Config {
 				c.ctx,
 				"failed to read internal server CA certificate",
 				slog.String("intern_client_tls_ca_cert_file_path", c.config.Intern.ClientTLS.CACertFilePath),
-				slog.Any("error_message", err),
+				slog.Any("error", err),
 			)
 			os.Exit(1) //nolint:revive // Fatal-equivalent for DI initialization failure.
 		}

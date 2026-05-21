@@ -18,7 +18,7 @@ func (c *Container) GetFileSystemFileWatcher() service.FileWatcher {
 		)
 		err := c.fileWatcher.Init()
 		if err != nil {
-			c.GetLogger().ErrorContext(c.ctx, "could not initialize file watcher", slog.Any("error_message", err))
+			c.GetLogger().ErrorContext(c.ctx, "could not initialize file watcher", slog.Any("error", err))
 			os.Exit(1) //nolint:revive // Fatal-equivalent for DI initialization failure.
 		}
 	}
@@ -31,7 +31,7 @@ func (c *Container) GetMockFileSystemFileWatcher() service.FileWatcher {
 		c.fileWatcher = c.GetMockFSSolutionArchiveStorage().(service.FileWatcher)
 		err := c.fileWatcher.Init()
 		if err != nil {
-			c.GetLogger().ErrorContext(c.ctx, "could not initialize file watcher", slog.Any("error_message", err))
+			c.GetLogger().ErrorContext(c.ctx, "could not initialize file watcher", slog.Any("error", err))
 			os.Exit(1) //nolint:revive // Fatal-equivalent for DI initialization failure.
 		}
 	}

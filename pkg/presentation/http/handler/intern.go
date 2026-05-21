@@ -86,7 +86,7 @@ func fillInternProblemDetailsFromAPIErrorsError(
 	src *errors.Error,
 	logMsg string,
 ) {
-	logger.ErrorContext(ctx, logMsg, slog.Any("error_message", src))
+	logger.ErrorContext(ctx, logMsg, slog.Any("error", src))
 
 	status := src.Identifier / 1000 // nolint: gosec // TODO: Refactor this in the "polishing" sprint.
 	code := fmt.Sprintf("%d", src.Identifier)

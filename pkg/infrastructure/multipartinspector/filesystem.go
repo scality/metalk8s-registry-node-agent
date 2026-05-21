@@ -193,7 +193,7 @@ func (f *FileSystem) filterOrphansMeta(
 				solutionArchive.Name+library.FileSystemMultipartPartsSuffix,
 			),
 		); err != nil {
-			f.logger.WarnContext(ctx, "The parts file is missing for the multipart file.", slog.Any("error_message", err))
+			f.logger.WarnContext(ctx, "The parts file is missing for the multipart file.", slog.Any("error", err))
 
 			continue
 		}
@@ -204,7 +204,7 @@ func (f *FileSystem) filterOrphansMeta(
 				solutionArchive.Name+library.FileSystemMultipartRecipientSuffix,
 			),
 		); err != nil {
-			f.logger.WarnContext(ctx, "The recipient file is missing for the multipart file.", slog.Any("error_message", err))
+			f.logger.WarnContext(ctx, "The recipient file is missing for the multipart file.", slog.Any("error", err))
 
 			continue
 		}

@@ -106,7 +106,7 @@ func fillExternProblemDetailsFromAPIErrorsError(
 	src *errors.Error,
 	logMsg string,
 ) {
-	logger.ErrorContext(ctx, logMsg, slog.Any("error_message", src))
+	logger.ErrorContext(ctx, logMsg, slog.Any("error", src))
 
 	status := src.Identifier / 1000 // nolint: gosec // TODO: Refactor this in the "polishing" sprint.
 	code := fmt.Sprintf("%d", src.Identifier)
@@ -180,7 +180,7 @@ func WriteExternProblemDetails(
 	w.WriteHeader(status)
 
 	if encErr := json.NewEncoder(w).Encode(problemDetails); encErr != nil {
-		logger.ErrorContext(ctx, "failed to encode ProblemDetails response", slog.Any("error_message", encErr))
+		logger.ErrorContext(ctx, "failed to encode ProblemDetails response", slog.Any("error", encErr))
 	}
 }
 

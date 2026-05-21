@@ -83,7 +83,7 @@ func (f *FileSystem) watchFiles(filenameChan chan domain.FileEventDetails) {
 			log.Debug("event received")
 
 			if err := f.store.RefreshWatchedFileInfos(); err != nil {
-				log.Error("failed to update watched file infos", slog.Any("error_message", err))
+				log.Error("failed to update watched file infos", slog.Any("error", err))
 			}
 
 			// Determine the origin of the object
@@ -97,10 +97,10 @@ func (f *FileSystem) watchFiles(filenameChan chan domain.FileEventDetails) {
 			isDir, err := isDirectory(origin, e)
 			if err != nil {
 				if errors.Is(err, domain.ErrStorageProviderNotFound) {
-					log.Debug("object not found to determine if it is a directory", slog.Any("error_message", err))
+					log.Debug("object not found to determine if it is a directory", slog.Any("error", err))
 					continue
 				}
-				log.Warn("failed to determine if the object is a directory", slog.Any("error_message", err))
+				log.Warn("failed to determine if the object is a directory", slog.Any("error", err))
 				// In our use case, we expect to do nothing if the object is undetermined
 				continue
 			}
@@ -141,7 +141,7 @@ func (f *FileSystem) watchFiles(filenameChan chan domain.FileEventDetails) {
 				return
 			}
 
-			f.logger.Error("watcher error", slog.Any("error_message", err))
+			f.logger.Error("watcher error", slog.Any("error", err))
 		}
 	}
 }

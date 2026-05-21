@@ -32,7 +32,7 @@ func (c *Container) GetGeneratedHTTPInternClient() *intern.ClientWithResponses {
 			intern.WithHTTPClient(c.GetHTTPInternClient()),
 		)
 		if err != nil {
-			c.GetLogger().ErrorContext(c.ctx, "failed to create generated http client", slog.Any("error_message", err))
+			c.GetLogger().ErrorContext(c.ctx, "failed to create generated http client", slog.Any("error", err))
 			os.Exit(1) //nolint:revive // Fatal-equivalent for DI initialization failure.
 		}
 

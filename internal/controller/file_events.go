@@ -55,7 +55,7 @@ func (f *FileEvents) Listen() {
 			if err != nil {
 				f.logger.ErrorContext(f.ctx, "Failed to handle event, requeuing",
 					slog.String("origin", "solution_archives"),
-					slog.Any("error_message", err),
+					slog.Any("error", err),
 				)
 				f.filenameChan <- eventDetails
 			}
@@ -65,7 +65,7 @@ func (f *FileEvents) Listen() {
 			if err != nil {
 				f.logger.ErrorContext(f.ctx, "Failed to handle event, requeuing",
 					slog.String("origin", "solutions"),
-					slog.Any("error_message", err),
+					slog.Any("error", err),
 				)
 				f.filenameChan <- eventDetails
 			}

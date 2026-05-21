@@ -97,7 +97,7 @@ var _ = BeforeSuite(func() {
 
 	fakeTLSConfig, err := utils.GenerateFakeTLSConfig()
 	if err != nil {
-		container.GetLogger().ErrorContext(ctx, "failed to generate fake TLS config", slog.Any("error_message", err))
+		container.GetLogger().ErrorContext(ctx, "failed to generate fake TLS config", slog.Any("error", err))
 		os.Exit(1) //nolint:revive // Fatal-equivalent for test setup failure.
 	}
 	container.ExternTLSConfig = fakeTLSConfig
@@ -106,7 +106,7 @@ var _ = BeforeSuite(func() {
 
 	rootPath, err := os.MkdirTemp("/tmp", "test-integration-api_v1_uploads-*")
 	if err != nil {
-		container.GetLogger().ErrorContext(ctx, "failed to create temporary directory", slog.Any("error_message", err))
+		container.GetLogger().ErrorContext(ctx, "failed to create temporary directory", slog.Any("error", err))
 		os.Exit(1) //nolint:revive // Fatal-equivalent for test setup failure.
 	}
 
@@ -115,7 +115,7 @@ var _ = BeforeSuite(func() {
 	externHTTPClient := utils.GetHTTPExternClient(externTLSClientConfig)
 	externClientWithResponse, err := utils.GetGeneratedHTTPExternClient(cfg.Extern.Addr, cfg.RootExternAPIPath, externHTTPClient)
 	if err != nil {
-		container.GetLogger().ErrorContext(ctx, "failed to create generated http client", slog.Any("error_message", err))
+		container.GetLogger().ErrorContext(ctx, "failed to create generated http client", slog.Any("error", err))
 		os.Exit(1) //nolint:revive // Fatal-equivalent for test setup failure.
 	}
 
@@ -140,7 +140,7 @@ var _ = BeforeSuite(func() {
 		serveErr := httpExternServer.ListenAndServeTLS("", "")
 		if serveErr != nil {
 			if !errors.Is(serveErr, http.ErrServerClosed) {
-				testingSuite.container.GetLogger().ErrorContext(ctx, "http extern server failure during startup", slog.Any("error_message", serveErr))
+				testingSuite.container.GetLogger().ErrorContext(ctx, "http extern server failure during startup", slog.Any("error", serveErr))
 			}
 		}
 
@@ -167,7 +167,7 @@ var _ = BeforeSuite(func() {
 		serveErr := httpInternServer.ListenAndServeTLS("", "")
 		if serveErr != nil {
 			if !errors.Is(serveErr, http.ErrServerClosed) {
-				testingSuite.container.GetLogger().ErrorContext(ctx, "http intern server failure during startup", slog.Any("error_message", serveErr))
+				testingSuite.container.GetLogger().ErrorContext(ctx, "http intern server failure during startup", slog.Any("error", serveErr))
 			}
 		}
 
@@ -204,7 +204,7 @@ var _ = BeforeSuite(func() {
 	By("Starting the file system watcher for the solution archive storage")
 	go func() {
 		if err := testingSuite.container.GetFileSystemFileWatcher().StartWatchFiles(filenameChan); err != nil {
-			testingSuite.container.GetLogger().ErrorContext(ctx, "problem starting file system solution archive storage", slog.Any("error_message", err))
+			testingSuite.container.GetLogger().ErrorContext(ctx, "problem starting file system solution archive storage", slog.Any("error", err))
 		}
 	}()
 
@@ -221,12 +221,12 @@ var _ = AfterSuite(func() {
 	defer os.RemoveAll(testingSuite.RootPath) // nolint: errcheck
 	err := testingSuite.container.GetHTTPExternServer().Close()
 	if err != nil {
-		testingSuite.logger.ErrorContext(ctx, "http extern server failure during shutdown", slog.Any("error_message", err))
+		testingSuite.logger.ErrorContext(ctx, "http extern server failure during shutdown", slog.Any("error", err))
 		os.Exit(1) //nolint:revive // Fatal-equivalent for test teardown failure.
 	}
 	err = testingSuite.container.GetHTTPInternServer().Close()
 	if err != nil {
-		testingSuite.logger.ErrorContext(ctx, "http intern server failure during shutdown", slog.Any("error_message", err))
+		testingSuite.logger.ErrorContext(ctx, "http intern server failure during shutdown", slog.Any("error", err))
 		os.Exit(1) //nolint:revive // Fatal-equivalent for test teardown failure.
 	}
 })

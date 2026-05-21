@@ -88,7 +88,7 @@ func (uc *InitializeSession) Execute(ctx context.Context, solutionArchive *domai
 			if err := bucketManager.DeleteBucket(bucketName); err != nil {
 				uc.logger.ErrorContext(ctx, "Failed to delete the bucket",
 					slog.String("bucket_name", bucketName),
-					slog.Any("error_message", err),
+					slog.Any("error", err),
 				)
 			}
 		}

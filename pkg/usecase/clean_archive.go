@@ -44,7 +44,7 @@ func (uc *CleanArchive) Execute(ctx context.Context) {
 				uc.logger.ErrorContext(ctx, "failed to clean unused solution archive",
 					slog.String("path", eventDetails.FullPathName),
 					slog.String("origin", "solution_archives"),
-					slog.Any("error_message", err),
+					slog.Any("error", err),
 				)
 				uc.fileWatcher.AddWatchFileOrDirectory(eventDetails.FullPathName) // nolint: errcheck // was existing before
 			}
@@ -58,7 +58,7 @@ func (uc *CleanArchive) Execute(ctx context.Context) {
 				uc.logger.ErrorContext(ctx, "failed to clean unused solution",
 					slog.String("path", eventDetails.FullPathName),
 					slog.String("origin", "solutions"),
-					slog.Any("error_message", err),
+					slog.Any("error", err),
 				)
 				uc.fileWatcher.AddWatchFileOrDirectory(eventDetails.FullPathName) // nolint: errcheck // was existing before
 			}

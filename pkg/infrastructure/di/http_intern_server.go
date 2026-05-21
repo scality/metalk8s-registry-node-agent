@@ -14,7 +14,7 @@ func (c *Container) GetHTTPInternServer() *http.Server {
 	if c.httpInternServer == nil {
 		swagger, err := intern.GetSwagger()
 		if err != nil {
-			c.GetLogger().ErrorContext(c.ctx, "failed to get swagger", slog.Any("error_message", err))
+			c.GetLogger().ErrorContext(c.ctx, "failed to get swagger", slog.Any("error", err))
 			os.Exit(1) //nolint:revive // Fatal-equivalent for DI initialization failure.
 		}
 

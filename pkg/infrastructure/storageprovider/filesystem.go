@@ -180,7 +180,7 @@ func (f *FileSystem) genWatchedFileInfos(fileEntries []os.DirEntry) watchedFiles
 
 			watchedFileInfo, err := f.genWatchedFileInfo(fileEntry)
 			if err != nil {
-				f.logger.Error("failed to generate watched file info", slog.Any("error_message", err))
+				f.logger.Error("failed to generate watched file info", slog.Any("error", err))
 
 				return
 			}
@@ -274,7 +274,7 @@ func (f *FileSystem) updateWatchedFileInfos(saveFunc func(watchedFilesMap) error
 	// Load current stored watched file infos.
 	watchedFileInfos, err := f.loadWatchedFileInfos()
 	if err != nil {
-		f.logger.Warn("Failed to load watched file infos.", slog.Any("error_message", err))
+		f.logger.Warn("Failed to load watched file infos.", slog.Any("error", err))
 
 		watchedFileInfos = make(watchedFilesMap)
 	}
@@ -303,7 +303,7 @@ func (f *FileSystem) updateWatchedFileInfos(saveFunc func(watchedFilesMap) error
 		if ok {
 			entryInfo, err := fileEntry.Info()
 			if err != nil {
-				f.logger.Warn("Failed to get file info.", slog.Any("error_message", err))
+				f.logger.Warn("Failed to get file info.", slog.Any("error", err))
 
 				continue
 			}

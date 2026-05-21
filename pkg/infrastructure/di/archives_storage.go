@@ -26,7 +26,7 @@ func (c *Container) GetFSSolutionArchiveStorage() service.StorageProvider {
 
 		err := c.solutionArchiveStorage.Init()
 		if err != nil {
-			c.GetLogger().ErrorContext(c.ctx, "could not initialize solution archives storage", slog.Any("error_message", err))
+			c.GetLogger().ErrorContext(c.ctx, "could not initialize solution archives storage", slog.Any("error", err))
 			os.Exit(1) //nolint:revive // Fatal-equivalent for DI initialization failure.
 		}
 
@@ -49,7 +49,7 @@ func (c *Container) GetMockFSSolutionArchiveStorage() service.StorageProvider {
 
 		err := c.solutionArchiveStorage.Init()
 		if err != nil {
-			c.GetLogger().ErrorContext(c.ctx, "could not initialize solution archives storage", slog.Any("error_message", err))
+			c.GetLogger().ErrorContext(c.ctx, "could not initialize solution archives storage", slog.Any("error", err))
 			os.Exit(1) //nolint:revive // Fatal-equivalent for DI initialization failure.
 		}
 

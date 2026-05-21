@@ -75,7 +75,7 @@ func (f *FileSystem) CleanUnusedSolutions(ctx context.Context, path string, isDi
 		if err != nil {
 			f.logger.ErrorContext(ctx, "failed to unmount unused solution",
 				slog.String("mount_point", path),
-				slog.Any("error_message", err),
+				slog.Any("error", err),
 			)
 			// Continue to try to delete the directory anyway
 		}
