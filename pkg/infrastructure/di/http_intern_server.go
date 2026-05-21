@@ -2,6 +2,7 @@
 package di
 
 import (
+	"context"
 	"log/slog"
 	"net/http"
 	"os"
@@ -31,13 +32,19 @@ func (c *Container) GetHTTPInternServer() *http.Server {
 		intern.HandlerFromMux(intern.NewStrictHandler(c.getHTTPInternResolver(), nil), apiRouter)
 
 		validatorOptions := &middleware.Options{
-			ErrorHandler: func(writer http.ResponseWriter, message string, statusCode int) {
-				c.GetLogger().ErrorContext(c.ctx, "OAPI request validation error",
-					slog.String("message", message),
-					slog.Int("status_code", statusCode),
+			ErrorHandlerWithOpts: func(
+				ctx context.Context,
+				err error,
+				writer http.ResponseWriter,
+				_ *http.Request,
+				opts middleware.ErrorHandlerOpts,
+			) {
+				c.GetLogger().ErrorContext(ctx, "OAPI request validation error",
+					slog.String("message", err.Error()),
+					slog.Int("status_code", opts.StatusCode),
 				)
 
-				http.Error(writer, message, statusCode)
+				http.Error(writer, err.Error(), opts.StatusCode)
 			},
 			DoNotValidateServers: true,
 		}
