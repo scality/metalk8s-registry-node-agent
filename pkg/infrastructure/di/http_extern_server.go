@@ -52,7 +52,10 @@ func (c *Container) GetHTTPExternServer() *http.Server {
 						WithProperty("content_range_size", rangeSize).
 						WithProperty("content_length", request.ContentLength).
 						Throw()
-					handler.WriteExternProblemDetails(request.Context(), c.GetLogger(), writer, bodySizeErr, "Body size does not match Content-Range")
+					handler.WriteExternProblemDetails(
+						request.Context(), c.GetLogger(), writer, bodySizeErr,
+						"Body size does not match Content-Range",
+					)
 					return
 				}
 

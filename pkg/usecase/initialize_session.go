@@ -40,7 +40,9 @@ func NewInitializeSession(
 	}
 }
 
-func (uc *InitializeSession) Execute(ctx context.Context, solutionArchive *domain.SolutionArchive) (*domain.SessionStatus, error) {
+func (uc *InitializeSession) Execute(
+	ctx context.Context, solutionArchive *domain.SolutionArchive,
+) (*domain.SessionStatus, error) {
 	uc.logger.DebugContext(ctx, "Initializing session",
 		slog.Any("solution_archive", solutionArchive),
 	)
