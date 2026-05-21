@@ -97,8 +97,7 @@ var _ = BeforeSuite(func() {
 
 	fakeTLSConfig, err := utils.GenerateFakeTLSConfig()
 	if err != nil {
-		container.GetLogger().ErrorContext(ctx, "failed to generate fake TLS config", slog.Any("error", err))
-		os.Exit(1) //nolint:revive // Fatal-equivalent for test setup failure.
+		Fail(fmt.Sprintf("failed to generate fake TLS config: %v", err))
 	}
 	container.ExternTLSConfig = fakeTLSConfig
 	container.InternTLSConfig = fakeTLSConfig
@@ -106,8 +105,7 @@ var _ = BeforeSuite(func() {
 
 	rootPath, err := os.MkdirTemp("/tmp", "test-integration-api_v1_uploads-*")
 	if err != nil {
-		container.GetLogger().ErrorContext(ctx, "failed to create temporary directory", slog.Any("error", err))
-		os.Exit(1) //nolint:revive // Fatal-equivalent for test setup failure.
+		Fail(fmt.Sprintf("failed to create temporary directory: %v", err))
 	}
 
 	// External HTTP Client creation
@@ -115,8 +113,7 @@ var _ = BeforeSuite(func() {
 	externHTTPClient := utils.GetHTTPExternClient(externTLSClientConfig)
 	externClientWithResponse, err := utils.GetGeneratedHTTPExternClient(cfg.Extern.Addr, cfg.RootExternAPIPath, externHTTPClient)
 	if err != nil {
-		container.GetLogger().ErrorContext(ctx, "failed to create generated http client", slog.Any("error", err))
-		os.Exit(1) //nolint:revive // Fatal-equivalent for test setup failure.
+		Fail(fmt.Sprintf("failed to create generated http client: %v", err))
 	}
 
 	cfg.SolutionArchivesLocation = rootPath + "/archives"
@@ -219,14 +216,18 @@ var _ = AfterSuite(func() {
 	By("tearing down the test environment")
 	cancel()
 	defer os.RemoveAll(testingSuite.RootPath) // nolint: errcheck
-	err := testingSuite.container.GetHTTPExternServer().Close()
-	if err != nil {
-		testingSuite.logger.ErrorContext(ctx, "http extern server failure during shutdown", slog.Any("error", err))
-		os.Exit(1) //nolint:revive // Fatal-equivalent for test teardown failure.
+	// Close both servers before asserting, so a failure on the first does not
+	// prevent the second from being closed (and the deferred temp dir cleanup).
+	externCloseErr := testingSuite.container.GetHTTPExternServer().Close()
+	if externCloseErr != nil {
+		testingSuite.logger.ErrorContext(ctx, "http extern server failure during shutdown",
+			slog.Any("error", externCloseErr))
 	}
-	err = testingSuite.container.GetHTTPInternServer().Close()
-	if err != nil {
-		testingSuite.logger.ErrorContext(ctx, "http intern server failure during shutdown", slog.Any("error", err))
-		os.Exit(1) //nolint:revive // Fatal-equivalent for test teardown failure.
+	internCloseErr := testingSuite.container.GetHTTPInternServer().Close()
+	if internCloseErr != nil {
+		testingSuite.logger.ErrorContext(ctx, "http intern server failure during shutdown",
+			slog.Any("error", internCloseErr))
 	}
+	Expect(externCloseErr).NotTo(HaveOccurred(), "http extern server close failed")
+	Expect(internCloseErr).NotTo(HaveOccurred(), "http intern server close failed")
 })
