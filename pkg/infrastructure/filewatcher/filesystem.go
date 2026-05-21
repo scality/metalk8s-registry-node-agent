@@ -1,13 +1,13 @@
 package filewatcher
 
 import (
+	"log/slog"
 	"os"
 	"path/filepath"
 	"strings"
 	"sync"
 
 	"github.com/fsnotify/fsnotify"
-	"github.com/rs/zerolog"
 	"github.com/scality/go-errors"
 	"github.com/scality/metalk8s-registry-node-agent/pkg/domain"
 	"github.com/scality/metalk8s-registry-node-agent/pkg/library"
@@ -16,7 +16,7 @@ import (
 
 type FileSystem struct {
 	sync.WaitGroup
-	logger                   *zerolog.Logger
+	logger                   *slog.Logger
 	watcher                  *fsnotify.Watcher
 	store                    service.StorageProvider
 	solutionArchivesLocation string
@@ -24,17 +24,16 @@ type FileSystem struct {
 }
 
 func NewFileSystem(
-	logger *zerolog.Logger,
+	logger *slog.Logger,
 	store service.StorageProvider,
 	solutionArchivesLocation string,
 	solutionsLocation string,
 ) service.FileWatcher {
-	l := logger.With().
-		Str("infrastructure", "file_watcher").
-		Str("implementation", "filesystem").
-		Logger()
 	return &FileSystem{
-		logger:                   &l,
+		logger: logger.With(
+			slog.String("infrastructure", "file_watcher"),
+			slog.String("implementation", "filesystem"),
+		),
 		store:                    store,
 		solutionArchivesLocation: solutionArchivesLocation,
 		solutionsLocation:        solutionsLocation,
@@ -73,18 +72,18 @@ func (f *FileSystem) watchFiles(filenameChan chan domain.FileEventDetails) {
 		select {
 		case e, ok := <-f.watcher.Events:
 			if !ok {
-				f.logger.Warn().Msg("watcher events channel closed")
+				f.logger.Warn("watcher events channel closed")
 				return
 			}
-			log := f.logger.With().
-				Str("source_event_type", e.Op.String()).
-				Str("file_name", e.Name).
-				Logger()
+			log := f.logger.With(
+				slog.String("source_event_type", e.Op.String()),
+				slog.String("file_name", e.Name),
+			)
 
-			log.Debug().Msg("event received")
+			log.Debug("event received")
 
 			if err := f.store.RefreshWatchedFileInfos(); err != nil {
-				log.Error().Err(err).Msg("failed to update watched file infos")
+				log.Error("failed to update watched file infos", slog.Any("error_message", err))
 			}
 
 			// Determine the origin of the object
@@ -98,10 +97,10 @@ func (f *FileSystem) watchFiles(filenameChan chan domain.FileEventDetails) {
 			isDir, err := isDirectory(origin, e)
 			if err != nil {
 				if errors.Is(err, domain.ErrStorageProviderNotFound) {
-					log.Debug().Err(err).Msg("object not found to determine if it is a directory")
+					log.Debug("object not found to determine if it is a directory", slog.Any("error_message", err))
 					continue
 				}
-				log.Warn().Err(err).Msg("failed to determine if the object is a directory")
+				log.Warn("failed to determine if the object is a directory", slog.Any("error_message", err))
 				// In our use case, we expect to do nothing if the object is undetermined
 				continue
 			}
@@ -126,7 +125,7 @@ func (f *FileSystem) watchFiles(filenameChan chan domain.FileEventDetails) {
 				objectNameVersion, _ = filepath.Rel(f.solutionsLocation, e.Name)
 			}
 
-			log.Debug().Msg("creating FileEventDetails")
+			log.Debug("creating FileEventDetails")
 			filenameChan <- domain.FileEventDetails{
 				FullPathName: e.Name,
 				ObjectName:   objectNameVersion,
@@ -134,15 +133,15 @@ func (f *FileSystem) watchFiles(filenameChan chan domain.FileEventDetails) {
 				Origin:       origin,
 				EventType:    e.Op.String(),
 			}
-			log.Debug().Msg("FileEventDetails created")
+			log.Debug("FileEventDetails created")
 		case err, ok := <-f.watcher.Errors:
 			if !ok {
-				f.logger.Warn().Msg("watcher errors channel closed")
+				f.logger.Warn("watcher errors channel closed")
 
 				return
 			}
 
-			f.logger.Error().Err(err).Msg("watcher error")
+			f.logger.Error("watcher error", slog.Any("error_message", err))
 		}
 	}
 }
@@ -186,7 +185,7 @@ func (f *FileSystem) StartWatchFiles(filenameChan chan domain.FileEventDetails) 
 	}
 	go func(dEntries []os.DirEntry) {
 		for _, dirEntry := range dEntries {
-			f.logger.Debug().Msg("creating an event for object " + dirEntry.Name())
+			f.logger.Debug("creating an event for object " + dirEntry.Name())
 			if !strings.HasPrefix(dirEntry.Name(), f.store.ControlDir()) {
 				f.watcher.Events <- fsnotify.Event{
 					Name: filepath.Join(f.solutionArchivesLocation, dirEntry.Name()),
@@ -230,7 +229,7 @@ func (f *FileSystem) StartWatchFiles(filenameChan chan domain.FileEventDetails) 
 	}
 	go func(dEntries []string) {
 		for _, dirEntry := range dEntries {
-			f.logger.Debug().Msg("creating an event for object " + dirEntry)
+			f.logger.Debug("creating an event for object " + dirEntry)
 			f.watcher.Events <- fsnotify.Event{
 				Name: dirEntry,
 				Op:   fsnotify.Create,

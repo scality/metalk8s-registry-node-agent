@@ -2,12 +2,13 @@
 package handler
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"strings"
 
-	"github.com/rs/zerolog"
 	"github.com/scality/go-errors"
 	"github.com/scality/metalk8s-registry-node-agent/pkg/domain"
 	"github.com/scality/metalk8s-registry-node-agent/pkg/presentation/http/extern"
@@ -99,12 +100,13 @@ func fillPartFromUploadChunkRequestObject(
 
 // fillExternProblemDetailsFromAPIErrorsError fills the ProblemDetails object from the apierrors.Error object.
 func fillExternProblemDetailsFromAPIErrorsError(
-	logger *zerolog.Logger,
+	ctx context.Context,
+	logger *slog.Logger,
 	dst *extern.ProblemDetails,
 	src *errors.Error,
 	logMsg string,
 ) {
-	logger.Error().Err(src).Msg(logMsg)
+	logger.ErrorContext(ctx, logMsg, slog.Any("error_message", src))
 
 	status := src.Identifier / 1000 // nolint: gosec // TODO: Refactor this in the "polishing" sprint.
 	code := fmt.Sprintf("%d", src.Identifier)
@@ -136,10 +138,11 @@ func fillExternProblemDetailsFromAPIErrorsError(
 }
 
 func (h *UploadPart) fillProblemDetailsFromAPIErrorsError(
+	ctx context.Context,
 	dst *extern.ProblemDetails,
 	src *errors.Error,
 ) {
-	fillExternProblemDetailsFromAPIErrorsError(h.logger, dst, src, "Uploads API error")
+	fillExternProblemDetailsFromAPIErrorsError(ctx, h.logger, dst, src, "Uploads API error")
 }
 
 // WriteExternProblemDetails writes a ProblemDetails JSON response to w based
@@ -147,7 +150,8 @@ func (h *UploadPart) fillProblemDetailsFromAPIErrorsError(
 // identifier (status = identifier / 1000). If err does not wrap an
 // *errors.Error, a generic 500 ProblemDetails is returned instead.
 func WriteExternProblemDetails(
-	logger *zerolog.Logger,
+	ctx context.Context,
+	logger *slog.Logger,
 	w http.ResponseWriter,
 	err error,
 	logMsg string,
@@ -162,7 +166,7 @@ func WriteExternProblemDetails(
 
 	var problemDetails extern.ProblemDetails
 
-	fillExternProblemDetailsFromAPIErrorsError(logger, &problemDetails, apiErr, logMsg)
+	fillExternProblemDetailsFromAPIErrorsError(ctx, logger, &problemDetails, apiErr, logMsg)
 
 	var status int
 	if problemDetails.Status != nil {
@@ -176,7 +180,7 @@ func WriteExternProblemDetails(
 	w.WriteHeader(status)
 
 	if encErr := json.NewEncoder(w).Encode(problemDetails); encErr != nil {
-		logger.Error().Err(encErr).Msg("failed to encode ProblemDetails response")
+		logger.ErrorContext(ctx, "failed to encode ProblemDetails response", slog.Any("error_message", encErr))
 	}
 }
 

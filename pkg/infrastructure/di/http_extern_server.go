@@ -3,7 +3,9 @@ package di
 
 import (
 	"context"
+	"log/slog"
 	"net/http"
+	"os"
 
 	middleware "github.com/oapi-codegen/nethttp-middleware"
 	"github.com/scality/go-errors"
@@ -16,7 +18,8 @@ func (c *Container) GetHTTPExternServer() *http.Server {
 	if c.httpExternServer == nil {
 		swagger, err := extern.GetSwagger()
 		if err != nil {
-			c.GetLogger().Fatal().Err(err).Msg("failed to get swagger")
+			c.GetLogger().ErrorContext(c.ctx, "failed to get swagger", slog.Any("error_message", err))
+			os.Exit(1) //nolint:revive // Fatal-equivalent for DI initialization failure.
 		}
 
 		mainRouter := http.NewServeMux()
@@ -36,7 +39,7 @@ func (c *Container) GetHTTPExternServer() *http.Server {
 				contentRange := request.Header.Get("Content-Range")
 				headerStart, headerEnd, _, err := handler.ParseContentRange(contentRange)
 				if err != nil {
-					handler.WriteExternProblemDetails(c.GetLogger(), writer, err, "Invalid Content-Range header")
+					handler.WriteExternProblemDetails(request.Context(), c.GetLogger(), writer, err, "Invalid Content-Range header")
 					return
 				}
 				rangeSize := headerEnd - headerStart + 1
@@ -49,7 +52,7 @@ func (c *Container) GetHTTPExternServer() *http.Server {
 						WithProperty("content_range_size", rangeSize).
 						WithProperty("content_length", request.ContentLength).
 						Throw()
-					handler.WriteExternProblemDetails(c.GetLogger(), writer, bodySizeErr, "Body size does not match Content-Range")
+					handler.WriteExternProblemDetails(request.Context(), c.GetLogger(), writer, bodySizeErr, "Body size does not match Content-Range")
 					return
 				}
 
@@ -87,10 +90,10 @@ func (c *Container) GetHTTPExternServer() *http.Server {
 					// request URL is probably missing solutionArchive and/or version parameter(s)
 					statusCode = http.StatusBadRequest
 				}
-				c.GetLogger().Error().
-					Str("message", err.Error()).
-					Int("status_code", statusCode).
-					Msg("OAPI request validation error")
+				c.GetLogger().ErrorContext(ctx, "OAPI request validation error",
+					slog.String("message", err.Error()),
+					slog.Int("status_code", statusCode),
+				)
 
 				http.Error(w, err.Error(), statusCode)
 			},

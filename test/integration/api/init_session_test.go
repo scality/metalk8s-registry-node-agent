@@ -21,7 +21,7 @@ var _ = Describe("Init Session API", func() {
 				Hash:    ptr.To("1234567890"),
 			}
 			By("successfully initialize the session")
-			_, err := testingSuite.container.GetInitializeSessionUseCase().Execute(solutionArchive)
+			_, err := testingSuite.container.GetInitializeSessionUseCase().Execute(ctx, solutionArchive)
 			Expect(err).NotTo(HaveOccurred())
 
 			By("creating the directory structure")
@@ -56,12 +56,12 @@ var _ = Describe("Init Session API", func() {
 			}
 
 			// Create initial session
-			_, err := testingSuite.container.GetInitializeSessionUseCase().Execute(solutionArchive)
+			_, err := testingSuite.container.GetInitializeSessionUseCase().Execute(ctx, solutionArchive)
 			Expect(err).NotTo(HaveOccurred())
 
 			By("accepting the session request, but not creating a new one")
 			// Create existing session
-			_, err = testingSuite.container.GetInitializeSessionUseCase().Execute(solutionArchive)
+			_, err = testingSuite.container.GetInitializeSessionUseCase().Execute(ctx, solutionArchive)
 			Expect(err).NotTo(HaveOccurred())
 		})
 	})
@@ -80,7 +80,7 @@ var _ = Describe("Init Session API", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			By("accepting the session request, but not creating a new one")
-			_, err = testingSuite.container.GetInitializeSessionUseCase().Execute(solutionArchive)
+			_, err = testingSuite.container.GetInitializeSessionUseCase().Execute(ctx, solutionArchive)
 			Expect(err).NotTo(HaveOccurred())
 
 			By("not creating a new directory structure")

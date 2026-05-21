@@ -3,48 +3,45 @@ package handler
 
 import (
 	"context"
+	"log/slog"
 	"net/http"
 
-	"github.com/rs/zerolog"
 	"github.com/scality/go-errors"
-
 	"github.com/scality/metalk8s-registry-node-agent/pkg/domain"
 	"github.com/scality/metalk8s-registry-node-agent/pkg/presentation/http/extern"
 	"github.com/scality/metalk8s-registry-node-agent/pkg/usecase"
 )
 
 type UploadPart struct {
-	logger *zerolog.Logger
+	logger *slog.Logger
 
 	uc *usecase.UploadPart
 }
 
 func NewUploadPart(
-	logger *zerolog.Logger,
+	logger *slog.Logger,
 	uc *usecase.UploadPart,
 ) *UploadPart {
-	l := logger.With().Str("http_handler", "upload_part").Logger()
-
 	return &UploadPart{
-		logger: &l,
+		logger: logger.With(slog.String("http_handler", "upload_part")),
 		uc:     uc,
 	}
 }
 
 //nolint:ireturn // Generated code forces to return an interface.
 func (h *UploadPart) UploadChunk(
-	_ context.Context,
+	ctx context.Context,
 	request extern.UploadChunkRequestObject,
 ) (extern.UploadChunkResponseObject, error) {
 	var part domain.Part
 
 	if err := fillPartFromUploadChunkRequestObject(&part, &request); err != nil {
-		return h.genUploadChunkResponseObjectFromError(errors.Stamp(err))
+		return h.genUploadChunkResponseObjectFromError(ctx, errors.Stamp(err))
 	}
 
-	solutionArchiveStatus, err := h.uc.Execute(&part)
+	solutionArchiveStatus, err := h.uc.Execute(ctx, &part)
 	if err != nil {
-		return h.genUploadChunkResponseObjectFromError(errors.Stamp(err))
+		return h.genUploadChunkResponseObjectFromError(ctx, errors.Stamp(err))
 	}
 
 	var response extern.UploadChunkSuccessResponse
@@ -59,6 +56,7 @@ func (h *UploadPart) UploadChunk(
 //
 //nolint:funlen,ireturn // Needs refactoring
 func (h *UploadPart) genUploadChunkResponseObjectFromError(
+	ctx context.Context,
 	err error,
 ) (extern.UploadChunkResponseObject, error) {
 	var apiErr *errors.Error
@@ -67,7 +65,7 @@ func (h *UploadPart) genUploadChunkResponseObjectFromError(
 
 	errors.As(err, &apiErr)
 
-	h.fillProblemDetailsFromAPIErrorsError(&problemDetails, apiErr)
+	h.fillProblemDetailsFromAPIErrorsError(ctx, &problemDetails, apiErr)
 
 	switch int(apiErr.Identifier / 1000) {
 	case http.StatusBadRequest, http.StatusUnprocessableEntity:

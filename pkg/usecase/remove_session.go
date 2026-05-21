@@ -1,7 +1,9 @@
 package usecase
 
 import (
-	"github.com/rs/zerolog"
+	"context"
+	"log/slog"
+
 	"github.com/scality/go-errors"
 
 	"github.com/scality/metalk8s-registry-node-agent/pkg/domain"
@@ -10,29 +12,27 @@ import (
 )
 
 type RemoveSession struct {
-	logger        *zerolog.Logger
+	logger        *slog.Logger
 	bucketManager service.BucketManager
 	bucketLocker  service.LockerUnlocker
 }
 
 func NewRemoveSession(
-	logger *zerolog.Logger,
+	logger *slog.Logger,
 	bucketManager service.BucketManager,
 	bucketLocker service.LockerUnlocker,
 ) *RemoveSession {
-	l := logger.With().Str("use_case", "remove_session").Logger()
-
 	return &RemoveSession{
-		logger:        &l,
+		logger:        logger.With(slog.String("use_case", "remove_session")),
 		bucketManager: bucketManager,
 		bucketLocker:  bucketLocker,
 	}
 }
 
-func (uc *RemoveSession) Execute(solutionArchive *domain.SolutionArchive) error {
-	uc.logger.Debug().
-		Any("solution_archive", solutionArchive).
-		Msg("Removing session")
+func (uc *RemoveSession) Execute(ctx context.Context, solutionArchive *domain.SolutionArchive) error {
+	uc.logger.DebugContext(ctx, "Removing session",
+		slog.Any("solution_archive", solutionArchive),
+	)
 
 	// To avoid simultaneous removals of the same session
 	uc.bucketLocker.Lock(solutionArchive)
@@ -69,7 +69,9 @@ func (uc *RemoveSession) Execute(solutionArchive *domain.SolutionArchive) error 
 		return errors.Stamp(err)
 	}
 
-	uc.logger.Debug().Any("solution_archive", solutionArchive).Msg("Session removed")
+	uc.logger.DebugContext(ctx, "Session removed",
+		slog.Any("solution_archive", solutionArchive),
+	)
 
 	return nil
 }

@@ -3,16 +3,17 @@ package usecase
 import (
 	"context"
 	"fmt"
+	"log/slog"
 
-	"github.com/rs/zerolog"
 	"github.com/scality/go-errors"
+
 	"github.com/scality/metalk8s-registry-node-agent/pkg/domain"
 	"github.com/scality/metalk8s-registry-node-agent/pkg/library"
 	"github.com/scality/metalk8s-registry-node-agent/pkg/service"
 )
 
 type GetExternalSolutionArchive struct {
-	logger             *zerolog.Logger
+	logger             *slog.Logger
 	externalDownloader service.ExternalDownloader
 	bucketManager      service.BucketManager
 	archiveLister      service.ArchiveLister
@@ -25,7 +26,7 @@ type GetExternalSolutionArchive struct {
 }
 
 func NewGetExternalSolutionArchive(
-	logger *zerolog.Logger,
+	logger *slog.Logger,
 	externalDownloader service.ExternalDownloader,
 	bucketManager service.BucketManager,
 	archiveLister service.ArchiveLister,
@@ -36,10 +37,8 @@ func NewGetExternalSolutionArchive(
 	rootAPIPath string,
 	chunkSize int64,
 ) *GetExternalSolutionArchive {
-	l := logger.With().Str("use_case", "get_external_solution_archive").Logger()
-
 	return &GetExternalSolutionArchive{
-		logger:             &l,
+		logger:             logger.With(slog.String("use_case", "get_external_solution_archive")),
 		externalDownloader: externalDownloader,
 		bucketManager:      bucketManager,
 		archiveLister:      archiveLister,
@@ -57,10 +56,10 @@ func (uc *GetExternalSolutionArchive) Execute(
 	solutionArchive *domain.SolutionArchive,
 	downloadURL string,
 ) error {
-	uc.logger.Debug().
-		Any("solution_archive", solutionArchive).
-		Str("download_url", downloadURL).
-		Msg("Getting external solution archive")
+	uc.logger.DebugContext(ctx, "Getting external solution archive",
+		slog.Any("solution_archive", solutionArchive),
+		slog.String("download_url", downloadURL),
+	)
 
 	// To avoid simultaneous downloads and deletions of the same solution archive
 	uc.bucketLocker.Lock(solutionArchive)
@@ -101,7 +100,7 @@ func (uc *GetExternalSolutionArchive) Execute(
 	}
 
 	// Load the manifest from metadata file
-	solutionArchiveFromManifest, err := uc.multipartInspector.GetMultipartFile(sessionBucket)
+	solutionArchiveFromManifest, err := uc.multipartInspector.GetMultipartFile(ctx, sessionBucket)
 	if err != nil {
 		return errors.Intercept(err).
 			WithProperty("instance", fmt.Sprintf("%s/downloads/%s", uc.rootAPIPath, solutionArchive.Name)).
@@ -114,7 +113,7 @@ func (uc *GetExternalSolutionArchive) Execute(
 	}
 
 	// Load the manifest from the session bucket
-	solutionArchiveStatus, err := uc.multipartInspector.GetMultipartFileStatus(sessionBucket, solutionArchive)
+	solutionArchiveStatus, err := uc.multipartInspector.GetMultipartFileStatus(ctx, sessionBucket, solutionArchive)
 	if err != nil {
 		return errors.Stamp(err)
 	}
@@ -153,6 +152,7 @@ func (uc *GetExternalSolutionArchive) Execute(
 		part.Content = body
 
 		solutionArchiveStatus, err = uc.multipartUploader.StorePart(
+			ctx,
 			sessionBucket,
 			solutionArchiveFromManifest,
 			part,
@@ -171,7 +171,7 @@ func (uc *GetExternalSolutionArchive) Execute(
 				Throw()
 		}
 
-		if err := uc.multipartUploader.CommitPart(sessionBucket, part); err != nil {
+		if err := uc.multipartUploader.CommitPart(ctx, sessionBucket, part); err != nil {
 			return errors.Intercept(err).
 				WithProperty("instance", fmt.Sprintf("%s/downloads/%s", uc.rootAPIPath, solutionArchive.Name)).
 				Throw()
@@ -190,6 +190,7 @@ func (uc *GetExternalSolutionArchive) Execute(
 	// move it to the storage root location and then
 	// remove the bucket.
 	err = uc.multipartUploader.Consolidate(
+		ctx,
 		sessionBucket,
 		solutionArchiveFromManifest,
 		library.FileSystemDefaultFileMode,
@@ -200,7 +201,9 @@ func (uc *GetExternalSolutionArchive) Execute(
 			Throw()
 	}
 
-	uc.logger.Debug().Any("solution_archive", solutionArchive).Msg("External solution archive retrieved")
+	uc.logger.DebugContext(ctx, "External solution archive retrieved",
+		slog.Any("solution_archive", solutionArchive),
+	)
 
 	return nil
 }

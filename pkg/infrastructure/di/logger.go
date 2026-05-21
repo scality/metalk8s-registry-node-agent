@@ -1,21 +1,32 @@
 package di
 
 import (
-	"github.com/rs/zerolog"
+	"log"
+	"log/slog"
+	"os"
 
 	"github.com/scality/metalk8s-registry-node-agent/cmd/config"
-	logger "github.com/scality/platform-library/pkg/infrastructure/logger/zerolog"
 )
 
-func (c *Container) GetLogger() *zerolog.Logger {
+func (c *Container) GetLogger() *slog.Logger {
 	if c.logger == nil {
-		l := logger.NewZerolog(&c.config.Logger).
-			With().
-			Str("application_name", config.ApplicationName).
-			Str("application_version", config.ApplicationVersion).
-			Logger()
+		var level slog.Level
+		if err := level.UnmarshalText([]byte(c.config.Logger.LogLevel)); err != nil {
+			level = slog.LevelInfo
+		}
 
-		c.logger = &l
+		hostname, err := os.Hostname()
+		if err != nil {
+			log.Fatalf("failed to get hostname: %v", err)
+		}
+
+		handler := slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: level})
+
+		c.logger = slog.New(handler).With(
+			slog.String("application_name", config.ApplicationName),
+			slog.String("application_version", config.ApplicationVersion),
+			slog.String("host", hostname),
+		)
 	}
 
 	return c.logger

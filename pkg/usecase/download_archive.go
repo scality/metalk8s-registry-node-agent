@@ -2,9 +2,10 @@
 package usecase
 
 import (
+	"context"
 	"fmt"
+	"log/slog"
 
-	"github.com/rs/zerolog"
 	"github.com/scality/go-errors"
 
 	"github.com/scality/metalk8s-registry-node-agent/pkg/domain"
@@ -13,7 +14,7 @@ import (
 )
 
 type DownloadSolutionArchive struct {
-	logger        *zerolog.Logger
+	logger        *slog.Logger
 	archiveLister service.ArchiveLister
 	archiveReader service.ArchiveReader
 	archiveLocker service.LockerUnlocker
@@ -21,16 +22,14 @@ type DownloadSolutionArchive struct {
 }
 
 func NewDownloadSolutionArchive(
-	logger *zerolog.Logger,
+	logger *slog.Logger,
 	archiveLister service.ArchiveLister,
 	archiveReader service.ArchiveReader,
 	archiveLocker service.LockerUnlocker,
 	rootAPIPath string,
 ) *DownloadSolutionArchive {
-	l := logger.With().Str("use_case", "download_solution_archive").Logger()
-
 	return &DownloadSolutionArchive{
-		logger:        &l,
+		logger:        logger.With(slog.String("use_case", "download_solution_archive")),
 		archiveLister: archiveLister,
 		archiveReader: archiveReader,
 		archiveLocker: archiveLocker,
@@ -39,11 +38,12 @@ func NewDownloadSolutionArchive(
 }
 
 func (uc *DownloadSolutionArchive) Execute(
+	ctx context.Context,
 	solutionArchivePart *domain.Part,
 ) (*domain.SolutionArchiveFile, error) {
-	uc.logger.Debug().
-		Any("solution_archive_part", solutionArchivePart).
-		Msg("Downloading solution archive chunk")
+	uc.logger.DebugContext(ctx, "Downloading solution archive chunk",
+		slog.Any("solution_archive_part", solutionArchivePart),
+	)
 
 	// To avoid simultaneous downloads and deletion of the same solution archive
 	uc.archiveLocker.RLock(solutionArchivePart.SolutionArchive)
@@ -95,7 +95,9 @@ func (uc *DownloadSolutionArchive) Execute(
 		return nil, errors.Stamp(err)
 	}
 
-	uc.logger.Debug().Any("solution_archive_part", solutionArchivePart).Msg("Solution archive chunk downloaded")
+	uc.logger.DebugContext(ctx, "Solution archive chunk downloaded",
+		slog.Any("solution_archive_part", solutionArchivePart),
+	)
 
 	return &domain.SolutionArchiveFile{
 		File:          file,

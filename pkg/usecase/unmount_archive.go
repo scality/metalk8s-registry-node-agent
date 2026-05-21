@@ -1,7 +1,9 @@
 package usecase
 
 import (
-	"github.com/rs/zerolog"
+	"context"
+	"log/slog"
+
 	"github.com/scality/go-errors"
 
 	"github.com/scality/metalk8s-registry-node-agent/pkg/domain"
@@ -10,29 +12,27 @@ import (
 )
 
 type UnmountSolutionArchive struct {
-	logger         *zerolog.Logger
+	logger         *slog.Logger
 	archiveMounter service.ArchiveMounter
 	archiveLocker  service.LockerUnlocker
 }
 
 func NewUnmountSolutionArchive(
-	logger *zerolog.Logger,
+	logger *slog.Logger,
 	archiveMounter service.ArchiveMounter,
 	archiveLocker service.LockerUnlocker,
 ) *UnmountSolutionArchive {
-	l := logger.With().Str("use_case", "unmount_solution_archive").Logger()
-
 	return &UnmountSolutionArchive{
-		logger:         &l,
+		logger:         logger.With(slog.String("use_case", "unmount_solution_archive")),
 		archiveMounter: archiveMounter,
 		archiveLocker:  archiveLocker,
 	}
 }
 
-func (uc *UnmountSolutionArchive) Execute(solutionArchive *domain.SolutionArchive) error {
-	uc.logger.Debug().
-		Any("solution_archive", solutionArchive).
-		Msg("Unmounting solution archive")
+func (uc *UnmountSolutionArchive) Execute(ctx context.Context, solutionArchive *domain.SolutionArchive) error {
+	uc.logger.DebugContext(ctx, "Unmounting solution archive",
+		slog.Any("solution_archive", solutionArchive),
+	)
 
 	uc.archiveLocker.Lock(solutionArchive)
 	defer uc.archiveLocker.Unlock(solutionArchive)
@@ -42,7 +42,9 @@ func (uc *UnmountSolutionArchive) Execute(solutionArchive *domain.SolutionArchiv
 		return errors.Stamp(err)
 	}
 
-	uc.logger.Debug().Any("solution_archive", solutionArchive).Msg("Solution archive unmounting ended")
+	uc.logger.DebugContext(ctx, "Solution archive unmounting ended",
+		slog.Any("solution_archive", solutionArchive),
+	)
 
 	return nil
 }

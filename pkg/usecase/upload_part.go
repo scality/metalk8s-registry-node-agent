@@ -1,9 +1,10 @@
 package usecase
 
 import (
+	"context"
 	"fmt"
+	"log/slog"
 
-	"github.com/rs/zerolog"
 	"github.com/scality/go-errors"
 
 	"github.com/scality/metalk8s-registry-node-agent/pkg/domain"
@@ -12,7 +13,7 @@ import (
 )
 
 type UploadPart struct {
-	logger             *zerolog.Logger
+	logger             *slog.Logger
 	bucketManager      service.BucketManager
 	multipartUploader  service.MultipartUploader
 	multipartInspector service.MultipartInspector
@@ -22,7 +23,7 @@ type UploadPart struct {
 }
 
 func NewUploadPart(
-	logger *zerolog.Logger,
+	logger *slog.Logger,
 	bucketManager service.BucketManager,
 	multipartUploader service.MultipartUploader,
 	multipartInspector service.MultipartInspector,
@@ -30,10 +31,8 @@ func NewUploadPart(
 	archiveLocker service.LockerUnlocker,
 	rootAPIPath string,
 ) *UploadPart {
-	l := logger.With().Str("use_case", "upload_part").Logger()
-
 	return &UploadPart{
-		logger:             &l,
+		logger:             logger.With(slog.String("use_case", "upload_part")),
 		bucketManager:      bucketManager,
 		multipartUploader:  multipartUploader,
 		multipartInspector: multipartInspector,
@@ -43,8 +42,8 @@ func NewUploadPart(
 	}
 }
 
-func (uc *UploadPart) Execute(part *domain.Part) (*domain.SolutionArchiveStatus, error) {
-	uc.logger.Info().Msg("Uploading part")
+func (uc *UploadPart) Execute(ctx context.Context, part *domain.Part) (*domain.SolutionArchiveStatus, error) {
+	uc.logger.InfoContext(ctx, "Uploading part")
 
 	uc.bucketLocker.Lock(part.SolutionArchive)
 	defer uc.bucketLocker.Unlock(part.SolutionArchive)
@@ -66,7 +65,7 @@ func (uc *UploadPart) Execute(part *domain.Part) (*domain.SolutionArchiveStatus,
 	}
 
 	// Load the manifest from metadata file
-	solutionArchiveFromManifest, err := uc.multipartInspector.GetMultipartFile(sessionBucket)
+	solutionArchiveFromManifest, err := uc.multipartInspector.GetMultipartFile(ctx, sessionBucket)
 	if err != nil {
 		return nil, errors.Intercept(err).
 			WithProperty("instance", fmt.Sprintf(
@@ -96,6 +95,7 @@ func (uc *UploadPart) Execute(part *domain.Part) (*domain.SolutionArchiveStatus,
 	}
 
 	solutionArchiveStatus, err := uc.multipartUploader.StorePart(
+		ctx,
 		sessionBucket,
 		solutionArchiveFromManifest,
 		part,
@@ -111,7 +111,7 @@ func (uc *UploadPart) Execute(part *domain.Part) (*domain.SolutionArchiveStatus,
 			Throw()
 	}
 
-	err = uc.multipartUploader.CommitPart(sessionBucket, part)
+	err = uc.multipartUploader.CommitPart(ctx, sessionBucket, part)
 	if err != nil {
 		return nil, errors.Intercept(err).
 			WithProperty("instance", fmt.Sprintf(
@@ -131,6 +131,7 @@ func (uc *UploadPart) Execute(part *domain.Part) (*domain.SolutionArchiveStatus,
 	// move it to the storage root location and then
 	// remove the bucket.
 	err = uc.multipartUploader.Consolidate(
+		ctx,
 		sessionBucket,
 		solutionArchiveFromManifest,
 		library.FileSystemDefaultFileMode,
@@ -146,7 +147,7 @@ func (uc *UploadPart) Execute(part *domain.Part) (*domain.SolutionArchiveStatus,
 			Throw()
 	}
 
-	uc.logger.Info().Msg("Part uploaded")
+	uc.logger.InfoContext(ctx, "Part uploaded")
 
 	return solutionArchiveStatus, nil
 }

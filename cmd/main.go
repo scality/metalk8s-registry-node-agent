@@ -355,7 +355,7 @@ func main() {
 	// It will remove unused solutions archives
 	go func() {
 		setupLog.Info("starting garbage collector")
-		container.GetCleanArchivesUseCase().Execute()
+		container.GetCleanArchivesUseCase().Execute(ctx)
 	}()
 
 	if metricsCertWatcher != nil {
@@ -461,5 +461,5 @@ func main() {
 		os.Exit(1)
 	}
 
-	logger.Info().Msg("service stopped")
+	logger.InfoContext(ctx, "service stopped")
 }

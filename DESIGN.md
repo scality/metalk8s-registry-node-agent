@@ -447,6 +447,6 @@ The agent never trusts a peer's `status.url` blindly: chunks fetched from that U
 
 ## 12. Observability
 
-- **Logging**: structured logs via `zerolog` (use cases) and `zap` / `controller-runtime` (controller, webhook). Verbosity is controlled by `LOGGER_LOG_LEVEL` (use cases) and `--zap-log-level` (controller).
+- **Logging**: structured logs via the standard library `log/slog` (use cases) and `zap` / `controller-runtime` (controller, webhook). Verbosity is controlled by `LOGGER_LOG_LEVEL` (use cases) and `--zap-log-level` (controller).
 - **Metrics**: controller-runtime exposes the standard set (workqueue depth, reconcile latency, errors). Domain-specific metrics (`/metrics` upload/download counters and durations) are not yet implemented.
 - **Resource status**: `kubectl get nsa` shows `Initialized`, `Available`, `Served` columns so operators can spot any node lagging behind without reading logs.

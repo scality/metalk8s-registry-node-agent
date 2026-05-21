@@ -8,10 +8,10 @@ import (
 	"fmt"
 	"hash"
 	"io"
+	"log/slog"
 	"net/http"
 	"regexp"
 
-	"github.com/rs/zerolog"
 	"github.com/scality/go-errors"
 	"github.com/scality/metalk8s-registry-node-agent/pkg/domain"
 	"github.com/scality/metalk8s-registry-node-agent/pkg/presentation/http/handler"
@@ -19,14 +19,13 @@ import (
 )
 
 type HTTP struct {
-	logger *zerolog.Logger
+	logger *slog.Logger
 	client *http.Client
 }
 
-func NewHTTP(logger *zerolog.Logger, c *http.Client) *HTTP {
-	l := logger.With().Str("infrastructure", "external_downloader").Logger()
+func NewHTTP(logger *slog.Logger, c *http.Client) *HTTP {
 	return &HTTP{
-		logger: &l,
+		logger: logger.With(slog.String("infrastructure", "external_downloader")),
 		client: c,
 	}
 }

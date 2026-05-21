@@ -1,7 +1,9 @@
 package usecase
 
 import (
-	"github.com/rs/zerolog"
+	"context"
+	"log/slog"
+
 	"github.com/scality/go-errors"
 
 	"github.com/scality/metalk8s-registry-node-agent/pkg/domain"
@@ -10,32 +12,30 @@ import (
 )
 
 type RemoveSolutionArchive struct {
-	logger         *zerolog.Logger
+	logger         *slog.Logger
 	archiveLister  service.ArchiveLister
 	archiveRemover service.ArchiveRemover
 	archiveLocker  service.LockerUnlocker
 }
 
 func NewRemoveSolutionArchive(
-	logger *zerolog.Logger,
+	logger *slog.Logger,
 	archiveLister service.ArchiveLister,
 	archiveRemover service.ArchiveRemover,
 	archiveLocker service.LockerUnlocker,
 ) *RemoveSolutionArchive {
-	l := logger.With().Str("use_case", "remove_solution_archive").Logger()
-
 	return &RemoveSolutionArchive{
-		logger:         &l,
+		logger:         logger.With(slog.String("use_case", "remove_solution_archive")),
 		archiveLister:  archiveLister,
 		archiveRemover: archiveRemover,
 		archiveLocker:  archiveLocker,
 	}
 }
 
-func (uc *RemoveSolutionArchive) Execute(solutionArchive *domain.SolutionArchive) error {
-	uc.logger.Debug().
-		Any("solution_archive", solutionArchive).
-		Msg("Removing solution archive")
+func (uc *RemoveSolutionArchive) Execute(ctx context.Context, solutionArchive *domain.SolutionArchive) error {
+	uc.logger.DebugContext(ctx, "Removing solution archive",
+		slog.Any("solution_archive", solutionArchive),
+	)
 
 	uc.archiveLocker.Lock(solutionArchive)
 	defer uc.archiveLocker.Unlock(solutionArchive)
@@ -55,7 +55,9 @@ func (uc *RemoveSolutionArchive) Execute(solutionArchive *domain.SolutionArchive
 		}
 	}
 
-	uc.logger.Debug().Any("solution_archive", solutionArchive).Msg("Solution archive removed")
+	uc.logger.DebugContext(ctx, "Solution archive removed",
+		slog.Any("solution_archive", solutionArchive),
+	)
 
 	return nil
 }

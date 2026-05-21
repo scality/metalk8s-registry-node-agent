@@ -28,7 +28,7 @@ var _ = Describe("Upload Part API", func() {
 				Version: "3.0.0-preview.2",
 				Hash:    ptr.To("sha"),
 			}
-			_, err := testingSuite.container.GetInitializeSessionUseCase().Execute(solutionArchive)
+			_, err := testingSuite.container.GetInitializeSessionUseCase().Execute(ctx, solutionArchive)
 			Expect(err).NotTo(HaveOccurred())
 
 			By("successfully upload the chunk")
@@ -79,7 +79,7 @@ var _ = Describe("Upload Part API", func() {
 				Version: "127.0.2-tiny",
 				Hash:    ptr.To("a2c60bdd4a4fd806fe368bacc30819173ecb9d5f109127bf35dfeaa927b275f0"),
 			}
-			_, err := testingSuite.container.GetInitializeSessionUseCase().Execute(solutionArchive)
+			_, err := testingSuite.container.GetInitializeSessionUseCase().Execute(ctx, solutionArchive)
 			Expect(err).NotTo(HaveOccurred())
 
 			By("successfully uploading all the chunks and responding adequately")
@@ -167,7 +167,7 @@ var _ = Describe("Upload Part API", func() {
 				Version: "127.0.3-tiny",
 				Hash:    ptr.To("a2c60bdd4a4fd806fe368bacc30819173ecb9d5f109127bf35dfeaa927b275f1"),
 			}
-			_, err := testingSuite.container.GetInitializeSessionUseCase().Execute(solutionArchive)
+			_, err := testingSuite.container.GetInitializeSessionUseCase().Execute(ctx, solutionArchive)
 			Expect(err).NotTo(HaveOccurred())
 
 			By("successfully uploading all the chunks")
@@ -238,7 +238,7 @@ var _ = Describe("Upload Part API", func() {
 				Version: "3.0.0-preview.4",
 				Hash:    ptr.To("sha"),
 			}
-			_, err := testingSuite.container.GetInitializeSessionUseCase().Execute(solutionArchive)
+			_, err := testingSuite.container.GetInitializeSessionUseCase().Execute(ctx, solutionArchive)
 			Expect(err).NotTo(HaveOccurred())
 
 			By("uploading a chunk whose body length does not match the Content-Range")
@@ -268,7 +268,7 @@ var _ = Describe("Upload Part API", func() {
 				Version: "127.0.3-small",
 				Hash:    ptr.To("c8db76b15eda867f25a4baa791cd14a673944fda1298cc440abe8568f33edef7"),
 			}
-			_, err := testingSuite.container.GetInitializeSessionUseCase().Execute(solutionArchive)
+			_, err := testingSuite.container.GetInitializeSessionUseCase().Execute(ctx, solutionArchive)
 			Expect(err).NotTo(HaveOccurred())
 
 			var resUpl *extern.UploadChunkResponse
@@ -373,7 +373,7 @@ var _ = Describe("Upload Part API", func() {
 				Name:    "platform",
 				Version: "127.0.2-unchecked",
 			}
-			_, err := testingSuite.container.GetInitializeSessionUseCase().Execute(solutionArchive)
+			_, err := testingSuite.container.GetInitializeSessionUseCase().Execute(ctx, solutionArchive)
 			Expect(err).NotTo(HaveOccurred())
 
 			By("successfully uploading all the chunks and responding adequately")
@@ -442,7 +442,7 @@ var _ = Describe("Upload Part API", func() {
 				Version: "127.0.4-badrange",
 				Hash:    ptr.To("sha"),
 			}
-			_, err := testingSuite.container.GetInitializeSessionUseCase().Execute(solutionArchive)
+			_, err := testingSuite.container.GetInitializeSessionUseCase().Execute(ctx, solutionArchive)
 			Expect(err).NotTo(HaveOccurred())
 
 			By("sending a malformed Content-Range header")
@@ -471,7 +471,7 @@ var _ = Describe("Upload Part API", func() {
 				Version: "127.0.4-invertedrange",
 				Hash:    ptr.To("sha"),
 			}
-			_, err := testingSuite.container.GetInitializeSessionUseCase().Execute(solutionArchive)
+			_, err := testingSuite.container.GetInitializeSessionUseCase().Execute(ctx, solutionArchive)
 			Expect(err).NotTo(HaveOccurred())
 
 			By("sending a Content-Range where start > end")
@@ -520,7 +520,7 @@ var _ = Describe("Upload Part API", func() {
 				Version: "127.0.4-overlap",
 				Hash:    ptr.To("sha"),
 			}
-			_, err := testingSuite.container.GetInitializeSessionUseCase().Execute(solutionArchive)
+			_, err := testingSuite.container.GetInitializeSessionUseCase().Execute(ctx, solutionArchive)
 			Expect(err).NotTo(HaveOccurred())
 
 			By("uploading a first chunk")
