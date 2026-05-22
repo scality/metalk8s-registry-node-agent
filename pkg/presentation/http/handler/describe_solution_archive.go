@@ -69,7 +69,7 @@ func (h *DescribeSolutionArchive) genDescribeSolutionArchiveResponseObjectFromEr
 	h.fillProblemDetailsFromAPIErrorsError(&problemDetails, apiErr)
 
 	switch int(apiErr.Identifier / 1000) {
-	case http.StatusBadRequest, http.StatusUnprocessableEntity:
+	case http.StatusBadRequest:
 		return intern.DescribeSolutionArchive400ApplicationProblemPlusJSONResponse{
 			BadRequestApplicationProblemPlusJSONResponse: intern.BadRequestApplicationProblemPlusJSONResponse(
 				problemDetails,

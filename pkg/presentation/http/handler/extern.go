@@ -11,6 +11,7 @@ import (
 	"github.com/scality/go-errors"
 	"github.com/scality/metalk8s-registry-node-agent/pkg/domain"
 	"github.com/scality/metalk8s-registry-node-agent/pkg/presentation/http/extern"
+	"k8s.io/utils/ptr"
 )
 
 // fillUploadChunkRangesFromDomainPartMetas fills the UploadChunkRange slice from the domain.Part map.
@@ -113,10 +114,9 @@ func fillExternProblemDetailsFromAPIErrorsError(
 	dst.Status = &status
 	dst.Code = &code
 
-	if len(src.Details) > 0 {
-		detail := strings.Join(src.Details, ": ")
-		dst.Detail = &detail
-	}
+	details := []string{}
+	details = append(details, src.Details...)
+	dst.Detail = ptr.To(strings.Join(details, ": "))
 
 	if instance, ok := src.Properties["instance"]; ok {
 		instanceStr, ok := instance.(string)
@@ -125,13 +125,14 @@ func fillExternProblemDetailsFromAPIErrorsError(
 		}
 	}
 
-	if len(src.Properties) > 0 {
-		fillInstanceFromPropertiesMap(&dst.Instance, src.Properties)
-
-		errs := make(extern.Errors, 0, len(src.Properties))
-		fillExternErrorDetailsFromPropertiesMap(&errs, src.Properties)
-
-		dst.Errors = &errs
+	for key, value := range src.Properties {
+		// We consider that properties containing "path" in their name are sensitive information.
+		if !strings.Contains(key, "path") && key != "instance" {
+			if dst.AdditionalInformation == nil {
+				dst.AdditionalInformation = &map[string]interface{}{}
+			}
+			(*dst.AdditionalInformation)[key] = value
+		}
 	}
 }
 
@@ -178,34 +179,4 @@ func WriteExternProblemDetails(
 	if encErr := json.NewEncoder(w).Encode(problemDetails); encErr != nil {
 		logger.Error().Err(encErr).Msg("failed to encode ProblemDetails response")
 	}
-}
-
-// fillExternErrorDetailsFromPropertiesMap fills the ErrorDetail slice from a map[string]any.
-func fillExternErrorDetailsFromPropertiesMap(
-	dst *extern.Errors,
-	src map[string]any,
-) {
-	*dst = make([]extern.ErrorDetail, 0, len(src))
-
-	for key, value := range src {
-		if strings.HasPrefix(key, "problem_") {
-			var errorDetail extern.ErrorDetail
-
-			fillExternErrorDetailFromProperty(&errorDetail, key, value)
-
-			*dst = append(*dst, errorDetail)
-		}
-	}
-}
-
-// fillExternErrorDetailFromProperty fills the ErrorDetail object from a property name and value.
-func fillExternErrorDetailFromProperty(
-	dst *extern.ErrorDetail,
-	key string, value any,
-) {
-	code := key
-	detail := fmt.Sprintf("%v", value)
-
-	dst.Code = &code
-	dst.Detail = detail
 }

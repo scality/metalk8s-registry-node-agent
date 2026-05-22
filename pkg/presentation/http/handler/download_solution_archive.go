@@ -105,12 +105,16 @@ func (h *DownloadSolutionArchive) genDownloadSolutionArchiveResponseObjectFromEr
 	h.fillProblemDetailsFromAPIErrorsError(&problemDetails, apiErr)
 
 	switch int(apiErr.Identifier / 1000) {
-	case http.StatusBadRequest, http.StatusUnprocessableEntity:
-		// TODO: Fix the status code on https://scality.atlassian.net/browse/ARTESCA-13615
-		// The status code should be 422, but the generated code uses 400.
-		// However, change this will demand changes the OpenAPI Spec.
+	case http.StatusBadRequest:
 		return intern.DownloadSolutionArchive400ApplicationProblemPlusJSONResponse{
 			BadRequestApplicationProblemPlusJSONResponse: intern.BadRequestApplicationProblemPlusJSONResponse(
+				problemDetails,
+			),
+		}, nil
+
+	case http.StatusUnprocessableEntity:
+		return intern.DownloadSolutionArchive422ApplicationProblemPlusJSONResponse{
+			UnprocessableEntityApplicationProblemPlusJSONResponse: intern.UnprocessableEntityApplicationProblemPlusJSONResponse(
 				problemDetails,
 			),
 		}, nil

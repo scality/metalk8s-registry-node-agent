@@ -2,11 +2,9 @@
 package handler
 
 import (
-	"bytes"
 	"fmt"
 	"regexp"
 	"strconv"
-	"strings"
 
 	"github.com/scality/go-errors"
 	"github.com/scality/metalk8s-registry-node-agent/pkg/domain"
@@ -148,28 +146,4 @@ func parseContentHeader(
 	}
 
 	return start, end, total, nil
-}
-
-// fillInstanceFromPropertiesMap generates an instance string from a map[string]any.
-func fillInstanceFromPropertiesMap(
-	dst **string,
-	src map[string]any,
-) {
-	b := bytes.NewBuffer(nil)
-
-	if dst != nil && *dst != nil {
-		b.WriteString(**dst)
-		b.WriteString(":")
-	}
-
-	for key, value := range src {
-		if !strings.HasPrefix(key, "problem_") {
-			fmt.Fprintf(b, "%s='%v',", key, value)
-		}
-	}
-
-	if b.Len() > 0 {
-		instance := b.String()[:b.Len()-1]
-		*dst = &instance
-	}
 }

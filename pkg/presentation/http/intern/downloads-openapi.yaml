@@ -66,6 +66,8 @@ paths:
           $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
         "500":
           $ref: "#/components/responses/ServerError"
     head:
@@ -176,6 +178,15 @@ components:
           examples:
             notFound:
               $ref: "#/components/examples/not-found"
+    UnprocessableEntity:
+      description: The request was malformed or could not be processed. 
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/ProblemDetails"
+          examples:
+            unprocessableEntity:
+              $ref: "#/components/examples/unprocessable-entity"
     ServerError:
       description: The server encountered an unexpected error
       content:
@@ -219,47 +230,16 @@ components:
           description: >-
             An API specific error code aiding the provider team understand the error based on their own potential taxonomy or registry.
           maxLength: 50
-        errors:
-          $ref: "#/components/schemas/Errors"
+        additionalInformation:
+          type: object
+          description: A map containing flexible metadata or contextual details about the error.
+          additionalProperties: true # Allows keys of string to map to any type of value
+          example:
+            invalidFields: ["email", "zipCode"]
+            timestamp: "2026-05-21T08:14:00Z"
+            internalId: 98765
       required:
         - title
-    Errors:
-      type: array
-      description: An array of error details to accompany a problem details response.
-      maxItems: 1000
-      items:
-        $ref: "#/components/schemas/ErrorDetail"
-    ErrorDetail:
-      type: object
-      description: An object to provide explicit details on a problem towards an API consumer.
-      properties:
-        detail:
-          type: string
-          description: >-
-            A granular description on the specific error related to a body property, query parameter, path parameters, and/or header.
-          maxLength: 4096
-        pointer:
-          type: string
-          description: >-
-            A JSON Pointer to a specific request body property that is the source of error.
-          maxLength: 1024
-        parameter:
-          type: string
-          description: >-
-            The name of the query or path parameter that is the source of error.
-          maxLength: 1024
-        header:
-          type: string
-          description: >-
-            The name of the header that is the source of error.
-          maxLength: 1024
-        code:
-          type: string
-          description: >-
-            A string containing additional provider specific codes to identify the error context.
-          maxLength: 50
-      required:
-        - detail
   examples:
     missing-body-property:
       description: Representation of a 400 Bad Request response where a rquired `body` property was omitted by the consumer.
@@ -277,9 +257,6 @@ components:
         title: Missing body property
         detail: The request is missing an expected body property.
         code: 400-09
-        errors:
-          - detail: The body property {name} is required.
-            pointer: /name
     missing-request-parameter:
       description: Representation of a 400 Bad Request response where a `query` or `path` parameter was omitted by the consumer.
       value:
@@ -296,9 +273,6 @@ components:
         title: Missing request parameter
         detail: The request is missing an expected query or path parameter.
         code: 400-03
-        errors:
-          - detail: The query parameter {name} is required.
-            parameter: name
     missing-request-header:
       description: Representation of a 400 Bad Request response where a `header` parameter was omitted by the consumer.
       value:
@@ -315,9 +289,6 @@ components:
         title: Missing request header
         detail: The request is missing an expected HTTP request header.
         code: 400-02
-        errors:
-          - detail: The header {Accept} is required
-            header: Accept
     invalid-body-property-format:
       description: Representation of a 400 Bad Request response where a body property does not leverage the correct format
       value:
@@ -334,9 +305,6 @@ components:
         title: Invalid Body Property Format
         detail: The request body contains a malformed property.
         code: 400-04
-        errors:
-          - detail: Must be a positive integer
-            pointer: /quantity
     invalid-request-parameter-format:
       description: Representation of a 400 Bad Request response where a query or path parameter is malformed.
       value:
@@ -353,9 +321,6 @@ components:
         title: Invalid Request Parameter Format
         detail: The request contains a malformed query parameter.
         code: 400-05
-        errors:
-          - detail: The expected string values are ASC or DSC
-            parameter: sort
     invalid-request-header-format:
       description: Representation of a 400 Bad Request response where request header provided was malformed
       value:
@@ -372,9 +337,6 @@ components:
         title: Invalid Request Header Format
         detail: The request contains a malformed request header parameter.
         code: 400-06
-        errors:
-          - detail: The request header was malformed
-            header: Accept
     invalid-body-property-value:
       description: Representation of a 400 Bad Request response where the request body contains a invalid property value
       value:
@@ -391,9 +353,6 @@ components:
         title: Invalid Body Property Value
         detail: The request body contains an invalid body property value.
         code: 400-07
-        errors:
-          - detail: A value `Never` is an invalid. Please provide `monthly` or `quarterly`
-            pointer: "#/marketingCommunication/frequency"
     invalid-request-parameter-value:
       description: Representation of a 400 Bad Request response where the request contains a invalid query or path parameter value.
       value:
@@ -410,9 +369,6 @@ components:
         title: Invalid Request Parameter Value
         detail: The request body contains an invalid request parameter value.
         code: 400-08
-        errors:
-          - detail: The value `top-down` is not a valid sort parameter value. The expected string values are `ASC` or `DSC`
-            parameter: sort
     unauthorized:
       value:
         type: about:blank
@@ -431,6 +387,12 @@ components:
         title: Not found
         detail: The requested resource was not found
         status: 404
+    unprocessable-entity:
+      value:
+        type: about:blank
+        title: Unprocessable Entity
+        detail: The request was malformed or could not be processed.
+        status: 422
     server-error:
       value:
         type: about:blank
