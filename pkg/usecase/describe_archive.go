@@ -48,14 +48,25 @@ func (uc *DescribeSolutionArchive) Execute(
 	// matching solutionArchiveStorageNamePattern
 	fileNames, err := uc.archiveLister.ListFiles()
 	if err != nil {
-		return 0, errors.Wrap(err)
+		return 0, errors.Wrap(err,
+			errors.WithIdentifier(196),
+			errors.WithDetail("error while listing solution archives"),
+			errors.WithProperty("usecase", "describe_solution_archive"),
+			errors.WithProperty("instance", fmt.Sprintf(
+				"%s/downloads/%s/%s",
+				uc.rootAPIPath,
+				solutionArchive.Name,
+				solutionArchive.Version,
+			)),
+		)
 	}
 
 	// Check if the solution archive exists in the storage
 	if !library.SolutionArchiveExists(solutionArchive, fileNames) {
 		return 0, errors.Wrap(domain.ErrNotFound,
-			errors.WithIdentifier(404000),
+			errors.WithIdentifier(197),
 			errors.WithDetail("solution archive not found"),
+			errors.WithProperty("usecase", "describe_solution_archive"),
 			errors.WithProperty("instance", fmt.Sprintf(
 				"%s/downloads/%s/%s",
 				uc.rootAPIPath,
@@ -70,7 +81,19 @@ func (uc *DescribeSolutionArchive) Execute(
 	solutionArchiveFileName := library.GenSolutionArchiveFileName(solutionArchive)
 	size, err := uc.archiveLister.GetArchiveSize(solutionArchiveFileName)
 	if err != nil {
-		return 0, errors.Wrap(err)
+		return 0, errors.Wrap(err,
+			errors.WithIdentifier(198),
+			errors.WithDetail("error while getting archive size"),
+			errors.WithProperty("usecase", "describe_solution_archive"),
+			errors.WithProperty("solution_archive_name", solutionArchive.Name),
+			errors.WithProperty("solution_archive_version", solutionArchive.Version),
+			errors.WithProperty("instance", fmt.Sprintf(
+				"%s/downloads/%s/%s",
+				uc.rootAPIPath,
+				solutionArchive.Name,
+				solutionArchive.Version,
+			)),
+		)
 	}
 
 	uc.logger.Debug().Any("solution_archive", solutionArchive).Msg("Solution archive described")
