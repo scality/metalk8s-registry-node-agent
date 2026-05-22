@@ -38,12 +38,24 @@ func (h *DescribeSolutionArchive) DescribeSolutionArchive(
 	var solutionArchive domain.SolutionArchive
 
 	if err := fillSolutionArchiveFromDescribeSolutionArchiveRequestObject(&solutionArchive, &request); err != nil {
-		return h.genDescribeSolutionArchiveResponseObjectFromError(errors.Wrap(err))
+		return h.genDescribeSolutionArchiveResponseObjectFromError(
+			errors.Wrap(err,
+				errors.WithIdentifier(http.StatusBadRequest),
+			),
+		)
 	}
 
 	size, err := h.uc.Execute(&solutionArchive)
 	if err != nil {
-		return h.genDescribeSolutionArchiveResponseObjectFromError(errors.Wrap(err))
+		// Default value for the API error
+		apiErr := errors.Wrap(err,
+			errors.WithIdentifier(http.StatusInternalServerError),
+		)
+		if errors.Is(err, errors.Wrap(domain.ErrNotFound, errors.WithIdentifier(404000))) {
+			apiErr = errors.Wrap(err, errors.WithIdentifier(http.StatusNotFound))
+		}
+
+		return h.genDescribeSolutionArchiveResponseObjectFromError(apiErr)
 	}
 
 	return intern.DescribeSolutionArchive200Response{
@@ -68,7 +80,7 @@ func (h *DescribeSolutionArchive) genDescribeSolutionArchiveResponseObjectFromEr
 
 	h.fillProblemDetailsFromAPIErrorsError(&problemDetails, apiErr)
 
-	switch int(apiErr.Identifier / 1000) {
+	switch int(*problemDetails.Status) {
 	case http.StatusBadRequest:
 		return intern.DescribeSolutionArchive400ApplicationProblemPlusJSONResponse{
 			BadRequestApplicationProblemPlusJSONResponse: intern.BadRequestApplicationProblemPlusJSONResponse(

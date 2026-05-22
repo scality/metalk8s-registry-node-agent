@@ -42,12 +42,25 @@ func (h *DownloadSolutionArchive) DownloadSolutionArchive(
 	var solutionArchivePart domain.Part
 
 	if err := fillSolutionArchiveFromDownloadSolutionArchiveRequestObject(&solutionArchivePart, &request); err != nil {
-		return h.genDownloadSolutionArchiveResponseObjectFromError(errors.Wrap(err))
+		return h.genDownloadSolutionArchiveResponseObjectFromError(
+			errors.Wrap(err,
+				errors.WithIdentifier(http.StatusBadRequest),
+			),
+		)
 	}
 
 	partFile, err := h.uc.Execute(&solutionArchivePart)
 	if err != nil {
-		return h.genDownloadSolutionArchiveResponseObjectFromError(errors.Wrap(err))
+		// Default value for the API error
+		apiErr := errors.Wrap(err,
+			errors.WithIdentifier(http.StatusInternalServerError),
+		)
+		if errors.Is(err, errors.Wrap(domain.ErrNotFound, errors.WithIdentifier(404000))) {
+			apiErr = errors.Wrap(err, errors.WithIdentifier(http.StatusNotFound))
+		}
+
+		return h.genDownloadSolutionArchiveResponseObjectFromError(apiErr)
+
 	}
 
 	// As oapi-codegen does not handle HTTP Trailers, we need to manually implement this point,
@@ -104,7 +117,7 @@ func (h *DownloadSolutionArchive) genDownloadSolutionArchiveResponseObjectFromEr
 
 	h.fillProblemDetailsFromAPIErrorsError(&problemDetails, apiErr)
 
-	switch int(apiErr.Identifier / 1000) {
+	switch int(*problemDetails.Status) {
 	case http.StatusBadRequest:
 		return intern.DownloadSolutionArchive400ApplicationProblemPlusJSONResponse{
 			BadRequestApplicationProblemPlusJSONResponse: intern.BadRequestApplicationProblemPlusJSONResponse(

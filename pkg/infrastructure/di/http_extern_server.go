@@ -36,7 +36,11 @@ func (c *Container) GetHTTPExternServer() *http.Server {
 				contentRange := request.Header.Get("Content-Range")
 				headerStart, headerEnd, _, err := handler.ParseContentRange(contentRange)
 				if err != nil {
-					handler.WriteExternProblemDetails(c.GetLogger(), writer, err, "Invalid Content-Range header")
+					handler.WriteExternProblemDetails(
+						c.GetLogger(),
+						writer,
+						errors.Wrap(err, errors.WithIdentifier(http.StatusBadRequest)),
+						"Invalid Content-Range header")
 					return
 				}
 				rangeSize := headerEnd - headerStart + 1
@@ -44,7 +48,7 @@ func (c *Container) GetHTTPExternServer() *http.Server {
 				// by setting request.ContentLength to 0 or -1 so the comparison below is sufficient.
 				if rangeSize != request.ContentLength {
 					bodySizeErr := errors.Wrap(domain.ErrHandlerBadRequest,
-						errors.WithIdentifier(400007),
+						errors.WithIdentifier(http.StatusBadRequest),
 						errors.WithDetail("Content-Range header does not match the body size"),
 						errors.WithProperty("content_range_size", rangeSize),
 						errors.WithProperty("content_length", request.ContentLength),

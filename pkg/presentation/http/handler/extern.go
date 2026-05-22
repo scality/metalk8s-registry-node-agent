@@ -3,7 +3,6 @@ package handler
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"strings"
 
@@ -107,8 +106,9 @@ func fillExternProblemDetailsFromAPIErrorsError(
 ) {
 	logger.Error().Err(src).Msg(logMsg)
 
-	status := src.Identifier / 1000 // nolint: gosec // TODO: Refactor this in the "polishing" sprint.
-	code := fmt.Sprintf("%d", src.Identifier)
+	// The HTTP status is the last error identifier.
+	status := int32(src.Identifier[len(src.Identifier)-1])
+	code := src.GetIdentifier()
 
 	dst.Title = src.Title
 	dst.Status = &status
@@ -156,7 +156,7 @@ func WriteExternProblemDetails(
 	var apiErr *errors.Error
 	if !errors.As(err, &apiErr) {
 		apiErr = errors.Wrap(domain.ErrUnknown,
-			errors.WithIdentifier(500000),
+			errors.WithIdentifier(http.StatusInternalServerError),
 			errors.WithDetail(err.Error()),
 		).(*errors.Error)
 	}

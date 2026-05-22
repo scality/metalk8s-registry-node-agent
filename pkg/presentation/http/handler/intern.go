@@ -2,7 +2,6 @@
 package handler
 
 import (
-	"fmt"
 	"strings"
 
 	"github.com/rs/zerolog"
@@ -92,8 +91,9 @@ func fillInternProblemDetailsFromAPIErrorsError(
 ) {
 	logger.Error().Err(src).Msg(logMsg)
 
-	status := src.Identifier / 1000 // nolint: gosec // TODO: Refactor this in the "polishing" sprint.
-	code := fmt.Sprintf("%d", src.Identifier)
+	// The HTTP status is the last error identifier.
+	status := int32(src.Identifier[len(src.Identifier)-1])
+	code := src.GetIdentifier()
 
 	dst.Title = src.Title
 	dst.Status = &status

@@ -39,12 +39,30 @@ func (h *UploadPart) UploadChunk(
 	var part domain.Part
 
 	if err := fillPartFromUploadChunkRequestObject(&part, &request); err != nil {
-		return h.genUploadChunkResponseObjectFromError(errors.Wrap(err))
+		return h.genUploadChunkResponseObjectFromError(
+			errors.Wrap(err,
+				errors.WithIdentifier(http.StatusBadRequest),
+			),
+		)
 	}
 
 	solutionArchiveStatus, err := h.uc.Execute(&part)
 	if err != nil {
-		return h.genUploadChunkResponseObjectFromError(errors.Wrap(err))
+		// Default value for the API error
+		apiErr := errors.Wrap(err,
+			errors.WithIdentifier(http.StatusInternalServerError),
+		)
+		if errors.Is(err, errors.Wrap(domain.ErrNotFound, errors.WithIdentifier(404000))) {
+			apiErr = errors.Wrap(err, errors.WithIdentifier(http.StatusNotFound))
+		} else if errors.Is(err, errors.Wrap(domain.ErrStorageProviderBusinessRuleViolation, errors.WithIdentifier(422001))) {
+			apiErr = errors.Wrap(err, errors.WithIdentifier(http.StatusUnprocessableEntity))
+		} else if errors.Is(err, errors.Wrap(domain.ErrHandlerBadRequest, errors.WithIdentifier(400007))) {
+			apiErr = errors.Wrap(err, errors.WithIdentifier(http.StatusBadRequest))
+		} else if errors.Is(err, errors.Wrap(domain.ErrHandlerInvalidRequestHeaderFormat, errors.WithIdentifier(400006))) {
+			apiErr = errors.Wrap(err, errors.WithIdentifier(http.StatusBadRequest))
+		}
+
+		return h.genUploadChunkResponseObjectFromError(apiErr)
 	}
 
 	var response extern.UploadChunkSuccessResponse
@@ -69,7 +87,7 @@ func (h *UploadPart) genUploadChunkResponseObjectFromError(
 
 	h.fillProblemDetailsFromAPIErrorsError(&problemDetails, apiErr)
 
-	switch int(apiErr.Identifier / 1000) {
+	switch int(*problemDetails.Status) {
 	case http.StatusBadRequest:
 		return extern.UploadChunk400ApplicationProblemPlusJSONResponse{
 			BadRequestApplicationProblemPlusJSONResponse: extern.BadRequestApplicationProblemPlusJSONResponse(
