@@ -44,7 +44,13 @@ func (uc *RemoveSession) Execute(solutionArchive *domain.SolutionArchive) error 
 		if errors.Is(err, domain.ErrBucketManagerNotFound) {
 			return nil
 		}
-		return errors.Wrap(err)
+		return errors.Wrap(err,
+			errors.WithIdentifier(228),
+			errors.WithDetail("error on listing buckets"),
+			errors.WithProperty("usecase", "remove_session"),
+			errors.WithProperty("solution_archive_name", solutionArchive.Name),
+			errors.WithProperty("solution_archive_version", solutionArchive.Version),
+		)
 	}
 
 	// Extract the session bucket
@@ -54,13 +60,23 @@ func (uc *RemoveSession) Execute(solutionArchive *domain.SolutionArchive) error 
 			return nil
 		}
 		return errors.Wrap(err,
+			errors.WithIdentifier(229),
 			errors.WithDetail("failed to extract the session bucket"),
+			errors.WithProperty("usecase", "remove_session"),
+			errors.WithProperty("solution_archive_name", solutionArchive.Name),
+			errors.WithProperty("solution_archive_version", solutionArchive.Version),
 		)
 	}
 
 	err = uc.bucketManager.DeleteBucket(sessionBucket)
 	if err != nil {
-		return errors.Wrap(err)
+		return errors.Wrap(err,
+			errors.WithIdentifier(230),
+			errors.WithDetail("unexpected error while deleting the session bucket"),
+			errors.WithProperty("usecase", "remove_session"),
+			errors.WithProperty("solution_archive_name", solutionArchive.Name),
+			errors.WithProperty("solution_archive_version", solutionArchive.Version),
+		)
 	}
 
 	uc.logger.Debug().Any("solution_archive", solutionArchive).Msg("Session removed")
