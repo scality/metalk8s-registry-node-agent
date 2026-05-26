@@ -11,6 +11,7 @@ import (
 	. "github.com/onsi/gomega"
 	"k8s.io/utils/ptr"
 
+	"github.com/scality/go-errors"
 	"github.com/scality/metalk8s-registry-node-agent/pkg/domain"
 	"github.com/scality/metalk8s-registry-node-agent/pkg/library"
 )
@@ -88,7 +89,7 @@ var _ = Describe("Get External Solution Archive UseCase", func() {
 	})
 
 	Context("When the target archive has no initialized session", func() {
-		It("should return a 404 not found error", func() {
+		It("should return a Not Found Error", func() {
 			target := &domain.SolutionArchive{
 				Name:    "no-session-archive",
 				Version: "1.0.0",
@@ -102,6 +103,12 @@ var _ = Describe("Get External Solution Archive UseCase", func() {
 				internDownloadURL(solutionArchive.Name, solutionArchive.Version),
 			)
 			Expect(err).To(HaveOccurred())
+			Expect(errors.Is(err, domain.ErrNotFound)).To(BeTrue())
+			// "206-122" means No bucket found at all
+			// "207-27" means no bucket related to the Solution Archive found
+			Expect(
+				errors.IdentifierStartsWith(err, "206-122") || errors.IdentifierStartsWith(err, "207-27"),
+			).To(BeTrue())
 		})
 	})
 
@@ -129,6 +136,8 @@ var _ = Describe("Get External Solution Archive UseCase", func() {
 				internDownloadURL(solutionArchive.Name, solutionArchive.Version),
 			)
 			Expect(err).To(HaveOccurred())
+			Expect(errors.Is(err, domain.ErrConflict)).To(BeTrue())
+			Expect(errors.IdentifierStartsWith(err, "210-149-29")).To(BeTrue())
 		})
 	})
 
@@ -151,6 +160,8 @@ var _ = Describe("Get External Solution Archive UseCase", func() {
 				internDownloadURL("non-existent-source-archive", "9.9.9"),
 			)
 			Expect(err).To(HaveOccurred())
+			Expect(errors.Is(err, domain.ErrExternalDownloaderWrongStatusCode)).To(BeTrue())
+			Expect(errors.IdentifierStartsWith(err, "205-136")).To(BeTrue())
 		})
 	})
 
@@ -173,6 +184,8 @@ var _ = Describe("Get External Solution Archive UseCase", func() {
 				"https://127.0.0.1:1/api/v1/downloads/nope/0.0.0",
 			)
 			Expect(err).To(HaveOccurred())
+			Expect(errors.Is(err, domain.ErrExternalDownloaderInternal)).To(BeTrue())
+			Expect(errors.IdentifierStartsWith(err, "205-135")).To(BeTrue())
 		})
 	})
 })

@@ -21,26 +21,30 @@ func fillSolutionArchiveFromDownloadSolutionArchiveRequestObject(
 
 	if src.SolutionArchive == "" {
 		return errors.Wrap(domain.ErrHandlerMissingRequestParameter,
-			errors.WithIdentifier(400003),
+			errors.WithIdentifier(244),
 			errors.WithDetail("parameter 'solution-archive' is missing"),
 		)
 	}
 
 	if src.Version == "" {
 		return errors.Wrap(domain.ErrHandlerMissingRequestParameter,
-			errors.WithIdentifier(400003),
+			errors.WithIdentifier(245),
 			errors.WithDetail("parameter 'version' is missing"),
 		)
 	}
 	if src.Params.Range == "" {
 		return errors.Wrap(domain.ErrHandlerMissingRequestHeader,
-			errors.WithIdentifier(400002),
+			errors.WithIdentifier(246),
 			errors.WithDetail("header 'Range' is missing"),
 		)
 	}
 	start, end, _, err := library.ParseRange(src.Params.Range)
 	if err != nil {
-		return errors.Wrap(err)
+		return errors.Wrap(err,
+			errors.WithIdentifier(247),
+			errors.WithDetail("Range is not valid"),
+			errors.WithProperty("Range", src.Params.Range),
+		)
 	}
 
 	solutionArchive := &domain.SolutionArchive{
@@ -65,14 +69,14 @@ func fillSolutionArchiveFromDescribeSolutionArchiveRequestObject(
 ) error {
 	if src.SolutionArchive == "" {
 		return errors.Wrap(domain.ErrHandlerMissingRequestParameter,
-			errors.WithIdentifier(400003),
+			errors.WithIdentifier(248),
 			errors.WithDetail("parameter 'solution-archive' is missing"),
 		)
 	}
 
 	if src.Version == "" {
 		return errors.Wrap(domain.ErrHandlerMissingRequestParameter,
-			errors.WithIdentifier(400003),
+			errors.WithIdentifier(249),
 			errors.WithDetail("parameter 'version' is missing"),
 		)
 	}

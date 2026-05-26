@@ -72,14 +72,18 @@ func fillPartFromUploadChunkRequestObject(
 ) error {
 	if src.Body == nil {
 		return errors.Wrap(domain.ErrHandlerBadRequest,
-			errors.WithIdentifier(400000),
+			errors.WithIdentifier(242),
 			errors.WithDetail("body is missing"),
 		)
 	}
 
 	start, end, total, err := library.ParseContentRange(src.Params.ContentRange)
 	if err != nil {
-		return errors.Wrap(err)
+		return errors.Wrap(err,
+			errors.WithIdentifier(243),
+			errors.WithDetail("Content-Range is not valid"),
+			errors.WithProperty("Content-Range", src.Params.ContentRange),
+		)
 	}
 
 	dst.SolutionArchive = &domain.SolutionArchive{

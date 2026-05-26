@@ -51,7 +51,7 @@ func (h *DescribeSolutionArchive) DescribeSolutionArchive(
 		apiErr := errors.Wrap(err,
 			errors.WithIdentifier(http.StatusInternalServerError),
 		)
-		if errors.Is(err, errors.Wrap(domain.ErrNotFound, errors.WithIdentifier(404000))) {
+		if errors.IdentifierStartsWith(err, "197") {
 			apiErr = errors.Wrap(err, errors.WithIdentifier(http.StatusNotFound))
 		}
 
@@ -76,7 +76,9 @@ func (h *DescribeSolutionArchive) genDescribeSolutionArchiveResponseObjectFromEr
 
 	var problemDetails intern.ProblemDetails
 
-	errors.As(err, &apiErr)
+	// no need to test for bad conversion
+	// the error is an underlying *errors.Error, wrapped in DescribeSolutionArchive
+	errors.As(err, &apiErr) // nolint: errcheck
 
 	h.fillProblemDetailsFromAPIErrorsError(&problemDetails, apiErr)
 

@@ -52,14 +52,16 @@ func (h *UploadPart) UploadChunk(
 		apiErr := errors.Wrap(err,
 			errors.WithIdentifier(http.StatusInternalServerError),
 		)
-		if errors.Is(err, errors.Wrap(domain.ErrNotFound, errors.WithIdentifier(404000))) {
+		if errors.IdentifierStartsWith(err, "232-122") {
 			apiErr = errors.Wrap(err, errors.WithIdentifier(http.StatusNotFound))
-		} else if errors.Is(err, errors.Wrap(domain.ErrStorageProviderBusinessRuleViolation, errors.WithIdentifier(422001))) {
+		} else if errors.IdentifierStartsWith(err, "233-27") {
+			apiErr = errors.Wrap(err, errors.WithIdentifier(http.StatusNotFound))
+		} else if errors.IdentifierStartsWith(err, "235") {
+			apiErr = errors.Wrap(err, errors.WithIdentifier(http.StatusNotFound))
+		} else if errors.IdentifierStartsWith(err, "238-192-181") {
 			apiErr = errors.Wrap(err, errors.WithIdentifier(http.StatusUnprocessableEntity))
-		} else if errors.Is(err, errors.Wrap(domain.ErrHandlerBadRequest, errors.WithIdentifier(400007))) {
-			apiErr = errors.Wrap(err, errors.WithIdentifier(http.StatusBadRequest))
-		} else if errors.Is(err, errors.Wrap(domain.ErrHandlerInvalidRequestHeaderFormat, errors.WithIdentifier(400006))) {
-			apiErr = errors.Wrap(err, errors.WithIdentifier(http.StatusBadRequest))
+		} else if errors.IdentifierStartsWith(err, "238-192-183") {
+			apiErr = errors.Wrap(err, errors.WithIdentifier(http.StatusUnprocessableEntity))
 		}
 
 		return h.genUploadChunkResponseObjectFromError(apiErr)
@@ -83,7 +85,9 @@ func (h *UploadPart) genUploadChunkResponseObjectFromError(
 
 	var problemDetails extern.ProblemDetails
 
-	errors.As(err, &apiErr)
+	// no need to test for bad conversion
+	// the error is an underlying *errors.Error, wrapped in UploadChunk
+	errors.As(err, &apiErr) // nolint: errcheck
 
 	h.fillProblemDetailsFromAPIErrorsError(&problemDetails, apiErr)
 

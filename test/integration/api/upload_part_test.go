@@ -198,8 +198,10 @@ var _ = Describe("Upload Part API", func() {
 
 			By("returning an http/422 response")
 			Expect(resUpl.HTTPResponse.StatusCode).To(Equal(422))
-			Expect(*resUpl.ApplicationproblemJSON422.Code).To(Equal("422-422001"))
-			Expect(*resUpl.ApplicationproblemJSON422.Status).To(Equal(int32(422)))
+			Expect(*resUpl.ApplicationproblemJSON422.Code).To(Equal("422-238-192-183"))
+			Expect(*resUpl.ApplicationproblemJSON422.Detail).To(ContainSubstring(
+				"the hash of the recipient file does not match the solution archive metadata",
+			))
 
 			By("not storing the solution archive")
 			solutionArchiveNameVersion := library.GenBucketName(solutionArchive)
