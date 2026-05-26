@@ -44,14 +44,26 @@ func (uc *RemoveSolutionArchive) Execute(solutionArchive *domain.SolutionArchive
 	// matching solutionArchiveStorageNamePattern
 	fileNames, err := uc.archiveLister.ListFiles()
 	if err != nil {
-		return errors.Wrap(err)
+		return errors.Wrap(err,
+			errors.WithIdentifier(226),
+			errors.WithDetail("error on listing solution archives"),
+			errors.WithProperty("usecase", "remove_solution_archive"),
+			errors.WithProperty("solution_archive_name", solutionArchive.Name),
+			errors.WithProperty("solution_archive_version", solutionArchive.Version),
+		)
 	}
 
 	// Check if the solution archive exists in the storage
 	if library.SolutionArchiveExists(solutionArchive, fileNames) {
 		err := uc.archiveRemover.DeleteFile(library.GenSolutionArchiveFileName(solutionArchive))
 		if err != nil {
-			return errors.Wrap(err)
+			return errors.Wrap(err,
+				errors.WithIdentifier(227),
+				errors.WithDetail("unexpected error while removing the solution archive"),
+				errors.WithProperty("usecase", "remove_solution_archive"),
+				errors.WithProperty("solution_archive_name", solutionArchive.Name),
+				errors.WithProperty("solution_archive_version", solutionArchive.Version),
+			)
 		}
 	}
 
