@@ -54,14 +54,36 @@ func (uc *UploadPart) Execute(part *domain.Part) (*domain.SolutionArchiveStatus,
 	// List all the buckets
 	buckets, err := uc.bucketManager.ListBuckets()
 	if err != nil {
-		return nil, errors.Wrap(err)
+		return nil, errors.Wrap(err,
+			errors.WithIdentifier(232),
+			errors.WithDetail("error on listing buckets"),
+			errors.WithProperty("usecase", "upload_part"),
+			errors.WithProperty("solution_archive_name", part.SolutionArchive.Name),
+			errors.WithProperty("solution_archive_version", part.SolutionArchive.Version),
+			errors.WithProperty("instance", fmt.Sprintf(
+				"%s/uploads/%s/%s",
+				uc.rootAPIPath,
+				part.SolutionArchive.Name,
+				part.SolutionArchive.Version,
+			)),
+		)
 	}
 
 	// Extract the session bucket
 	sessionBucket, err := library.ExtractSessionBucket(buckets, part.SolutionArchive)
 	if err != nil {
 		return nil, errors.Wrap(err,
+			errors.WithIdentifier(233),
 			errors.WithDetail("failed to extract the session bucket"),
+			errors.WithProperty("usecase", "upload_part"),
+			errors.WithProperty("solution_archive_name", part.SolutionArchive.Name),
+			errors.WithProperty("solution_archive_version", part.SolutionArchive.Version),
+			errors.WithProperty("instance", fmt.Sprintf(
+				"%s/uploads/%s/%s",
+				uc.rootAPIPath,
+				part.SolutionArchive.Name,
+				part.SolutionArchive.Version,
+			)),
 		)
 	}
 
@@ -69,6 +91,11 @@ func (uc *UploadPart) Execute(part *domain.Part) (*domain.SolutionArchiveStatus,
 	solutionArchiveFromManifest, err := uc.multipartInspector.GetMultipartFile(sessionBucket)
 	if err != nil {
 		return nil, errors.Wrap(err,
+			errors.WithIdentifier(234),
+			errors.WithDetail("error on retrieving the manifest file"),
+			errors.WithProperty("usecase", "upload_part"),
+			errors.WithProperty("solution_archive_name", part.SolutionArchive.Name),
+			errors.WithProperty("solution_archive_version", part.SolutionArchive.Version),
 			errors.WithProperty("instance", fmt.Sprintf(
 				"%s/uploads/%s/%s",
 				uc.rootAPIPath,
@@ -82,8 +109,11 @@ func (uc *UploadPart) Execute(part *domain.Part) (*domain.SolutionArchiveStatus,
 	if solutionArchiveFromManifest.Name != part.SolutionArchive.Name ||
 		solutionArchiveFromManifest.Version != part.SolutionArchive.Version {
 		return nil, errors.Wrap(domain.ErrPartUploaderNotFound,
-			errors.WithIdentifier(404000),
+			errors.WithIdentifier(235),
 			errors.WithDetail("solution archive not found in the current session manifest"),
+			errors.WithProperty("usecase", "upload_part"),
+			errors.WithProperty("solution_archive_name", part.SolutionArchive.Name),
+			errors.WithProperty("solution_archive_version", part.SolutionArchive.Version),
 			errors.WithProperty("instance", fmt.Sprintf(
 				"%s/uploads/%s/%s",
 				uc.rootAPIPath,
@@ -102,6 +132,11 @@ func (uc *UploadPart) Execute(part *domain.Part) (*domain.SolutionArchiveStatus,
 	)
 	if err != nil {
 		return nil, errors.Wrap(err,
+			errors.WithIdentifier(236),
+			errors.WithDetail("error on storing the part"),
+			errors.WithProperty("usecase", "upload_part"),
+			errors.WithProperty("solution_archive_name", part.SolutionArchive.Name),
+			errors.WithProperty("solution_archive_version", part.SolutionArchive.Version),
 			errors.WithProperty("instance", fmt.Sprintf(
 				"%s/uploads/%s/%s",
 				uc.rootAPIPath,
@@ -114,6 +149,11 @@ func (uc *UploadPart) Execute(part *domain.Part) (*domain.SolutionArchiveStatus,
 	err = uc.multipartUploader.CommitPart(sessionBucket, part)
 	if err != nil {
 		return nil, errors.Wrap(err,
+			errors.WithIdentifier(237),
+			errors.WithDetail("error on committing the part"),
+			errors.WithProperty("usecase", "upload_part"),
+			errors.WithProperty("solution_archive_name", part.SolutionArchive.Name),
+			errors.WithProperty("solution_archive_version", part.SolutionArchive.Version),
 			errors.WithProperty("instance", fmt.Sprintf(
 				"%s/uploads/%s/%s",
 				uc.rootAPIPath,
@@ -137,6 +177,11 @@ func (uc *UploadPart) Execute(part *domain.Part) (*domain.SolutionArchiveStatus,
 	)
 	if err != nil {
 		return nil, errors.Wrap(err,
+			errors.WithIdentifier(238),
+			errors.WithDetail("error on consolidating the part"),
+			errors.WithProperty("usecase", "upload_part"),
+			errors.WithProperty("solution_archive_name", part.SolutionArchive.Name),
+			errors.WithProperty("solution_archive_version", part.SolutionArchive.Version),
 			errors.WithProperty("instance", fmt.Sprintf(
 				"%s/uploads/%s/%s",
 				uc.rootAPIPath,
