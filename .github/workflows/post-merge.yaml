@@ -13,3 +13,12 @@ jobs:
       is-development: false
       is-latest: true
       is-stable: false
+
+  generate-sbom:
+    needs: build
+    uses: ./.github/workflows/generate-sbom.yaml
+    secrets: inherit
+    with:
+      image-name: ${{ needs.build.outputs.image-name }}
+      image-version: ${{ needs.build.outputs.image-version }}
+      upload-sbom: true
