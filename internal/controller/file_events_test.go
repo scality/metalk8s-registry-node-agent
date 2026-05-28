@@ -18,6 +18,7 @@ package controller
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"sync"
 	"time"
@@ -63,6 +64,13 @@ func (f *fakeClient) List(ctx context.Context, list client.ObjectList, opts ...c
 	listOpts := &client.ListOptions{}
 	for _, opt := range opts {
 		opt.ApplyToList(listOpts)
+	}
+
+	// Kubernetes connection failure testing
+	if listOpts.FieldSelector != nil &&
+		(listOpts.FieldSelector.Matches(fields.Set{"LocalSolutionArchiveName": "test-kubernetes-connection-failure"}) ||
+			listOpts.FieldSelector.Matches(fields.Set{"LocalSolutionArchiveNameVersion": "test-kubernetes-connection-failure-1.0.0"})) {
+		return errors.New("kubernetes connection failure error")
 	}
 
 	// Filter resources based on matching fields
@@ -689,6 +697,26 @@ var _ = Describe("FileEvents", func() {
 				EventType:    fsnotify.Rename.String(),
 			}
 
+			// Verify that no reconcile/delete were triggered
+			Consistently(reconcileCh, time.Millisecond*500).ShouldNot(Receive())
+			Consistently(deleteCh, time.Millisecond*500).ShouldNot(Receive())
+		})
+
+		It("should requeue a processing event when kubernetes connection fails", func() {
+			// Start listening in a goroutine
+			go fileEventHandler.Listen()
+
+			// Send an event for a file
+			filenameCh <- domain.FileEventDetails{
+				FullPathName: "/archives/test-kubernetes-connection-failure-1.0.0.iso",
+				ObjectName:   "test-kubernetes-connection-failure-1.0.0",
+				IsDir:        false,
+				Origin:       domain.SolutionArchivesOrigin,
+				EventType:    fsnotify.Create.String(),
+			}
+
+			// Verify that the event was requeued on filenameChan
+			Eventually(filenameCh, time.Second*5).Should(Receive())
 			// Verify that no reconcile/delete were triggered
 			Consistently(reconcileCh, time.Millisecond*500).ShouldNot(Receive())
 			Consistently(deleteCh, time.Millisecond*500).ShouldNot(Receive())
@@ -1623,6 +1651,26 @@ var _ = Describe("FileEvents", func() {
 			// Verify that no reconcile event was triggered
 			Consistently(reconcileCh, time.Millisecond*500).ShouldNot(Receive())
 			// Verify that no delete event was triggered
+			Consistently(deleteCh, time.Millisecond*500).ShouldNot(Receive())
+		})
+
+		It("should requeue a processing event when kubernetes connection fails", func() {
+			// Start listening in a goroutine
+			go fileEventHandler.Listen()
+
+			// Send an event for a directory
+			filenameCh <- domain.FileEventDetails{
+				FullPathName: "/solutions/test-kubernetes-connection-failure",
+				ObjectName:   "test-kubernetes-connection-failure",
+				IsDir:        true,
+				Origin:       domain.SolutionsOrigin,
+				EventType:    fsnotify.Create.String(),
+			}
+
+			// Verify that the event was requeued on filenameChan
+			Eventually(filenameCh, time.Second*5).Should(Receive())
+			// Verify that no reconcile/delete were triggered
+			Consistently(reconcileCh, time.Millisecond*500).ShouldNot(Receive())
 			Consistently(deleteCh, time.Millisecond*500).ShouldNot(Receive())
 		})
 	})
