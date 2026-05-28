@@ -14,7 +14,7 @@ import (
 type ReceivePart struct {
 	logger             *zerolog.Logger
 	bucketManager      service.BucketManager
-	multipartUploader  service.MultipartUploader
+	multipartStorer    service.MultipartStorer
 	multipartInspector service.MultipartInspector
 	bucketLocker       service.LockerUnlocker
 	archiveLocker      service.LockerUnlocker
@@ -24,7 +24,7 @@ type ReceivePart struct {
 func NewReceivePart(
 	logger *zerolog.Logger,
 	bucketManager service.BucketManager,
-	multipartUploader service.MultipartUploader,
+	multipartStorer service.MultipartStorer,
 	multipartInspector service.MultipartInspector,
 	bucketLocker service.LockerUnlocker,
 	archiveLocker service.LockerUnlocker,
@@ -35,7 +35,7 @@ func NewReceivePart(
 	return &ReceivePart{
 		logger:             &l,
 		bucketManager:      bucketManager,
-		multipartUploader:  multipartUploader,
+		multipartStorer:    multipartStorer,
 		multipartInspector: multipartInspector,
 		bucketLocker:       bucketLocker,
 		archiveLocker:      archiveLocker,
@@ -125,7 +125,7 @@ func (uc *ReceivePart) Execute(part *domain.Part) (*domain.SolutionArchiveStatus
 		)
 	}
 
-	solutionArchiveStatus, err := uc.multipartUploader.StorePart(
+	solutionArchiveStatus, err := uc.multipartStorer.StorePart(
 		sessionBucket,
 		solutionArchiveFromManifest,
 		part,
@@ -146,7 +146,7 @@ func (uc *ReceivePart) Execute(part *domain.Part) (*domain.SolutionArchiveStatus
 		)
 	}
 
-	err = uc.multipartUploader.CommitPart(sessionBucket, part)
+	err = uc.multipartStorer.CommitPart(sessionBucket, part)
 	if err != nil {
 		return nil, errors.Wrap(err,
 			errors.WithIdentifier(237),
@@ -170,7 +170,7 @@ func (uc *ReceivePart) Execute(part *domain.Part) (*domain.SolutionArchiveStatus
 	// Solution archive is complete, so let's consolidate it,
 	// move it to the storage root location and then
 	// remove the bucket.
-	err = uc.multipartUploader.Consolidate(
+	err = uc.multipartStorer.Consolidate(
 		sessionBucket,
 		solutionArchiveFromManifest,
 		library.FileSystemDefaultFileMode,

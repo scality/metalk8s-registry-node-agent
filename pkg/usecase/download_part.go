@@ -18,7 +18,7 @@ type DownloadPart struct {
 	archiveLister      service.ArchiveLister
 	archiveLocker      service.LockerUnlocker
 	bucketLocker       service.LockerUnlocker
-	multipartUploader  service.MultipartUploader
+	multipartStorer    service.MultipartStorer
 	multipartInspector service.MultipartInspector
 	rootAPIPath        string
 	chunkSize          int64
@@ -31,7 +31,7 @@ func NewDownloadPart(
 	archiveLister service.ArchiveLister,
 	archiveLocker service.LockerUnlocker,
 	bucketLocker service.LockerUnlocker,
-	multipartUploader service.MultipartUploader,
+	multipartStorer service.MultipartStorer,
 	multipartInspector service.MultipartInspector,
 	rootAPIPath string,
 	chunkSize int64,
@@ -45,7 +45,7 @@ func NewDownloadPart(
 		archiveLister:      archiveLister,
 		archiveLocker:      archiveLocker,
 		bucketLocker:       bucketLocker,
-		multipartUploader:  multipartUploader,
+		multipartStorer:    multipartStorer,
 		multipartInspector: multipartInspector,
 		rootAPIPath:        rootAPIPath,
 		chunkSize:          chunkSize,
@@ -241,7 +241,7 @@ func (uc *DownloadPart) Execute(
 
 		part.Content = body
 
-		solutionArchiveStatus, err = uc.multipartUploader.StorePart(
+		solutionArchiveStatus, err = uc.multipartStorer.StorePart(
 			sessionBucket,
 			solutionArchiveFromManifest,
 			part,
@@ -284,7 +284,7 @@ func (uc *DownloadPart) Execute(
 			)
 		}
 
-		if err := uc.multipartUploader.CommitPart(sessionBucket, part); err != nil {
+		if err := uc.multipartStorer.CommitPart(sessionBucket, part); err != nil {
 			return errors.Wrap(err,
 				errors.WithIdentifier(214),
 				errors.WithDetail("error on committing a solution archive chunk"),
@@ -322,7 +322,7 @@ func (uc *DownloadPart) Execute(
 	// Solution archive is complete, so let's consolidate it,
 	// move it to the storage root location and then
 	// remove the bucket.
-	err = uc.multipartUploader.Consolidate(
+	err = uc.multipartStorer.Consolidate(
 		sessionBucket,
 		solutionArchiveFromManifest,
 		library.FileSystemDefaultFileMode,

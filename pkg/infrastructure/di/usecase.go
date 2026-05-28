@@ -8,7 +8,7 @@ func (c *Container) getReceivePartUseCase() *usecase.ReceivePart {
 		c.receivePartUseCase = usecase.NewReceivePart(
 			c.GetLogger(),
 			c.GetFileSystemBucketManager(),
-			c.GetFileSystemMultipartUploader(),
+			c.GetFileSystemMultipartStorer(),
 			c.GetFileSystemMultipartInspector(),
 			c.getInMemoryBucketLocker(),
 			c.getInMemoryArchiveLocker(),
@@ -25,7 +25,7 @@ func (c *Container) GetInitializeSessionUseCase() *usecase.InitializeSession {
 			c.GetLogger(),
 			c.GetFileSystemBucketManager(),
 			c.GetFileSystemArchiveLister(),
-			c.GetFileSystemMultipartUploader(),
+			c.GetFileSystemMultipartStorer(),
 			c.GetFileSystemMultipartInspector(),
 			c.getInMemoryBucketLocker(),
 		)
@@ -103,7 +103,7 @@ func (c *Container) GetDownloadPartUseCase() *usecase.DownloadPart {
 			c.GetFileSystemArchiveLister(),
 			c.getInMemoryArchiveLocker(),
 			c.getInMemoryBucketLocker(),
-			c.GetFileSystemMultipartUploader(),
+			c.GetFileSystemMultipartStorer(),
 			c.GetFileSystemMultipartInspector(),
 			c.GetRootExternAPIPath(),
 			c.GetChunkSize(),

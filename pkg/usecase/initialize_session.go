@@ -17,7 +17,7 @@ type InitializeSession struct {
 	logger             *zerolog.Logger
 	bucketManager      service.BucketManager
 	archiveLister      service.ArchiveLister
-	multipartUploader  service.MultipartUploader
+	multipartStorer    service.MultipartStorer
 	multipartInspector service.MultipartInspector
 	bucketLocker       service.LockerUnlocker
 }
@@ -26,7 +26,7 @@ func NewInitializeSession(
 	logger *zerolog.Logger,
 	bucketManager service.BucketManager,
 	archiveLister service.ArchiveLister,
-	multipartUploader service.MultipartUploader,
+	multipartStorer service.MultipartStorer,
 	multipartInspector service.MultipartInspector,
 	bucketLocker service.LockerUnlocker,
 ) *InitializeSession {
@@ -36,7 +36,7 @@ func NewInitializeSession(
 		logger:             &l,
 		bucketManager:      bucketManager,
 		archiveLister:      archiveLister,
-		multipartUploader:  multipartUploader,
+		multipartStorer:    multipartStorer,
 		multipartInspector: multipartInspector,
 		bucketLocker:       bucketLocker,
 	}
@@ -121,7 +121,7 @@ func (uc *InitializeSession) Execute(solutionArchive *domain.SolutionArchive) (*
 		)
 	}
 
-	solutionArchiveStatus, err := uc.multipartUploader.CreateMultipartFiles(bucketName, solutionArchive)
+	solutionArchiveStatus, err := uc.multipartStorer.CreateMultipartFiles(bucketName, solutionArchive)
 	if err != nil {
 		cleanup()
 		return nil, errors.Wrap(err,

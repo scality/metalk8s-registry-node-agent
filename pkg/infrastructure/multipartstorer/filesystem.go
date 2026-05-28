@@ -1,4 +1,4 @@
-package multipartuploader
+package multipartstorer
 
 import (
 	"bytes"
@@ -29,9 +29,9 @@ func NewFileSystem(
 	multipartInspector service.MultipartInspector,
 	multipartRemover service.MultipartRemover,
 	bucketManager service.BucketManager,
-) service.MultipartUploader {
+) service.MultipartStorer {
 	l := logger.With().
-		Str("infrastructure", "multipart_uploader").
+		Str("infrastructure", "multipart_storer").
 		Str("implementation", "filesystem").
 		Logger()
 	return &FileSystem{
@@ -43,7 +43,7 @@ func NewFileSystem(
 	}
 }
 
-var _ service.MultipartUploader = &FileSystem{}
+var _ service.MultipartStorer = &FileSystem{}
 
 // CreateMultipartFiles creates into a bucket: a metadata file, a multipart file recipient and a parts synthesis file.
 func (f *FileSystem) CreateMultipartFiles(

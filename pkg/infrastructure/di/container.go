@@ -50,7 +50,7 @@ type Container struct {
 	archiveLister          service.ArchiveLister
 	multipartInspector     service.MultipartInspector
 	multipartRemover       service.MultipartRemover
-	multipartUploader      service.MultipartUploader
+	multipartStorer        service.MultipartStorer
 
 	inMemoryArchiveLocker service.LockerUnlocker
 	inMemoryBucketLocker  service.LockerUnlocker
