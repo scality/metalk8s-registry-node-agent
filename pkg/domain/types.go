@@ -1,6 +1,7 @@
 package domain
 
 import (
+	"fmt"
 	"io"
 	"sort"
 )
@@ -136,4 +137,12 @@ func (sas *SolutionArchiveStatus) ContainsPart(part *PartMeta) bool {
 		return iv.end >= partEnd
 	}
 	return false
+}
+
+func (sa *SolutionArchive) GetUploadURL(rootAPIPath string) string {
+	return fmt.Sprintf("%s/uploads/%s/%s", rootAPIPath, sa.Name, sa.Version)
+}
+
+func (sa *SolutionArchive) GetDownloadURL(rootAPIPath string) string {
+	return fmt.Sprintf("%s/downloads/%s/%s", rootAPIPath, sa.Name, sa.Version)
 }

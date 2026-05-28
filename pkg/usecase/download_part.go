@@ -2,7 +2,6 @@ package usecase
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/rs/zerolog"
 	"github.com/scality/go-errors"
@@ -76,12 +75,7 @@ func (uc *DownloadPart) Execute(
 			errors.WithIdentifier(204),
 			errors.WithDetail("error on listing solution archives"),
 			errors.WithProperty("usecase", "download_part"),
-			errors.WithProperty("instance", fmt.Sprintf(
-				"%s/downloads/%s/%s",
-				uc.rootAPIPath,
-				solutionArchive.Name,
-				solutionArchive.Version,
-			)),
+			errors.WithProperty("instance", solutionArchive.GetDownloadURL(uc.rootAPIPath)),
 		)
 	}
 
@@ -99,12 +93,7 @@ func (uc *DownloadPart) Execute(
 			errors.WithProperty("usecase", "download_part"),
 			errors.WithProperty("solution_archive_name", solutionArchive.Name),
 			errors.WithProperty("solution_archive_version", solutionArchive.Version),
-			errors.WithProperty("instance", fmt.Sprintf(
-				"%s/downloads/%s/%s",
-				uc.rootAPIPath,
-				solutionArchive.Name,
-				solutionArchive.Version,
-			)),
+			errors.WithProperty("instance", solutionArchive.GetDownloadURL(uc.rootAPIPath)),
 		)
 	}
 
@@ -115,12 +104,7 @@ func (uc *DownloadPart) Execute(
 			errors.WithIdentifier(206),
 			errors.WithDetail("error on listing buckets"),
 			errors.WithProperty("usecase", "download_part"),
-			errors.WithProperty("instance", fmt.Sprintf(
-				"%s/downloads/%s/%s",
-				uc.rootAPIPath,
-				solutionArchive.Name,
-				solutionArchive.Version,
-			)),
+			errors.WithProperty("instance", solutionArchive.GetDownloadURL(uc.rootAPIPath)),
 		)
 	}
 
@@ -133,12 +117,7 @@ func (uc *DownloadPart) Execute(
 			errors.WithProperty("usecase", "download_part"),
 			errors.WithProperty("solution_archive_name", solutionArchive.Name),
 			errors.WithProperty("solution_archive_version", solutionArchive.Version),
-			errors.WithProperty("instance", fmt.Sprintf(
-				"%s/downloads/%s/%s",
-				uc.rootAPIPath,
-				solutionArchive.Name,
-				solutionArchive.Version,
-			)),
+			errors.WithProperty("instance", solutionArchive.GetDownloadURL(uc.rootAPIPath)),
 		)
 	}
 
@@ -151,12 +130,7 @@ func (uc *DownloadPart) Execute(
 			errors.WithProperty("usecase", "download_part"),
 			errors.WithProperty("solution_archive_name", solutionArchive.Name),
 			errors.WithProperty("solution_archive_version", solutionArchive.Version),
-			errors.WithProperty("instance", fmt.Sprintf(
-				"%s/downloads/%s/%s",
-				uc.rootAPIPath,
-				solutionArchive.Name,
-				solutionArchive.Version,
-			)),
+			errors.WithProperty("instance", solutionArchive.GetDownloadURL(uc.rootAPIPath)),
 		)
 	}
 
@@ -167,12 +141,7 @@ func (uc *DownloadPart) Execute(
 			errors.WithProperty("usecase", "download_part"),
 			errors.WithProperty("solution_archive_name", solutionArchive.Name),
 			errors.WithProperty("solution_archive_version", solutionArchive.Version),
-			errors.WithProperty("instance", fmt.Sprintf(
-				"%s/downloads/%s/%s",
-				uc.rootAPIPath,
-				solutionArchive.Name,
-				solutionArchive.Version,
-			)),
+			errors.WithProperty("instance", solutionArchive.GetDownloadURL(uc.rootAPIPath)),
 		)
 	}
 
@@ -185,12 +154,7 @@ func (uc *DownloadPart) Execute(
 			errors.WithProperty("usecase", "download_part"),
 			errors.WithProperty("solution_archive_name", solutionArchive.Name),
 			errors.WithProperty("solution_archive_version", solutionArchive.Version),
-			errors.WithProperty("instance", fmt.Sprintf(
-				"%s/downloads/%s/%s",
-				uc.rootAPIPath,
-				solutionArchive.Name,
-				solutionArchive.Version,
-			)),
+			errors.WithProperty("instance", solutionArchive.GetDownloadURL(uc.rootAPIPath)),
 		)
 	}
 
@@ -227,12 +191,7 @@ func (uc *DownloadPart) Execute(
 				errors.WithProperty("solution_archive_version", solutionArchive.Version),
 				errors.WithProperty("range_start", start),
 				errors.WithProperty("range_end", end),
-				errors.WithProperty("instance", fmt.Sprintf(
-					"%s/downloads/%s/%s",
-					uc.rootAPIPath,
-					solutionArchive.Name,
-					solutionArchive.Version,
-				)),
+				errors.WithProperty("instance", solutionArchive.GetDownloadURL(uc.rootAPIPath)),
 			)
 		}
 
@@ -253,12 +212,7 @@ func (uc *DownloadPart) Execute(
 				errors.WithProperty("solution_archive_version", solutionArchive.Version),
 				errors.WithProperty("range_start", start),
 				errors.WithProperty("range_end", end),
-				errors.WithProperty("instance", fmt.Sprintf(
-					"%s/downloads/%s/%s",
-					uc.rootAPIPath,
-					solutionArchive.Name,
-					solutionArchive.Version,
-				)),
+				errors.WithProperty("instance", solutionArchive.GetDownloadURL(uc.rootAPIPath)),
 			)
 		}
 
@@ -272,12 +226,7 @@ func (uc *DownloadPart) Execute(
 				errors.WithProperty("solution_archive_version", solutionArchive.Version),
 				errors.WithProperty("range_start", start),
 				errors.WithProperty("range_end", end),
-				errors.WithProperty("instance", fmt.Sprintf(
-					"%s/downloads/%s/%s",
-					uc.rootAPIPath,
-					solutionArchive.Name,
-					solutionArchive.Version,
-				)),
+				errors.WithProperty("instance", solutionArchive.GetDownloadURL(uc.rootAPIPath)),
 			)
 		}
 
@@ -290,12 +239,7 @@ func (uc *DownloadPart) Execute(
 				errors.WithProperty("solution_archive_version", solutionArchive.Version),
 				errors.WithProperty("range_start", start),
 				errors.WithProperty("range_end", end),
-				errors.WithProperty("instance", fmt.Sprintf(
-					"%s/downloads/%s/%s",
-					uc.rootAPIPath,
-					solutionArchive.Name,
-					solutionArchive.Version,
-				)),
+				errors.WithProperty("instance", solutionArchive.GetDownloadURL(uc.rootAPIPath)),
 			)
 		}
 	}
@@ -307,12 +251,7 @@ func (uc *DownloadPart) Execute(
 			errors.WithProperty("usecase", "download_part"),
 			errors.WithProperty("solution_archive_name", solutionArchive.Name),
 			errors.WithProperty("solution_archive_version", solutionArchive.Version),
-			errors.WithProperty("instance", fmt.Sprintf(
-				"%s/downloads/%s/%s",
-				uc.rootAPIPath,
-				solutionArchive.Name,
-				solutionArchive.Version,
-			)),
+			errors.WithProperty("instance", solutionArchive.GetDownloadURL(uc.rootAPIPath)),
 		)
 	}
 
@@ -331,12 +270,7 @@ func (uc *DownloadPart) Execute(
 			errors.WithProperty("usecase", "download_part"),
 			errors.WithProperty("solution_archive_name", solutionArchive.Name),
 			errors.WithProperty("solution_archive_version", solutionArchive.Version),
-			errors.WithProperty("instance", fmt.Sprintf(
-				"%s/downloads/%s/%s",
-				uc.rootAPIPath,
-				solutionArchive.Name,
-				solutionArchive.Version,
-			)),
+			errors.WithProperty("instance", solutionArchive.GetDownloadURL(uc.rootAPIPath)),
 		)
 	}
 

@@ -2,8 +2,6 @@
 package usecase
 
 import (
-	"fmt"
-
 	"github.com/rs/zerolog"
 	"github.com/scality/go-errors"
 	"github.com/scality/metalk8s-registry-node-agent/pkg/domain"
@@ -52,12 +50,7 @@ func (uc *DescribeSolutionArchive) Execute(
 			errors.WithIdentifier(196),
 			errors.WithDetail("error while listing solution archives"),
 			errors.WithProperty("usecase", "describe_solution_archive"),
-			errors.WithProperty("instance", fmt.Sprintf(
-				"%s/downloads/%s/%s",
-				uc.rootAPIPath,
-				solutionArchive.Name,
-				solutionArchive.Version,
-			)),
+			errors.WithProperty("instance", solutionArchive.GetDownloadURL(uc.rootAPIPath)),
 		)
 	}
 
@@ -67,12 +60,7 @@ func (uc *DescribeSolutionArchive) Execute(
 			errors.WithIdentifier(197),
 			errors.WithDetail("solution archive not found"),
 			errors.WithProperty("usecase", "describe_solution_archive"),
-			errors.WithProperty("instance", fmt.Sprintf(
-				"%s/downloads/%s/%s",
-				uc.rootAPIPath,
-				solutionArchive.Name,
-				solutionArchive.Version,
-			)),
+			errors.WithProperty("instance", solutionArchive.GetDownloadURL(uc.rootAPIPath)),
 			errors.WithProperty("solution_archive_name", solutionArchive.Name),
 			errors.WithProperty("solution_archive_version", solutionArchive.Version),
 		)
@@ -87,12 +75,7 @@ func (uc *DescribeSolutionArchive) Execute(
 			errors.WithProperty("usecase", "describe_solution_archive"),
 			errors.WithProperty("solution_archive_name", solutionArchive.Name),
 			errors.WithProperty("solution_archive_version", solutionArchive.Version),
-			errors.WithProperty("instance", fmt.Sprintf(
-				"%s/downloads/%s/%s",
-				uc.rootAPIPath,
-				solutionArchive.Name,
-				solutionArchive.Version,
-			)),
+			errors.WithProperty("instance", solutionArchive.GetDownloadURL(uc.rootAPIPath)),
 		)
 	}
 

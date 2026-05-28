@@ -1,8 +1,6 @@
 package usecase
 
 import (
-	"fmt"
-
 	"github.com/rs/zerolog"
 	"github.com/scality/go-errors"
 
@@ -60,12 +58,7 @@ func (uc *ReceivePart) Execute(part *domain.Part) (*domain.SolutionArchiveStatus
 			errors.WithProperty("usecase", "receive_part"),
 			errors.WithProperty("solution_archive_name", part.SolutionArchive.Name),
 			errors.WithProperty("solution_archive_version", part.SolutionArchive.Version),
-			errors.WithProperty("instance", fmt.Sprintf(
-				"%s/uploads/%s/%s",
-				uc.rootAPIPath,
-				part.SolutionArchive.Name,
-				part.SolutionArchive.Version,
-			)),
+			errors.WithProperty("instance", part.SolutionArchive.GetUploadURL(uc.rootAPIPath)),
 		)
 	}
 
@@ -78,12 +71,7 @@ func (uc *ReceivePart) Execute(part *domain.Part) (*domain.SolutionArchiveStatus
 			errors.WithProperty("usecase", "receive_part"),
 			errors.WithProperty("solution_archive_name", part.SolutionArchive.Name),
 			errors.WithProperty("solution_archive_version", part.SolutionArchive.Version),
-			errors.WithProperty("instance", fmt.Sprintf(
-				"%s/uploads/%s/%s",
-				uc.rootAPIPath,
-				part.SolutionArchive.Name,
-				part.SolutionArchive.Version,
-			)),
+			errors.WithProperty("instance", part.SolutionArchive.GetUploadURL(uc.rootAPIPath)),
 		)
 	}
 
@@ -96,12 +84,7 @@ func (uc *ReceivePart) Execute(part *domain.Part) (*domain.SolutionArchiveStatus
 			errors.WithProperty("usecase", "receive_part"),
 			errors.WithProperty("solution_archive_name", part.SolutionArchive.Name),
 			errors.WithProperty("solution_archive_version", part.SolutionArchive.Version),
-			errors.WithProperty("instance", fmt.Sprintf(
-				"%s/uploads/%s/%s",
-				uc.rootAPIPath,
-				part.SolutionArchive.Name,
-				part.SolutionArchive.Version,
-			)),
+			errors.WithProperty("instance", part.SolutionArchive.GetUploadURL(uc.rootAPIPath)),
 		)
 	}
 
@@ -114,12 +97,7 @@ func (uc *ReceivePart) Execute(part *domain.Part) (*domain.SolutionArchiveStatus
 			errors.WithProperty("usecase", "receive_part"),
 			errors.WithProperty("solution_archive_name", part.SolutionArchive.Name),
 			errors.WithProperty("solution_archive_version", part.SolutionArchive.Version),
-			errors.WithProperty("instance", fmt.Sprintf(
-				"%s/uploads/%s/%s",
-				uc.rootAPIPath,
-				part.SolutionArchive.Name,
-				part.SolutionArchive.Version,
-			)),
+			errors.WithProperty("instance", part.SolutionArchive.GetUploadURL(uc.rootAPIPath)),
 			errors.WithProperty("component", part.SolutionArchive.Name),
 			errors.WithProperty("version", part.SolutionArchive.Version),
 		)
@@ -137,12 +115,7 @@ func (uc *ReceivePart) Execute(part *domain.Part) (*domain.SolutionArchiveStatus
 			errors.WithProperty("usecase", "receive_part"),
 			errors.WithProperty("solution_archive_name", part.SolutionArchive.Name),
 			errors.WithProperty("solution_archive_version", part.SolutionArchive.Version),
-			errors.WithProperty("instance", fmt.Sprintf(
-				"%s/uploads/%s/%s",
-				uc.rootAPIPath,
-				part.SolutionArchive.Name,
-				part.SolutionArchive.Version,
-			)),
+			errors.WithProperty("instance", part.SolutionArchive.GetUploadURL(uc.rootAPIPath)),
 		)
 	}
 
@@ -154,12 +127,7 @@ func (uc *ReceivePart) Execute(part *domain.Part) (*domain.SolutionArchiveStatus
 			errors.WithProperty("usecase", "receive_part"),
 			errors.WithProperty("solution_archive_name", part.SolutionArchive.Name),
 			errors.WithProperty("solution_archive_version", part.SolutionArchive.Version),
-			errors.WithProperty("instance", fmt.Sprintf(
-				"%s/uploads/%s/%s",
-				uc.rootAPIPath,
-				part.SolutionArchive.Name,
-				part.SolutionArchive.Version,
-			)),
+			errors.WithProperty("instance", part.SolutionArchive.GetUploadURL(uc.rootAPIPath)),
 		)
 	}
 
@@ -182,12 +150,7 @@ func (uc *ReceivePart) Execute(part *domain.Part) (*domain.SolutionArchiveStatus
 			errors.WithProperty("usecase", "receive_part"),
 			errors.WithProperty("solution_archive_name", part.SolutionArchive.Name),
 			errors.WithProperty("solution_archive_version", part.SolutionArchive.Version),
-			errors.WithProperty("instance", fmt.Sprintf(
-				"%s/uploads/%s/%s",
-				uc.rootAPIPath,
-				part.SolutionArchive.Name,
-				part.SolutionArchive.Version,
-			)),
+			errors.WithProperty("instance", part.SolutionArchive.GetUploadURL(uc.rootAPIPath)),
 		)
 	}
 
