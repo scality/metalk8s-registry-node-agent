@@ -69,9 +69,9 @@ func (c *Container) GetRemoveSessionUseCase() *usecase.RemoveSession {
 	return c.removeSessionUseCase
 }
 
-func (c *Container) GetDownloadSolutionArchiveUseCase() *usecase.DownloadSolutionArchive {
-	if c.downloadSolutionArchiveUseCase == nil {
-		c.downloadSolutionArchiveUseCase = usecase.NewDownloadSolutionArchive(
+func (c *Container) GetServePartUseCase() *usecase.ServePart {
+	if c.servePartUseCase == nil {
+		c.servePartUseCase = usecase.NewServePart(
 			c.GetLogger(),
 			c.GetFileSystemArchiveLister(),
 			c.GetFileSystemArchiveReader(),
@@ -79,7 +79,7 @@ func (c *Container) GetDownloadSolutionArchiveUseCase() *usecase.DownloadSolutio
 			c.GetRootInternAPIPath(),
 		)
 	}
-	return c.downloadSolutionArchiveUseCase
+	return c.servePartUseCase
 }
 
 func (c *Container) GetDescribeSolutionArchiveUseCase() *usecase.DescribeSolutionArchive {

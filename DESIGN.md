@@ -98,7 +98,7 @@ inward**:
 ┌──────────────────────────── Use cases ───────────────────────────────┐
 │  pkg/usecase/*  (InitializeSession, UploadPart, ValidateArchive,     │
 │                  DescribeArchive, GetExternalSolutionArchive,        │
-│                  DownloadArchive, MountArchive, UnmountArchive,      │
+│                  ServerPart, MountArchive, UnmountArchive,           │
 │                  RemoveArchive, RemoveSession, CleanArchive)         │
 └──────────────────────────────────────────────────────────────────────┘
                        │                       │
@@ -417,7 +417,7 @@ sequenceDiagram
 | `ValidateArchive`              | Reconciler (step 6)         | Compare archive size and SHA-256 against the `validation.checksum`.      |
 | `DescribeArchive`              | Internal API (HEAD)         | Return total size of an archive without reading it.                      |
 | `GetExternalSolutionArchive`   | Reconciler (step 5)         | Pull every missing chunk from a peer's internal API, verify digests.     |
-| `DownloadArchive`              | Internal API (GET)          | Stream one byte range with `Content-Digest` trailer.                     |
+| `ServePart`                    | Internal API (GET)          | Stream one byte range with `Content-Digest` trailer.                     |
 | `MountArchive` / `UnmountArchive` | Reconciler (step 8 / cleanup) | Materialise / unmount the archive under `${SOLUTIONS_LOCATION}`.    |
 | `RemoveArchive` / `RemoveSession` | Reconciler / GC          | Delete the consolidated file / bucket.                                   |
 | `CleanArchive`                 | GC goroutine                | Periodically reconcile FS state with the set of live NSAs.               |

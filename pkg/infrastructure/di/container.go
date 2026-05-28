@@ -71,7 +71,7 @@ type Container struct {
 	mountSolutionArchiveUseCase       *usecase.MountSolutionArchive
 	unmountSolutionArchiveUseCase     *usecase.UnmountSolutionArchive
 	validateSolutionArchiveUseCase    *usecase.ValidateSolutionArchive
-	downloadSolutionArchiveUseCase    *usecase.DownloadSolutionArchive
+	servePartUseCase                  *usecase.ServePart
 	getExternalSolutionArchiveUseCase *usecase.GetExternalSolutionArchive
 	cleanArchivesUseCase              *usecase.CleanArchive
 	describeSolutionArchiveUseCase    *usecase.DescribeSolutionArchive

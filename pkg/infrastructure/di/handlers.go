@@ -18,7 +18,7 @@ func (c *Container) getDownloadSolutionArchiveHandler() *handler.DownloadSolutio
 	if c.downloadSolutionArchiveHandler == nil {
 		c.downloadSolutionArchiveHandler = handler.NewDownloadSolutionArchive(
 			c.GetLogger(),
-			c.GetDownloadSolutionArchiveUseCase(),
+			c.GetServePartUseCase(),
 		)
 	}
 	return c.downloadSolutionArchiveHandler
