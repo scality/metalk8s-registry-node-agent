@@ -220,7 +220,7 @@ func (uc *DownloadPart) Execute(
 			continue
 		}
 
-		body, err := uc.externalDownloader.Download(ctx, downloadURL, start, end, solutionArchiveSize)
+		body, err := uc.externalDownloader.DownloadPart(ctx, downloadURL, start, end, solutionArchiveSize)
 		if err != nil {
 			return errors.Wrap(err,
 				errors.WithIdentifier(211),
