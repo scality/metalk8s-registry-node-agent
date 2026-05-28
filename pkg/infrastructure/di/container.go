@@ -64,17 +64,17 @@ type Container struct {
 
 	httpExternalDownloader *externaldownloader.HTTP
 
-	uploadPartUseCase                 *usecase.UploadPart
-	initializeSessionUseCase          *usecase.InitializeSession
-	removeSolutionArchiveUseCase      *usecase.RemoveSolutionArchive
-	removeSessionUseCase              *usecase.RemoveSession
-	mountSolutionArchiveUseCase       *usecase.MountSolutionArchive
-	unmountSolutionArchiveUseCase     *usecase.UnmountSolutionArchive
-	validateSolutionArchiveUseCase    *usecase.ValidateSolutionArchive
-	servePartUseCase                  *usecase.ServePart
-	getExternalSolutionArchiveUseCase *usecase.GetExternalSolutionArchive
-	cleanArchivesUseCase              *usecase.CleanArchive
-	describeSolutionArchiveUseCase    *usecase.DescribeSolutionArchive
+	uploadPartUseCase              *usecase.UploadPart
+	initializeSessionUseCase       *usecase.InitializeSession
+	removeSolutionArchiveUseCase   *usecase.RemoveSolutionArchive
+	removeSessionUseCase           *usecase.RemoveSession
+	mountSolutionArchiveUseCase    *usecase.MountSolutionArchive
+	unmountSolutionArchiveUseCase  *usecase.UnmountSolutionArchive
+	validateSolutionArchiveUseCase *usecase.ValidateSolutionArchive
+	servePartUseCase               *usecase.ServePart
+	downloadPartUseCase            *usecase.DownloadPart
+	cleanArchivesUseCase           *usecase.CleanArchive
+	describeSolutionArchiveUseCase *usecase.DescribeSolutionArchive
 }
 
 func NewContainer(

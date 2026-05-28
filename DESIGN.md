@@ -97,7 +97,7 @@ inward**:
                  ▼                                    ▼
 ┌──────────────────────────── Use cases ───────────────────────────────┐
 │  pkg/usecase/*  (InitializeSession, UploadPart, ValidateArchive,     │
-│                  DescribeArchive, GetExternalSolutionArchive,        │
+│                  DescribeArchive, DownloadPart,                      │
 │                  ServerPart, MountArchive, UnmountArchive,           │
 │                  RemoveArchive, RemoveSession, CleanArchive)         │
 └──────────────────────────────────────────────────────────────────────┘
@@ -188,7 +188,7 @@ Pseudo-code:
 4. InitializeSessionUseCase  → status.Initialized
 5. If not Available, look for a sibling NSA (same name+version, other node)
    whose status.Available == true:
-       GetExternalSolutionArchiveUseCase(url=peer.status.url)
+       DownloadPartUseCase(url=peer.status.url)
 6. ValidateArchiveUseCase    (size + SHA-256)
    - invalid → Unmount + clear url + return (will retry on next event)
 7. status.url = "<DOWNLOAD_BASE_URL>/<name>/<version>"
@@ -416,7 +416,7 @@ sequenceDiagram
 | `UploadPart`                   | External API                | Persist a chunk, update parts synthesis, consolidate when complete.      |
 | `ValidateArchive`              | Reconciler (step 6)         | Compare archive size and SHA-256 against the `validation.checksum`.      |
 | `DescribeArchive`              | Internal API (HEAD)         | Return total size of an archive without reading it.                      |
-| `GetExternalSolutionArchive`   | Reconciler (step 5)         | Pull every missing chunk from a peer's internal API, verify digests.     |
+| `DownloadPart`                 | Reconciler (step 5)         | Pull every missing chunk from a peer's internal API, verify digests.     |
 | `ServePart`                    | Internal API (GET)          | Stream one byte range with `Content-Digest` trailer.                     |
 | `MountArchive` / `UnmountArchive` | Reconciler (step 8 / cleanup) | Materialise / unmount the archive under `${SOLUTIONS_LOCATION}`.    |
 | `RemoveArchive` / `RemoveSession` | Reconciler / GC          | Delete the consolidated file / bucket.                                   |

@@ -11,7 +11,7 @@ import (
 	"github.com/scality/metalk8s-registry-node-agent/pkg/service"
 )
 
-type GetExternalSolutionArchive struct {
+type DownloadPart struct {
 	logger             *zerolog.Logger
 	externalDownloader service.ExternalDownloader
 	bucketManager      service.BucketManager
@@ -24,7 +24,7 @@ type GetExternalSolutionArchive struct {
 	chunkSize          int64
 }
 
-func NewGetExternalSolutionArchive(
+func NewDownloadPart(
 	logger *zerolog.Logger,
 	externalDownloader service.ExternalDownloader,
 	bucketManager service.BucketManager,
@@ -35,10 +35,10 @@ func NewGetExternalSolutionArchive(
 	multipartInspector service.MultipartInspector,
 	rootAPIPath string,
 	chunkSize int64,
-) *GetExternalSolutionArchive {
-	l := logger.With().Str("use_case", "get_external_solution_archive").Logger()
+) *DownloadPart {
+	l := logger.With().Str("use_case", "download_part").Logger()
 
-	return &GetExternalSolutionArchive{
+	return &DownloadPart{
 		logger:             &l,
 		externalDownloader: externalDownloader,
 		bucketManager:      bucketManager,
@@ -52,7 +52,7 @@ func NewGetExternalSolutionArchive(
 	}
 }
 
-func (uc *GetExternalSolutionArchive) Execute(
+func (uc *DownloadPart) Execute(
 	ctx context.Context,
 	solutionArchive *domain.SolutionArchive,
 	downloadURL string,
@@ -60,7 +60,7 @@ func (uc *GetExternalSolutionArchive) Execute(
 	uc.logger.Debug().
 		Any("solution_archive", solutionArchive).
 		Str("download_url", downloadURL).
-		Msg("Getting external solution archive")
+		Msg("Downloading part")
 
 	// To avoid simultaneous downloads and deletions of the same solution archive
 	uc.bucketLocker.Lock(solutionArchive)
@@ -75,7 +75,7 @@ func (uc *GetExternalSolutionArchive) Execute(
 		return errors.Wrap(err,
 			errors.WithIdentifier(204),
 			errors.WithDetail("error on listing solution archives"),
-			errors.WithProperty("usecase", "get_external_solution_archive"),
+			errors.WithProperty("usecase", "download_part"),
 			errors.WithProperty("instance", fmt.Sprintf(
 				"%s/downloads/%s/%s",
 				uc.rootAPIPath,
@@ -96,7 +96,7 @@ func (uc *GetExternalSolutionArchive) Execute(
 		return errors.Wrap(err,
 			errors.WithIdentifier(205),
 			errors.WithDetail("error on getting description of the solution archive"),
-			errors.WithProperty("usecase", "get_external_solution_archive"),
+			errors.WithProperty("usecase", "download_part"),
 			errors.WithProperty("solution_archive_name", solutionArchive.Name),
 			errors.WithProperty("solution_archive_version", solutionArchive.Version),
 			errors.WithProperty("instance", fmt.Sprintf(
@@ -114,7 +114,7 @@ func (uc *GetExternalSolutionArchive) Execute(
 		return errors.Wrap(err,
 			errors.WithIdentifier(206),
 			errors.WithDetail("error on listing buckets"),
-			errors.WithProperty("usecase", "get_external_solution_archive"),
+			errors.WithProperty("usecase", "download_part"),
 			errors.WithProperty("instance", fmt.Sprintf(
 				"%s/downloads/%s/%s",
 				uc.rootAPIPath,
@@ -130,7 +130,7 @@ func (uc *GetExternalSolutionArchive) Execute(
 		return errors.Wrap(err,
 			errors.WithIdentifier(207),
 			errors.WithDetail("failed to extract the session bucket"),
-			errors.WithProperty("usecase", "get_external_solution_archive"),
+			errors.WithProperty("usecase", "download_part"),
 			errors.WithProperty("solution_archive_name", solutionArchive.Name),
 			errors.WithProperty("solution_archive_version", solutionArchive.Version),
 			errors.WithProperty("instance", fmt.Sprintf(
@@ -148,7 +148,7 @@ func (uc *GetExternalSolutionArchive) Execute(
 		return errors.Wrap(err,
 			errors.WithIdentifier(208),
 			errors.WithDetail("error on retrieving the manifest file"),
-			errors.WithProperty("usecase", "get_external_solution_archive"),
+			errors.WithProperty("usecase", "download_part"),
 			errors.WithProperty("solution_archive_name", solutionArchive.Name),
 			errors.WithProperty("solution_archive_version", solutionArchive.Version),
 			errors.WithProperty("instance", fmt.Sprintf(
@@ -161,10 +161,10 @@ func (uc *GetExternalSolutionArchive) Execute(
 	}
 
 	if !uc.checkManifestFile(solutionArchiveFromManifest, solutionArchive) {
-		return errors.Wrap(domain.ErrPartUploaderNotFound,
+		return errors.Wrap(domain.ErrPartDownloaderNotFound,
 			errors.WithIdentifier(209),
 			errors.WithDetail("error on checking the manifest file"),
-			errors.WithProperty("usecase", "get_external_solution_archive"),
+			errors.WithProperty("usecase", "download_part"),
 			errors.WithProperty("solution_archive_name", solutionArchive.Name),
 			errors.WithProperty("solution_archive_version", solutionArchive.Version),
 			errors.WithProperty("instance", fmt.Sprintf(
@@ -182,7 +182,7 @@ func (uc *GetExternalSolutionArchive) Execute(
 		return errors.Wrap(err,
 			errors.WithIdentifier(210),
 			errors.WithDetail("error on getting the solution archive status"),
-			errors.WithProperty("usecase", "get_external_solution_archive"),
+			errors.WithProperty("usecase", "download_part"),
 			errors.WithProperty("solution_archive_name", solutionArchive.Name),
 			errors.WithProperty("solution_archive_version", solutionArchive.Version),
 			errors.WithProperty("instance", fmt.Sprintf(
@@ -225,7 +225,7 @@ func (uc *GetExternalSolutionArchive) Execute(
 			return errors.Wrap(err,
 				errors.WithIdentifier(211),
 				errors.WithDetail("error on downloading a solution archive chunk"),
-				errors.WithProperty("usecase", "get_external_solution_archive"),
+				errors.WithProperty("usecase", "download_part"),
 				errors.WithProperty("solution_archive_name", solutionArchive.Name),
 				errors.WithProperty("solution_archive_version", solutionArchive.Version),
 				errors.WithProperty("range_start", start),
@@ -251,7 +251,7 @@ func (uc *GetExternalSolutionArchive) Execute(
 			return errors.Wrap(err,
 				errors.WithIdentifier(212),
 				errors.WithDetail("error on storing a solution archive chunk"),
-				errors.WithProperty("usecase", "get_external_solution_archive"),
+				errors.WithProperty("usecase", "download_part"),
 				errors.WithProperty("solution_archive_name", solutionArchive.Name),
 				errors.WithProperty("solution_archive_version", solutionArchive.Version),
 				errors.WithProperty("range_start", start),
@@ -270,7 +270,7 @@ func (uc *GetExternalSolutionArchive) Execute(
 			return errors.Wrap(err,
 				errors.WithIdentifier(213),
 				errors.WithDetail("error on verifying the Content-Digest trailer of the solution archive chunk"),
-				errors.WithProperty("usecase", "get_external_solution_archive"),
+				errors.WithProperty("usecase", "download_part"),
 				errors.WithProperty("solution_archive_name", solutionArchive.Name),
 				errors.WithProperty("solution_archive_version", solutionArchive.Version),
 				errors.WithProperty("range_start", start),
@@ -288,7 +288,7 @@ func (uc *GetExternalSolutionArchive) Execute(
 			return errors.Wrap(err,
 				errors.WithIdentifier(214),
 				errors.WithDetail("error on committing a solution archive chunk"),
-				errors.WithProperty("usecase", "get_external_solution_archive"),
+				errors.WithProperty("usecase", "download_part"),
 				errors.WithProperty("solution_archive_name", solutionArchive.Name),
 				errors.WithProperty("solution_archive_version", solutionArchive.Version),
 				errors.WithProperty("range_start", start),
@@ -304,10 +304,10 @@ func (uc *GetExternalSolutionArchive) Execute(
 	}
 
 	if !solutionArchiveStatus.IsComplete() {
-		return errors.Wrap(domain.ErrGetExternalSolutionArchiveNotComplete,
+		return errors.Wrap(domain.ErrPartDownloaderNotComplete,
 			errors.WithIdentifier(215),
-			errors.WithDetail("unable to get external solution archive because it is not complete"),
-			errors.WithProperty("usecase", "get_external_solution_archive"),
+			errors.WithDetail("unable to download part because it is not complete"),
+			errors.WithProperty("usecase", "download_part"),
 			errors.WithProperty("solution_archive_name", solutionArchive.Name),
 			errors.WithProperty("solution_archive_version", solutionArchive.Version),
 			errors.WithProperty("instance", fmt.Sprintf(
@@ -331,7 +331,7 @@ func (uc *GetExternalSolutionArchive) Execute(
 		return errors.Wrap(err,
 			errors.WithIdentifier(216),
 			errors.WithDetail("error on consolidating the solution archive"),
-			errors.WithProperty("usecase", "get_external_solution_archive"),
+			errors.WithProperty("usecase", "download_part"),
 			errors.WithProperty("solution_archive_name", solutionArchive.Name),
 			errors.WithProperty("solution_archive_version", solutionArchive.Version),
 			errors.WithProperty("instance", fmt.Sprintf(
@@ -343,12 +343,12 @@ func (uc *GetExternalSolutionArchive) Execute(
 		)
 	}
 
-	uc.logger.Debug().Any("solution_archive", solutionArchive).Msg("External solution archive retrieved")
+	uc.logger.Debug().Any("solution_archive", solutionArchive).Msg("Part downloaded")
 
 	return nil
 }
 
-func (uc *GetExternalSolutionArchive) checkManifestFile(
+func (uc *DownloadPart) checkManifestFile(
 	solutionArchiveFromManifest *domain.SolutionArchive,
 	solutionArchive *domain.SolutionArchive,
 ) bool {

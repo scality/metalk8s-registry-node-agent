@@ -94,9 +94,9 @@ func (c *Container) GetDescribeSolutionArchiveUseCase() *usecase.DescribeSolutio
 	return c.describeSolutionArchiveUseCase
 }
 
-func (c *Container) GetGetExternalSolutionArchiveUseCase() *usecase.GetExternalSolutionArchive {
-	if c.getExternalSolutionArchiveUseCase == nil {
-		c.getExternalSolutionArchiveUseCase = usecase.NewGetExternalSolutionArchive(
+func (c *Container) GetDownloadPartUseCase() *usecase.DownloadPart {
+	if c.downloadPartUseCase == nil {
+		c.downloadPartUseCase = usecase.NewDownloadPart(
 			c.GetLogger(),
 			c.getHTTPExternalDownloader(),
 			c.GetFileSystemBucketManager(),
@@ -109,7 +109,7 @@ func (c *Container) GetGetExternalSolutionArchiveUseCase() *usecase.GetExternalS
 			c.GetChunkSize(),
 		)
 	}
-	return c.getExternalSolutionArchiveUseCase
+	return c.downloadPartUseCase
 }
 
 func (c *Container) GetMountSolutionArchiveUseCase() *usecase.MountSolutionArchive {
