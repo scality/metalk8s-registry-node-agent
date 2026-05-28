@@ -5,12 +5,12 @@ import (
 	"github.com/scality/metalk8s-registry-node-agent/pkg/service"
 )
 
-func (c *Container) GetFileSystemArchiveCleaner() service.ArchiveCleaner {
+func (c *Container) getFileSystemArchiveCleaner() service.ArchiveCleaner {
 	if c.archiveCleaner == nil {
 		c.archiveCleaner = archivecleaner.NewFileSystem(
 			c.GetLogger(),
 			c.GetFSSolutionArchiveStorage(),
-			c.GetFileSystemArchiveMounter(),
+			c.getFileSystemArchiveMounter(),
 		)
 	}
 	return c.archiveCleaner

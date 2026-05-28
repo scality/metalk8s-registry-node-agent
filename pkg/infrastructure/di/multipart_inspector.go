@@ -5,7 +5,7 @@ import (
 	"github.com/scality/metalk8s-registry-node-agent/pkg/service"
 )
 
-func (c *Container) GetFileSystemMultipartInspector() service.MultipartInspector {
+func (c *Container) getFileSystemMultipartInspector() service.MultipartInspector {
 	if c.multipartInspector == nil {
 		c.multipartInspector = multipartinspector.NewFileSystem(
 			c.GetLogger(),

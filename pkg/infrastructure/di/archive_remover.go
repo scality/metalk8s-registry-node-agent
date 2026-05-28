@@ -5,7 +5,7 @@ import (
 	"github.com/scality/metalk8s-registry-node-agent/pkg/service"
 )
 
-func (c *Container) GetFileSystemArchiveRemover() service.ArchiveRemover {
+func (c *Container) getFileSystemArchiveRemover() service.ArchiveRemover {
 	if c.archiveRemover == nil {
 		c.archiveRemover = archiveremover.NewFileSystem(
 			c.GetLogger(),

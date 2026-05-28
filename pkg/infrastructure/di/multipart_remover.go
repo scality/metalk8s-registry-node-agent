@@ -5,7 +5,7 @@ import (
 	"github.com/scality/metalk8s-registry-node-agent/pkg/service"
 )
 
-func (c *Container) GetFileSystemMultipartRemover() service.MultipartRemover {
+func (c *Container) getFileSystemMultipartRemover() service.MultipartRemover {
 	if c.multipartRemover == nil {
 		c.multipartRemover = multipartremover.NewFileSystem(
 			c.GetLogger(),

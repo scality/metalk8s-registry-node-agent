@@ -5,14 +5,14 @@ import (
 	"github.com/scality/metalk8s-registry-node-agent/pkg/service"
 )
 
-func (c *Container) GetFileSystemMultipartStorer() service.MultipartStorer {
+func (c *Container) getFileSystemMultipartStorer() service.MultipartStorer {
 	if c.multipartStorer == nil {
 		c.multipartStorer = multipartstorer.NewFileSystem(
 			c.GetLogger(),
 			c.config.SolutionArchivesLocation,
-			c.GetFileSystemMultipartInspector(),
-			c.GetFileSystemMultipartRemover(),
-			c.GetFileSystemBucketManager(),
+			c.getFileSystemMultipartInspector(),
+			c.getFileSystemMultipartRemover(),
+			c.getFileSystemBucketManager(),
 		)
 	}
 	return c.multipartStorer
