@@ -35,7 +35,7 @@ var (
 )
 
 var (
-	ErrPartUploaderNotFound error = errors.New("Not Found Error")
+	ErrPartReceiverNotFound error = errors.New("Not Found Error")
 )
 
 var (

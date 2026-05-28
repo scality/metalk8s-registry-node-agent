@@ -3,9 +3,9 @@ package di
 
 import "github.com/scality/metalk8s-registry-node-agent/pkg/usecase"
 
-func (c *Container) getUploadPartUseCase() *usecase.UploadPart {
-	if c.uploadPartUseCase == nil {
-		c.uploadPartUseCase = usecase.NewUploadPart(
+func (c *Container) getReceivePartUseCase() *usecase.ReceivePart {
+	if c.receivePartUseCase == nil {
+		c.receivePartUseCase = usecase.NewReceivePart(
 			c.GetLogger(),
 			c.GetFileSystemBucketManager(),
 			c.GetFileSystemMultipartUploader(),
@@ -16,7 +16,7 @@ func (c *Container) getUploadPartUseCase() *usecase.UploadPart {
 		)
 	}
 
-	return c.uploadPartUseCase
+	return c.receivePartUseCase
 }
 
 func (c *Container) GetInitializeSessionUseCase() *usecase.InitializeSession {

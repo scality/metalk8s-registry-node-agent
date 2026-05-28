@@ -7,7 +7,7 @@ func (c *Container) getUploadPartHandler() *handler.UploadPart {
 	if c.uploadPartHandler == nil {
 		c.uploadPartHandler = handler.NewUploadPart(
 			c.GetLogger(),
-			c.getUploadPartUseCase(),
+			c.getReceivePartUseCase(),
 		)
 	}
 

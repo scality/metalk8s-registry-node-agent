@@ -64,7 +64,7 @@ type Container struct {
 
 	httpExternalDownloader *externaldownloader.HTTP
 
-	uploadPartUseCase              *usecase.UploadPart
+	receivePartUseCase             *usecase.ReceivePart
 	initializeSessionUseCase       *usecase.InitializeSession
 	removeSolutionArchiveUseCase   *usecase.RemoveSolutionArchive
 	removeSessionUseCase           *usecase.RemoveSession

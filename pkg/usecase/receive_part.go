@@ -11,7 +11,7 @@ import (
 	"github.com/scality/metalk8s-registry-node-agent/pkg/service"
 )
 
-type UploadPart struct {
+type ReceivePart struct {
 	logger             *zerolog.Logger
 	bucketManager      service.BucketManager
 	multipartUploader  service.MultipartUploader
@@ -21,7 +21,7 @@ type UploadPart struct {
 	rootAPIPath        string
 }
 
-func NewUploadPart(
+func NewReceivePart(
 	logger *zerolog.Logger,
 	bucketManager service.BucketManager,
 	multipartUploader service.MultipartUploader,
@@ -29,10 +29,10 @@ func NewUploadPart(
 	bucketLocker service.LockerUnlocker,
 	archiveLocker service.LockerUnlocker,
 	rootAPIPath string,
-) *UploadPart {
-	l := logger.With().Str("use_case", "upload_part").Logger()
+) *ReceivePart {
+	l := logger.With().Str("use_case", "receive_part").Logger()
 
-	return &UploadPart{
+	return &ReceivePart{
 		logger:             &l,
 		bucketManager:      bucketManager,
 		multipartUploader:  multipartUploader,
@@ -43,8 +43,8 @@ func NewUploadPart(
 	}
 }
 
-func (uc *UploadPart) Execute(part *domain.Part) (*domain.SolutionArchiveStatus, error) {
-	uc.logger.Info().Msg("Uploading part")
+func (uc *ReceivePart) Execute(part *domain.Part) (*domain.SolutionArchiveStatus, error) {
+	uc.logger.Info().Msg("Receiving part")
 
 	uc.bucketLocker.Lock(part.SolutionArchive)
 	defer uc.bucketLocker.Unlock(part.SolutionArchive)
@@ -57,7 +57,7 @@ func (uc *UploadPart) Execute(part *domain.Part) (*domain.SolutionArchiveStatus,
 		return nil, errors.Wrap(err,
 			errors.WithIdentifier(232),
 			errors.WithDetail("error on listing buckets"),
-			errors.WithProperty("usecase", "upload_part"),
+			errors.WithProperty("usecase", "receive_part"),
 			errors.WithProperty("solution_archive_name", part.SolutionArchive.Name),
 			errors.WithProperty("solution_archive_version", part.SolutionArchive.Version),
 			errors.WithProperty("instance", fmt.Sprintf(
@@ -75,7 +75,7 @@ func (uc *UploadPart) Execute(part *domain.Part) (*domain.SolutionArchiveStatus,
 		return nil, errors.Wrap(err,
 			errors.WithIdentifier(233),
 			errors.WithDetail("failed to extract the session bucket"),
-			errors.WithProperty("usecase", "upload_part"),
+			errors.WithProperty("usecase", "receive_part"),
 			errors.WithProperty("solution_archive_name", part.SolutionArchive.Name),
 			errors.WithProperty("solution_archive_version", part.SolutionArchive.Version),
 			errors.WithProperty("instance", fmt.Sprintf(
@@ -93,7 +93,7 @@ func (uc *UploadPart) Execute(part *domain.Part) (*domain.SolutionArchiveStatus,
 		return nil, errors.Wrap(err,
 			errors.WithIdentifier(234),
 			errors.WithDetail("error on retrieving the manifest file"),
-			errors.WithProperty("usecase", "upload_part"),
+			errors.WithProperty("usecase", "receive_part"),
 			errors.WithProperty("solution_archive_name", part.SolutionArchive.Name),
 			errors.WithProperty("solution_archive_version", part.SolutionArchive.Version),
 			errors.WithProperty("instance", fmt.Sprintf(
@@ -108,10 +108,10 @@ func (uc *UploadPart) Execute(part *domain.Part) (*domain.SolutionArchiveStatus,
 	// Test if a session related to the solution archive from the part exists
 	if solutionArchiveFromManifest.Name != part.SolutionArchive.Name ||
 		solutionArchiveFromManifest.Version != part.SolutionArchive.Version {
-		return nil, errors.Wrap(domain.ErrPartUploaderNotFound,
+		return nil, errors.Wrap(domain.ErrPartReceiverNotFound,
 			errors.WithIdentifier(235),
 			errors.WithDetail("solution archive not found in the current session manifest"),
-			errors.WithProperty("usecase", "upload_part"),
+			errors.WithProperty("usecase", "receive_part"),
 			errors.WithProperty("solution_archive_name", part.SolutionArchive.Name),
 			errors.WithProperty("solution_archive_version", part.SolutionArchive.Version),
 			errors.WithProperty("instance", fmt.Sprintf(
@@ -134,7 +134,7 @@ func (uc *UploadPart) Execute(part *domain.Part) (*domain.SolutionArchiveStatus,
 		return nil, errors.Wrap(err,
 			errors.WithIdentifier(236),
 			errors.WithDetail("error on storing the part"),
-			errors.WithProperty("usecase", "upload_part"),
+			errors.WithProperty("usecase", "receive_part"),
 			errors.WithProperty("solution_archive_name", part.SolutionArchive.Name),
 			errors.WithProperty("solution_archive_version", part.SolutionArchive.Version),
 			errors.WithProperty("instance", fmt.Sprintf(
@@ -151,7 +151,7 @@ func (uc *UploadPart) Execute(part *domain.Part) (*domain.SolutionArchiveStatus,
 		return nil, errors.Wrap(err,
 			errors.WithIdentifier(237),
 			errors.WithDetail("error on committing the part"),
-			errors.WithProperty("usecase", "upload_part"),
+			errors.WithProperty("usecase", "receive_part"),
 			errors.WithProperty("solution_archive_name", part.SolutionArchive.Name),
 			errors.WithProperty("solution_archive_version", part.SolutionArchive.Version),
 			errors.WithProperty("instance", fmt.Sprintf(
@@ -179,7 +179,7 @@ func (uc *UploadPart) Execute(part *domain.Part) (*domain.SolutionArchiveStatus,
 		return nil, errors.Wrap(err,
 			errors.WithIdentifier(238),
 			errors.WithDetail("error on consolidating the part"),
-			errors.WithProperty("usecase", "upload_part"),
+			errors.WithProperty("usecase", "receive_part"),
 			errors.WithProperty("solution_archive_name", part.SolutionArchive.Name),
 			errors.WithProperty("solution_archive_version", part.SolutionArchive.Version),
 			errors.WithProperty("instance", fmt.Sprintf(
@@ -191,7 +191,7 @@ func (uc *UploadPart) Execute(part *domain.Part) (*domain.SolutionArchiveStatus,
 		)
 	}
 
-	uc.logger.Info().Msg("Part uploaded")
+	uc.logger.Info().Msg("Part received")
 
 	return solutionArchiveStatus, nil
 }
