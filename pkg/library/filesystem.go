@@ -335,6 +335,12 @@ func HashFile(
 		)
 	}
 
+	// Best-effort: drop the page cache populated by the full-archive read so a
+	// large archive does not stay resident as reclaimable cache after hashing.
+	if osFile, ok := file.(*os.File); ok {
+		_ = DropCache(osFile, 0, 0) // nolint: errcheck // Best-effort cache hint.
+	}
+
 	return hash, nil
 }
 
@@ -353,6 +359,23 @@ func hashReader(
 	}
 
 	return fmt.Sprintf("%x", hasher.Sum(nil)), nil
+}
+
+// DropCache advises the kernel to drop the page cache for the given byte range.
+// Archive parts are written once and never re-read on the upload path,
+// so retaining their pages only inflates the container's reclaimable page cache
+// (charged to the cgroup's memory.usage).
+// A length of 0 covers from offset to the end of the file.
+func DropCache(file *os.File, offset, length int64) error {
+	if err := unix.Fadvise(int(file.Fd()), offset, length, unix.FADV_DONTNEED); err != nil {
+		return errors.Wrap(domain.ErrInternal,
+			errors.WithIdentifier(242),
+			errors.WithDetail("unable to advise the kernel to drop the page cache"),
+			errors.CausedBy(err),
+		)
+	}
+
+	return nil
 }
 
 // GenBucketName generates a unique bucket name for a session based on the solution archive's name and version.
