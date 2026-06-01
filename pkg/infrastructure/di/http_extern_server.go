@@ -2,10 +2,9 @@
 package di
 
 import (
-	"context"
 	"net/http"
+	"strings"
 
-	middleware "github.com/oapi-codegen/nethttp-middleware"
 	"github.com/scality/go-errors"
 	"github.com/scality/metalk8s-registry-node-agent/pkg/domain"
 	"github.com/scality/metalk8s-registry-node-agent/pkg/library"
@@ -15,11 +14,6 @@ import (
 
 func (c *Container) GetHTTPExternServer() *http.Server {
 	if c.httpExternServer == nil {
-		swagger, err := extern.GetSwagger()
-		if err != nil {
-			c.GetLogger().Fatal().Err(err).Msg("failed to get swagger")
-		}
-
 		mainRouter := http.NewServeMux()
 
 		// Healthcheck endpoint for liveness status
@@ -28,6 +22,47 @@ func (c *Container) GetHTTPExternServer() *http.Server {
 		})
 
 		apiRouter := http.NewServeMux()
+
+		// Add a middleware to check if the SolutionArchive version parameter
+		// is present in the path
+		// SolutionArchive name cannot be validated because the router send http/301
+		// when the sequence "//" is sent in the path before any middleware execution
+		validateVersion := func(next http.Handler) http.Handler {
+			return http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+				urlParts := strings.Split(request.URL.Path, "/")
+				if len(urlParts) < 4 {
+					handler.WriteExternProblemDetails(
+						c.GetLogger(),
+						writer,
+						errors.Wrap(
+							domain.ErrHandlerBadRequest,
+							errors.WithIdentifier(http.StatusBadRequest),
+							errors.WithDetail("path is not valid"),
+						),
+						"path is not valid",
+					)
+					return
+				}
+
+				// Verify SolutionArchive version is present
+				version := urlParts[3]
+				if version == "" {
+					handler.WriteExternProblemDetails(
+						c.GetLogger(),
+						writer,
+						errors.Wrap(
+							domain.ErrHandlerBadRequest,
+							errors.WithIdentifier(http.StatusBadRequest),
+							errors.WithDetail("Version parameter is required"),
+						),
+						"Version parameter is required",
+					)
+					return
+				}
+
+				next.ServeHTTP(writer, request)
+			})
+		}
 
 		// Add a middleware to check if the body size (through Content-Length header)
 		// 	is conform to the chunk size declared by the Content-Range header
@@ -79,35 +114,17 @@ func (c *Container) GetHTTPExternServer() *http.Server {
 			},
 		)
 
-		validatorOptions := &middleware.Options{
-			ErrorHandlerWithOpts: func(
-				ctx context.Context,
-				err error,
-				w http.ResponseWriter,
-				r *http.Request,
-				opts middleware.ErrorHandlerOpts,
-			) {
-				statusCode := opts.StatusCode
-				if opts.MatchedRoute == nil {
-					// request URL is probably missing solutionArchive and/or version parameter(s)
-					statusCode = http.StatusBadRequest
-				}
-				c.GetLogger().Error().
-					Str("message", err.Error()).
-					Int("status_code", statusCode).
-					Msg("OAPI request validation error")
-
-				http.Error(w, err.Error(), statusCode)
-			},
-			DoNotValidateServers: true,
-		}
-
-		// Use the middleware to check all requests
+		// Use a custom middleware to check all requests
+		// OpenAPI-codegen middleware validator cannot be used for the moment
+		// because it reads the full body through io.ReadAll().
+		// In the version 1.1.2 of the library, the option "Skipper" is not yet available.
+		// This middleware must be executed as soon as possible to avoid the router to return a http/404
+		// because the path has not been found.
 		mainRouter.Handle(
 			c.getRootExternAPIPath()+"/",
 			http.StripPrefix(
 				c.getRootExternAPIPath(),
-				middleware.OapiRequestValidatorWithOptions(swagger, validatorOptions)(apiRouter),
+				validateVersion(apiRouter),
 			),
 		)
 
