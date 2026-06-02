@@ -261,17 +261,6 @@ func (f *FileSystem) StorePart(
 		)
 	}
 
-	// Best-effort: drop the page cache for the part. Parts are
-	// written once and not re-read on the upload path, so retaining their pages
-	// would let the page cache grow to the full archive size during an upload.
-	if err := library.DropCache(recipientFile, part.Meta.Start, part.Meta.Size()); err != nil {
-		f.logger.Warn().Err(err).
-			Str("recipient_file_path", recipientFilePath).
-			Int64("part_start", part.Meta.Start).
-			Int64("part_size", part.Meta.Size()).
-			Msg("failed to drop page cache after storing part")
-	}
-
 	solutionArchiveStatus.Parts[part.Meta.Start] = part.Meta
 
 	return solutionArchiveStatus, nil

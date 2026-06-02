@@ -450,3 +450,13 @@ The agent never trusts a peer's `status.url` blindly: chunks fetched from that U
 - **Logging**: structured logs via `zerolog` (use cases) and `zap` / `controller-runtime` (controller, webhook). Verbosity is controlled by `LOGGER_LOG_LEVEL` (use cases) and `--zap-log-level` (controller).
 - **Metrics**: controller-runtime exposes the standard set (workqueue depth, reconcile latency, errors). Domain-specific metrics (`/metrics` upload/download counters and durations) are not yet implemented.
 - **Resource status**: `kubectl get nsa` shows `Initialized`, `Available`, `Served` columns so operators can spot any node lagging behind without reading logs.
+
+## 13. Streaming and cache
+
+To avoid memory overflow, all part uploads, downloads and hashing are streamed (`io.Copy` / `io.TeeReader`) instead of being buffered fully in memory.
+
+During these phases (uploading, hashing or downloading a solutionArchive part), the written or read data is transiently held in the Linux page cache. This cache is reclaimable: the kernel evicts it under memory pressure, so it cannot by itself cause an OOM kill.
+
+After multiple tests, we conclude that:
+* the page cache is reclaimed before reaching the memory limits defined under the `resources` section, and
+* no OOM kill was observed.
