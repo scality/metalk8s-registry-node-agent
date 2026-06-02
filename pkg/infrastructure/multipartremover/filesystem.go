@@ -36,8 +36,13 @@ func (f *FileSystem) DeleteMultipartFile(
 	bucketName string,
 	solutionArchive *domain.SolutionArchive,
 ) error {
-	if err := library.CheckDir(library.GenBucketPath(f.solutionArchivesLocation, bucketName)); err != nil {
-		return errors.Stamp(err)
+	bucketPath := library.GenBucketPath(f.solutionArchivesLocation, bucketName)
+	if err := library.CheckDir(bucketPath); err != nil {
+		return errors.Wrap(err,
+			errors.WithIdentifier(157),
+			errors.WithDetail("unexpected error while checking bucket directory"),
+			errors.WithProperty("bucket_path", bucketPath),
+		)
 	}
 
 	metaFilePath, partsFilePath, recipientFilePath := library.GenMultipartFilePaths(
@@ -47,15 +52,27 @@ func (f *FileSystem) DeleteMultipartFile(
 	)
 
 	if err := library.CheckFile(metaFilePath); err != nil {
-		return errors.Stamp(err)
+		return errors.Wrap(err,
+			errors.WithIdentifier(158),
+			errors.WithDetail("unexpected error while checking meta file"),
+			errors.WithProperty("meta_file_path", metaFilePath),
+		)
 	}
 
 	if err := library.CheckFile(partsFilePath); err != nil {
-		return errors.Stamp(err)
+		return errors.Wrap(err,
+			errors.WithIdentifier(159),
+			errors.WithDetail("unexpected error while checking parts file"),
+			errors.WithProperty("parts_file_path", partsFilePath),
+		)
 	}
 
 	if err := library.CheckFile(recipientFilePath); err != nil {
-		return errors.Stamp(err)
+		return errors.Wrap(err,
+			errors.WithIdentifier(160),
+			errors.WithDetail("unexpected error while checking recipient file"),
+			errors.WithProperty("recipient_file_path", recipientFilePath),
+		)
 	}
 
 	problems := make(map[string]any)
@@ -73,11 +90,11 @@ func (f *FileSystem) DeleteMultipartFile(
 	}
 
 	if len(problems) > 0 {
-		return errors.From(domain.ErrStorageProviderInternal).
-			WithIdentifier(500000).
-			WithDetail("unable to delete the multipart file").
-			WithProperties(problems).
-			Throw()
+		return errors.Wrap(domain.ErrStorageProviderInternal,
+			errors.WithIdentifier(161),
+			errors.WithDetail("unable to delete multipart file(s)"),
+			errors.WithProperties(problems),
+		)
 	}
 
 	return nil

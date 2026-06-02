@@ -8,6 +8,7 @@ import (
 	middleware "github.com/oapi-codegen/nethttp-middleware"
 	"github.com/scality/go-errors"
 	"github.com/scality/metalk8s-registry-node-agent/pkg/domain"
+	"github.com/scality/metalk8s-registry-node-agent/pkg/library"
 	"github.com/scality/metalk8s-registry-node-agent/pkg/presentation/http/extern"
 	"github.com/scality/metalk8s-registry-node-agent/pkg/presentation/http/handler"
 )
@@ -34,21 +35,25 @@ func (c *Container) GetHTTPExternServer() *http.Server {
 			return http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
 				// OpenAPI-codegen validation will catch the missing Content-Range header
 				contentRange := request.Header.Get("Content-Range")
-				headerStart, headerEnd, _, err := handler.ParseContentRange(contentRange)
+				headerStart, headerEnd, _, err := library.ParseContentRange(contentRange)
 				if err != nil {
-					handler.WriteExternProblemDetails(c.GetLogger(), writer, err, "Invalid Content-Range header")
+					handler.WriteExternProblemDetails(
+						c.GetLogger(),
+						writer,
+						errors.Wrap(err, errors.WithIdentifier(http.StatusBadRequest)),
+						"Invalid Content-Range header")
 					return
 				}
 				rangeSize := headerEnd - headerStart + 1
 				// golang net/http library deals with missing or malformed Content-Length headers
 				// by setting request.ContentLength to 0 or -1 so the comparison below is sufficient.
 				if rangeSize != request.ContentLength {
-					bodySizeErr := errors.From(domain.ErrHandlerBadRequest).
-						WithIdentifier(400007).
-						WithDetail("Content-Range header does not match the body size").
-						WithProperty("content_range_size", rangeSize).
-						WithProperty("content_length", request.ContentLength).
-						Throw()
+					bodySizeErr := errors.Wrap(domain.ErrHandlerBadRequest,
+						errors.WithIdentifier(http.StatusBadRequest),
+						errors.WithDetail("Content-Range header does not match the body size"),
+						errors.WithProperty("content_range_size", rangeSize),
+						errors.WithProperty("content_length", request.ContentLength),
+					)
 					handler.WriteExternProblemDetails(c.GetLogger(), writer, bodySizeErr, "Body size does not match Content-Range")
 					return
 				}

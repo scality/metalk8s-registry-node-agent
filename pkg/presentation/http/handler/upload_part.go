@@ -39,12 +39,32 @@ func (h *UploadPart) UploadChunk(
 	var part domain.Part
 
 	if err := fillPartFromUploadChunkRequestObject(&part, &request); err != nil {
-		return h.genUploadChunkResponseObjectFromError(errors.Stamp(err))
+		return h.genUploadChunkResponseObjectFromError(
+			errors.Wrap(err,
+				errors.WithIdentifier(http.StatusBadRequest),
+			),
+		)
 	}
 
 	solutionArchiveStatus, err := h.uc.Execute(&part)
 	if err != nil {
-		return h.genUploadChunkResponseObjectFromError(errors.Stamp(err))
+		// Default value for the API error
+		apiErr := errors.Wrap(err,
+			errors.WithIdentifier(http.StatusInternalServerError),
+		)
+		if errors.IdentifierStartsWith(err, "232-122") {
+			apiErr = errors.Wrap(err, errors.WithIdentifier(http.StatusNotFound))
+		} else if errors.IdentifierStartsWith(err, "233-27") {
+			apiErr = errors.Wrap(err, errors.WithIdentifier(http.StatusNotFound))
+		} else if errors.IdentifierStartsWith(err, "235") {
+			apiErr = errors.Wrap(err, errors.WithIdentifier(http.StatusNotFound))
+		} else if errors.IdentifierStartsWith(err, "238-192-181") {
+			apiErr = errors.Wrap(err, errors.WithIdentifier(http.StatusUnprocessableEntity))
+		} else if errors.IdentifierStartsWith(err, "238-192-183") {
+			apiErr = errors.Wrap(err, errors.WithIdentifier(http.StatusUnprocessableEntity))
+		}
+
+		return h.genUploadChunkResponseObjectFromError(apiErr)
 	}
 
 	var response extern.UploadChunkSuccessResponse
@@ -65,17 +85,23 @@ func (h *UploadPart) genUploadChunkResponseObjectFromError(
 
 	var problemDetails extern.ProblemDetails
 
-	errors.As(err, &apiErr)
+	// no need to test for bad conversion
+	// the error is an underlying *errors.Error, wrapped in UploadChunk
+	errors.As(err, &apiErr) // nolint: errcheck
 
 	h.fillProblemDetailsFromAPIErrorsError(&problemDetails, apiErr)
 
-	switch int(apiErr.Identifier / 1000) {
-	case http.StatusBadRequest, http.StatusUnprocessableEntity:
-		// TODO: Fix the status code on https://scality.atlassian.net/browse/ARTESCA-13615
-		// The status code should be 422, but the generated code uses 400.
-		// However, change this will demand changes the OpenAPI Spec.
+	switch int(*problemDetails.Status) {
+	case http.StatusBadRequest:
 		return extern.UploadChunk400ApplicationProblemPlusJSONResponse{
 			BadRequestApplicationProblemPlusJSONResponse: extern.BadRequestApplicationProblemPlusJSONResponse(
+				problemDetails,
+			),
+		}, nil
+
+	case http.StatusUnprocessableEntity:
+		return extern.UploadChunk422ApplicationProblemPlusJSONResponse{
+			UnprocessableEntityApplicationProblemPlusJSONResponse: extern.UnprocessableEntityApplicationProblemPlusJSONResponse(
 				problemDetails,
 			),
 		}, nil
@@ -116,6 +142,6 @@ func (h *UploadPart) genUploadChunkResponseObjectFromError(
 		}, nil
 
 	default:
-		return nil, errors.Stamp(err)
+		return nil, errors.Wrap(err)
 	}
 }

@@ -33,11 +33,11 @@ func (s *WatchedFileStore) GetHashFromFileInfos(filename string) (string, error)
 
 	info, ok := s.infos[filename]
 	if !ok {
-		return "", errors.From(domain.ErrStorageProviderNotFound).
-			WithIdentifier(404000).
-			WithDetail("file not found").
-			WithProperty("file_name", filename).
-			Throw()
+		return "", errors.Wrap(domain.ErrStorageProviderNotFound,
+			errors.WithIdentifier(77),
+			errors.WithDetail("error getting hash from file infos"),
+			errors.WithProperty("file_name", filename),
+		)
 	}
 
 	return info.Hash, nil
@@ -49,11 +49,11 @@ func (s *WatchedFileStore) GetSizeFromFileInfos(filename string) (int64, error) 
 
 	info, ok := s.infos[filename]
 	if !ok {
-		return 0, errors.From(domain.ErrStorageProviderNotFound).
-			WithIdentifier(404000).
-			WithDetail("file not found").
-			WithProperty("file_name", filename).
-			Throw()
+		return 0, errors.Wrap(domain.ErrStorageProviderNotFound,
+			errors.WithIdentifier(78),
+			errors.WithDetail("error getting size from file infos"),
+			errors.WithProperty("file_name", filename),
+		)
 	}
 
 	return info.Size, nil

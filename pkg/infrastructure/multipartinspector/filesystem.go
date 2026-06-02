@@ -39,12 +39,20 @@ var _ service.MultipartInspector = &FileSystem{}
 func (f *FileSystem) GetMultipartFile(bucketName string) (*domain.SolutionArchive, error) {
 	bucketPath := library.GenBucketPath(f.solutionArchivesLocation, bucketName)
 	if err := library.CheckDir(bucketPath); err != nil {
-		return nil, errors.Stamp(err)
+		return nil, errors.Wrap(err,
+			errors.WithIdentifier(140),
+			errors.WithDetail("unexpected error while checking bucket directory"),
+			errors.WithProperty("bucket_path", bucketPath),
+		)
 	}
 
 	solutionArchiveMeta, err := f.getSolutionArchiveMeta(bucketPath)
 	if err != nil {
-		return nil, errors.Stamp(err)
+		return nil, errors.Wrap(err,
+			errors.WithIdentifier(141),
+			errors.WithDetail("unexpected error while getting solution archive metadata"),
+			errors.WithProperty("bucket_path", bucketPath),
+		)
 	}
 
 	return solutionArchiveMeta, nil
@@ -56,10 +64,13 @@ func (f *FileSystem) GetMultipartFileStatus(
 	bucketName string,
 	solutionArchive *domain.SolutionArchive,
 ) (*domain.SolutionArchiveStatus, error) {
-	if err := library.CheckDir(
-		library.GenBucketPath(f.solutionArchivesLocation, bucketName),
-	); err != nil {
-		return nil, errors.Stamp(err)
+	bucketPath := library.GenBucketPath(f.solutionArchivesLocation, bucketName)
+	if err := library.CheckDir(bucketPath); err != nil {
+		return nil, errors.Wrap(err,
+			errors.WithIdentifier(142),
+			errors.WithDetail("unexpected error while checking bucket directory"),
+			errors.WithProperty("bucket_path", bucketPath),
+		)
 	}
 
 	metaFilePath, partsFilePath, recipientFilePath := library.GenMultipartFilePaths(
@@ -69,44 +80,67 @@ func (f *FileSystem) GetMultipartFileStatus(
 	)
 
 	if err := library.CheckFile(metaFilePath); err != nil {
-		return nil, errors.Stamp(err)
+		return nil, errors.Wrap(err,
+			errors.WithIdentifier(143),
+			errors.WithDetail("unexpected error while checking meta file"),
+			errors.WithProperty("meta_file_path", metaFilePath),
+		)
 	}
 
 	if err := library.CheckFile(partsFilePath); err != nil {
-		return nil, errors.Stamp(err)
+		return nil, errors.Wrap(err,
+			errors.WithIdentifier(144),
+			errors.WithDetail("unexpected error while checking parts file"),
+			errors.WithProperty("parts_file_path", partsFilePath),
+		)
 	}
 
 	if err := library.CheckFile(recipientFilePath); err != nil {
-		return nil, errors.Stamp(err)
+		return nil, errors.Wrap(err,
+			errors.WithIdentifier(145),
+			errors.WithDetail("unexpected error while checking recipient file"),
+			errors.WithProperty("recipient_file_path", recipientFilePath),
+		)
 	}
 
 	metaFile, err := library.GetFile(metaFilePath)
 	if err != nil {
-		return nil, errors.Stamp(err)
+		return nil, errors.Wrap(err,
+			errors.WithIdentifier(146),
+			errors.WithDetail("unexpected error while getting meta file content"),
+			errors.WithProperty("meta_file_path", metaFilePath),
+		)
 	}
 
 	defer metaFile.Close() // nolint: errcheck // No error check on defer.
 
 	partsFile, err := library.GetFile(partsFilePath)
 	if err != nil {
-		return nil, errors.Stamp(err)
+		return nil, errors.Wrap(err,
+			errors.WithIdentifier(147),
+			errors.WithDetail("unexpected error while getting parts file content"),
+			errors.WithProperty("parts_file_path", partsFilePath),
+		)
 	}
 
 	defer partsFile.Close() // nolint: errcheck // No error check on defer.
 
 	var storedSolutionArchiveMeta domain.SolutionArchive
 	if err := json.NewDecoder(metaFile).Decode(&storedSolutionArchiveMeta); err != nil {
-		return nil, errors.From(domain.ErrStorageProviderInternal).
-			WithIdentifier(500000).
-			WithDetail("unable to load the metadata of the multipart file").
-			WithProperty("file_path", metaFilePath).
-			WithProperty("while", "decoding the metadata from json").
-			CausedBy(err).
-			Throw()
+		return nil, errors.Wrap(domain.ErrStorageProviderInternal,
+			errors.WithIdentifier(148),
+			errors.WithDetail("unable to decode metadata from JSON in multipart meta file"),
+			errors.WithProperty("file_path", metaFilePath),
+			errors.CausedBy(err),
+		)
 	}
 
 	if err := library.CompareSolutionArchiveMetas(solutionArchive, &storedSolutionArchiveMeta); err != nil {
-		return nil, errors.Stamp(err)
+		return nil, errors.Wrap(err,
+			errors.WithIdentifier(149),
+			errors.WithDetail("unexpected error while comparing solution archive metas"),
+			errors.WithProperty("solution_archive_name", solutionArchive.Name),
+		)
 	}
 
 	partMetas := make(map[int64]*domain.PartMeta)
@@ -119,13 +153,12 @@ func (f *FileSystem) GetMultipartFileStatus(
 		}
 
 		if err != nil {
-			return nil, errors.From(domain.ErrStorageProviderInternal).
-				WithIdentifier(500000).
-				WithDetail("unable to load the parts metadata of the multipart file").
-				WithProperty("file_path", partsFilePath).
-				WithProperty("while", "decoding the parts metadata from binary").
-				CausedBy(err).
-				Throw()
+			return nil, errors.Wrap(domain.ErrStorageProviderInternal,
+				errors.WithIdentifier(150),
+				errors.WithDetail("unable to load the parts metadata from binary multipart file"),
+				errors.WithProperty("file_path", partsFilePath),
+				errors.CausedBy(err),
+			)
 		}
 
 		partMetas[partMeta.Start] = &partMeta
@@ -142,7 +175,11 @@ func (f *FileSystem) GetMultipartFileStatus(
 func (f *FileSystem) getSolutionArchiveMeta(bucketPath string) (*domain.SolutionArchive, error) {
 	metaFileNames, err := library.ListDirContentNames(bucketPath, library.MultipartMetaFilter)
 	if err != nil {
-		return nil, errors.Stamp(err)
+		return nil, errors.Wrap(err,
+			errors.WithIdentifier(151),
+			errors.WithDetail("unexpected error while listing multipart meta files"),
+			errors.WithProperty("bucket_path", bucketPath),
+		)
 	}
 
 	solutionArchiveMetas := make([]*domain.SolutionArchive, 0, len(metaFileNames))
@@ -151,7 +188,11 @@ func (f *FileSystem) getSolutionArchiveMeta(bucketPath string) (*domain.Solution
 		var solutionArchiveMeta domain.SolutionArchive
 
 		if err := loadSolutionArchiveMeta(&solutionArchiveMeta, filepath.Join(bucketPath, metaFileName)); err != nil {
-			return nil, errors.Stamp(err)
+			return nil, errors.Wrap(err,
+				errors.WithIdentifier(152),
+				errors.WithDetail("unexpected error while loading solution archive metadata"),
+				errors.WithProperty("meta_file_path", filepath.Join(bucketPath, metaFileName)),
+			)
 		}
 
 		solutionArchiveMetas = append(solutionArchiveMetas, &solutionArchiveMeta)
@@ -159,18 +200,18 @@ func (f *FileSystem) getSolutionArchiveMeta(bucketPath string) (*domain.Solution
 
 	solutionArchiveMetas = f.filterOrphansMeta(bucketPath, solutionArchiveMetas)
 	if len(solutionArchiveMetas) < 1 {
-		return nil, errors.From(domain.ErrStorageProviderNotFound).
-			WithIdentifier(404000).
-			WithDetail("no multipart files found in the bucket").
-			WithProperty("bucket_name", bucketPath).
-			Throw()
+		return nil, errors.Wrap(domain.ErrStorageProviderNotFound,
+			errors.WithIdentifier(153),
+			errors.WithDetail("no multipart files found in the bucket"),
+			errors.WithProperty("bucket_path", bucketPath),
+		)
 	}
 	if len(solutionArchiveMetas) > 1 {
-		return nil, errors.From(domain.ErrStorageProviderInternal).
-			WithIdentifier(500000).
-			WithDetail("too many multipart files found in the bucket").
-			WithProperty("bucket_name", bucketPath).
-			Throw()
+		return nil, errors.Wrap(domain.ErrStorageProviderInternal,
+			errors.WithIdentifier(154),
+			errors.WithDetail("too many multipart files found in the bucket"),
+			errors.WithProperty("bucket_path", bucketPath),
+		)
 	}
 
 	return solutionArchiveMetas[0], nil
@@ -218,19 +259,22 @@ func (f *FileSystem) filterOrphansMeta(
 func loadSolutionArchiveMeta(meta *domain.SolutionArchive, filePath string) error {
 	metaFile, err := library.GetFile(filePath)
 	if err != nil {
-		return errors.Stamp(err)
+		return errors.Wrap(err,
+			errors.WithIdentifier(155),
+			errors.WithDetail("unexpected error while getting multipart meta file content"),
+			errors.WithProperty("meta_file_path", filePath),
+		)
 	}
 
 	defer metaFile.Close() // nolint: errcheck // No error check on defer.
 
 	if err := json.NewDecoder(metaFile).Decode(meta); err != nil {
-		return errors.From(domain.ErrStorageProviderInternal).
-			WithIdentifier(500000).
-			WithDetail("unable to load the metadata of the multipart file").
-			WithProperty("file_path", filePath).
-			WithProperty("while", "decoding the metadata from json").
-			CausedBy(err).
-			Throw()
+		return errors.Wrap(domain.ErrStorageProviderInternal,
+			errors.WithIdentifier(156),
+			errors.WithDetail("unable to decode metadata from JSON in multipart meta file"),
+			errors.WithProperty("file_path", filePath),
+			errors.CausedBy(err),
+		)
 	}
 
 	return nil

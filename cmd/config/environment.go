@@ -79,7 +79,9 @@ func NewEnvironment(ctx context.Context) (*Environment, error) {
 
 	err := cfg.Load(ctx)
 	if err != nil {
-		return nil, errors.Stamp(err)
+		return nil, errors.Wrap(err,
+			errors.WithIdentifier(3),
+		)
 	}
 
 	return cfg, nil
@@ -88,18 +90,18 @@ func NewEnvironment(ctx context.Context) (*Environment, error) {
 func (cfg *Environment) Load(ctx context.Context) error {
 	err := envconfig.Process(ctx, cfg)
 	if err != nil {
-		return errors.From(domain.ErrInternal).
-			WithIdentifier(500000).
-			WithDetail("failed to process environment variables").
-			CausedBy(err).
-			Throw()
+		return errors.Wrap(domain.ErrConfigurationLoading,
+			errors.WithIdentifier(1),
+			errors.WithDetail("failed to process environment variables"),
+			errors.CausedBy(err),
+		)
 	}
 
 	if cfg.ChunkSizeMB <= 0 {
-		return errors.From(domain.ErrInternal).
-			WithIdentifier(500000).
-			WithDetail("chunk size must be greater than 0").
-			Throw()
+		return errors.Wrap(domain.ErrConfigurationLoading,
+			errors.WithIdentifier(2),
+			errors.WithDetail("chunk size must be greater than 0"),
+		)
 	}
 
 	return nil

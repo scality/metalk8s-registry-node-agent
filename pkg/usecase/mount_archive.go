@@ -45,7 +45,13 @@ func (uc *MountSolutionArchive) Execute(solutionArchive *domain.SolutionArchive)
 	// matching solutionArchiveStorageNamePattern
 	fileNames, err := uc.archiveLister.ListFiles()
 	if err != nil {
-		return errors.Stamp(err)
+		return errors.Wrap(err,
+			errors.WithIdentifier(222),
+			errors.WithDetail("error on listing solution archives"),
+			errors.WithProperty("usecase", "mount_solution_archive"),
+			errors.WithProperty("solution_archive_name", solutionArchive.Name),
+			errors.WithProperty("solution_archive_version", solutionArchive.Version),
+		)
 	}
 
 	// Check if the solution archive exists in the storage
@@ -53,28 +59,32 @@ func (uc *MountSolutionArchive) Execute(solutionArchive *domain.SolutionArchive)
 		err := uc.archiveMounter.MountFile(library.GenSolutionArchiveFileName(solutionArchive),
 			library.GenSolutionDirName(solutionArchive))
 		if err != nil {
-			if errors.Is(err,
-				errors.
-					Intercept(domain.ErrMountSolutionArchiveInvalidISO).
-					WithIdentifier(400000).
-					Throw()) {
-				return errors.Intercept(err).
-					WithDetail("file deleted").
-					Throw()
+			if errors.Is(err, domain.ErrMountSolutionArchiveInvalidISO) {
+				return errors.Wrap(err,
+					errors.WithIdentifier(223),
+					errors.WithDetail("solution archive is not a valid ISO file and is therefore deleted"),
+					errors.WithProperty("usecase", "mount_solution_archive"),
+					errors.WithProperty("solution_archive_name", solutionArchive.Name),
+					errors.WithProperty("solution_archive_version", solutionArchive.Version),
+				)
 			}
 
-			return errors.Intercept(err).
-				WithDetail("failed to mount solution archive").
-				Throw()
+			return errors.Wrap(err,
+				errors.WithIdentifier(224),
+				errors.WithDetail("unexpected error while mounting the solution archive"),
+				errors.WithProperty("usecase", "mount_solution_archive"),
+				errors.WithProperty("solution_archive_name", solutionArchive.Name),
+				errors.WithProperty("solution_archive_version", solutionArchive.Version),
+			)
 		}
 		uc.logger.Debug().Any("solution_archive", solutionArchive).Msg("Solution archive mounted")
 		return nil
 	}
 
-	return errors.From(domain.ErrNotFound).
-		WithIdentifier(404000).
-		WithDetail("solution archive not found").
-		WithProperty("solution_archive_name", solutionArchive.Name).
-		WithProperty("solution_archive_version", solutionArchive.Version).
-		Throw()
+	return errors.Wrap(domain.ErrNotFound,
+		errors.WithIdentifier(225),
+		errors.WithDetail("solution archive not found"),
+		errors.WithProperty("solution_archive_name", solutionArchive.Name),
+		errors.WithProperty("solution_archive_version", solutionArchive.Version),
+	)
 }

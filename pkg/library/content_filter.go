@@ -56,7 +56,7 @@ func ListDirContentNames(
 ) ([]string, error) {
 	entries, err := ListDirContent(location, filter)
 	if err != nil {
-		return nil, errors.Stamp(err)
+		return nil, errors.Wrap(err)
 	}
 
 	return ExtractNames(entries), nil
@@ -122,12 +122,12 @@ func ListDirContent(
 ) ([]fs.DirEntry, error) {
 	entries, err := os.ReadDir(location)
 	if err != nil {
-		return nil, errors.From(domain.ErrInternal).
-			WithIdentifier(500000).
-			WithDetail("unexpected error while listing the content").
-			WithProperty("location", location).
-			CausedBy(err).
-			Throw()
+		return nil, errors.Wrap(domain.ErrInternal,
+			errors.WithIdentifier(7),
+			errors.WithDetail("unexpected error while listing the content"),
+			errors.WithProperty("location_path", location),
+			errors.CausedBy(err),
+		)
 	}
 
 	return FilterContent(entries, filter), nil

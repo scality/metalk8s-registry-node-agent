@@ -3,14 +3,15 @@ package handler
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"strings"
 
 	"github.com/rs/zerolog"
 	"github.com/scality/go-errors"
 	"github.com/scality/metalk8s-registry-node-agent/pkg/domain"
+	"github.com/scality/metalk8s-registry-node-agent/pkg/library"
 	"github.com/scality/metalk8s-registry-node-agent/pkg/presentation/http/extern"
+	"k8s.io/utils/ptr"
 )
 
 // fillUploadChunkRangesFromDomainPartMetas fills the UploadChunkRange slice from the domain.Part map.
@@ -70,15 +71,19 @@ func fillPartFromUploadChunkRequestObject(
 	src *extern.UploadChunkRequestObject,
 ) error {
 	if src.Body == nil {
-		return errors.From(domain.ErrHandlerBadRequest).
-			WithIdentifier(400000).
-			WithDetail("body is missing").
-			Throw()
+		return errors.Wrap(domain.ErrHandlerBadRequest,
+			errors.WithIdentifier(242),
+			errors.WithDetail("body is missing"),
+		)
 	}
 
-	start, end, total, err := ParseContentRange(src.Params.ContentRange)
+	start, end, total, err := library.ParseContentRange(src.Params.ContentRange)
 	if err != nil {
-		return errors.Stamp(err)
+		return errors.Wrap(err,
+			errors.WithIdentifier(243),
+			errors.WithDetail("Content-Range is not valid"),
+			errors.WithProperty("Content-Range", src.Params.ContentRange),
+		)
 	}
 
 	dst.SolutionArchive = &domain.SolutionArchive{
@@ -106,17 +111,17 @@ func fillExternProblemDetailsFromAPIErrorsError(
 ) {
 	logger.Error().Err(src).Msg(logMsg)
 
-	status := src.Identifier / 1000 // nolint: gosec // TODO: Refactor this in the "polishing" sprint.
-	code := fmt.Sprintf("%d", src.Identifier)
+	// The HTTP status is the last error identifier.
+	status := int32(src.Identifier[len(src.Identifier)-1])
+	code := src.GetIdentifier()
 
 	dst.Title = src.Title
 	dst.Status = &status
 	dst.Code = &code
 
-	if len(src.Details) > 0 {
-		detail := strings.Join(src.Details, ": ")
-		dst.Detail = &detail
-	}
+	details := []string{}
+	details = append(details, src.Details...)
+	dst.Detail = ptr.To(strings.Join(details, ": "))
 
 	if instance, ok := src.Properties["instance"]; ok {
 		instanceStr, ok := instance.(string)
@@ -125,13 +130,14 @@ func fillExternProblemDetailsFromAPIErrorsError(
 		}
 	}
 
-	if len(src.Properties) > 0 {
-		fillInstanceFromPropertiesMap(&dst.Instance, src.Properties)
-
-		errs := make(extern.Errors, 0, len(src.Properties))
-		fillExternErrorDetailsFromPropertiesMap(&errs, src.Properties)
-
-		dst.Errors = &errs
+	for key, value := range src.Properties {
+		// We consider that properties containing "path" in their name are sensitive information.
+		if !strings.Contains(key, "path") && key != "instance" {
+			if dst.AdditionalInformation == nil {
+				dst.AdditionalInformation = &map[string]interface{}{}
+			}
+			(*dst.AdditionalInformation)[key] = value
+		}
 	}
 }
 
@@ -154,10 +160,10 @@ func WriteExternProblemDetails(
 ) {
 	var apiErr *errors.Error
 	if !errors.As(err, &apiErr) {
-		apiErr = errors.From(domain.ErrUnknown).
-			WithIdentifier(500000).
-			WithDetail(err.Error()).
-			Throw().(*errors.Error)
+		apiErr = errors.Wrap(domain.ErrUnknown,
+			errors.WithIdentifier(http.StatusInternalServerError),
+			errors.WithDetail(err.Error()),
+		).(*errors.Error)
 	}
 
 	var problemDetails extern.ProblemDetails
@@ -178,34 +184,4 @@ func WriteExternProblemDetails(
 	if encErr := json.NewEncoder(w).Encode(problemDetails); encErr != nil {
 		logger.Error().Err(encErr).Msg("failed to encode ProblemDetails response")
 	}
-}
-
-// fillExternErrorDetailsFromPropertiesMap fills the ErrorDetail slice from a map[string]any.
-func fillExternErrorDetailsFromPropertiesMap(
-	dst *extern.Errors,
-	src map[string]any,
-) {
-	*dst = make([]extern.ErrorDetail, 0, len(src))
-
-	for key, value := range src {
-		if strings.HasPrefix(key, "problem_") {
-			var errorDetail extern.ErrorDetail
-
-			fillExternErrorDetailFromProperty(&errorDetail, key, value)
-
-			*dst = append(*dst, errorDetail)
-		}
-	}
-}
-
-// fillExternErrorDetailFromProperty fills the ErrorDetail object from a property name and value.
-func fillExternErrorDetailFromProperty(
-	dst *extern.ErrorDetail,
-	key string, value any,
-) {
-	code := key
-	detail := fmt.Sprintf("%v", value)
-
-	dst.Code = &code
-	dst.Detail = detail
 }

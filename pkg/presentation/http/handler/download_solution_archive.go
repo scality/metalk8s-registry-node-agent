@@ -42,12 +42,28 @@ func (h *DownloadSolutionArchive) DownloadSolutionArchive(
 	var solutionArchivePart domain.Part
 
 	if err := fillSolutionArchiveFromDownloadSolutionArchiveRequestObject(&solutionArchivePart, &request); err != nil {
-		return h.genDownloadSolutionArchiveResponseObjectFromError(errors.Stamp(err))
+		return h.genDownloadSolutionArchiveResponseObjectFromError(
+			errors.Wrap(err,
+				errors.WithIdentifier(http.StatusBadRequest),
+			),
+		)
 	}
 
 	partFile, err := h.uc.Execute(&solutionArchivePart)
 	if err != nil {
-		return h.genDownloadSolutionArchiveResponseObjectFromError(errors.Stamp(err))
+		// Default value for the API error
+		apiErr := errors.Wrap(err,
+			errors.WithIdentifier(http.StatusInternalServerError),
+		)
+
+		if errors.IdentifierStartsWith(err, "200") {
+			apiErr = errors.Wrap(err, errors.WithIdentifier(http.StatusNotFound))
+		} else if errors.IdentifierStartsWith(err, "202") {
+			apiErr = errors.Wrap(err, errors.WithIdentifier(http.StatusBadRequest))
+		}
+
+		return h.genDownloadSolutionArchiveResponseObjectFromError(apiErr)
+
 	}
 
 	// As oapi-codegen does not handle HTTP Trailers, we need to manually implement this point,
@@ -100,17 +116,23 @@ func (h *DownloadSolutionArchive) genDownloadSolutionArchiveResponseObjectFromEr
 
 	var problemDetails intern.ProblemDetails
 
-	errors.As(err, &apiErr)
+	// no need to test for bad conversion
+	// the error is an underlying *errors.Error, wrapped in DownloadSolutionArchive
+	errors.As(err, &apiErr) // nolint: errcheck
 
 	h.fillProblemDetailsFromAPIErrorsError(&problemDetails, apiErr)
 
-	switch int(apiErr.Identifier / 1000) {
-	case http.StatusBadRequest, http.StatusUnprocessableEntity:
-		// TODO: Fix the status code on https://scality.atlassian.net/browse/ARTESCA-13615
-		// The status code should be 422, but the generated code uses 400.
-		// However, change this will demand changes the OpenAPI Spec.
+	switch int(*problemDetails.Status) {
+	case http.StatusBadRequest:
 		return intern.DownloadSolutionArchive400ApplicationProblemPlusJSONResponse{
 			BadRequestApplicationProblemPlusJSONResponse: intern.BadRequestApplicationProblemPlusJSONResponse(
+				problemDetails,
+			),
+		}, nil
+
+	case http.StatusUnprocessableEntity:
+		return intern.DownloadSolutionArchive422ApplicationProblemPlusJSONResponse{
+			UnprocessableEntityApplicationProblemPlusJSONResponse: intern.UnprocessableEntityApplicationProblemPlusJSONResponse(
 				problemDetails,
 			),
 		}, nil
@@ -144,6 +166,6 @@ func (h *DownloadSolutionArchive) genDownloadSolutionArchiveResponseObjectFromEr
 		}, nil
 
 	default:
-		return nil, errors.Stamp(err)
+		return nil, errors.Wrap(err)
 	}
 }

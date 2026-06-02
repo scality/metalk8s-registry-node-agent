@@ -1,4 +1,4 @@
-package handler
+package library
 
 import (
 	"testing"
@@ -48,7 +48,7 @@ func TestParseRange(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			start, end, total, err := parseRange(test.header)
+			start, end, total, err := ParseRange(test.header)
 			if (err != nil) != test.wantErr {
 				t.Errorf("parseRange() error = %v, wantErr %v", err, test.wantErr)
 			}

@@ -1,12 +1,10 @@
 //nolint:dupl,wrapcheck,funlen,lll,revive // Duplication is fine, too much wraps missing
-package handler
+package library
 
 import (
-	"bytes"
 	"fmt"
 	"regexp"
 	"strconv"
-	"strings"
 
 	"github.com/scality/go-errors"
 	"github.com/scality/metalk8s-registry-node-agent/pkg/domain"
@@ -47,7 +45,7 @@ var rangeRegexp = ContentRegexp{
 // parseRange() parses the Range header and returns the start,
 // size and end values.
 // nolint:revive
-func parseRange(
+func ParseRange(
 	headerRange string,
 ) (int64, int64, int64, error) {
 	return parseContentHeader(
@@ -77,10 +75,10 @@ func parseContentHeader(
 
 	// Check if the Content-Range header is missing
 	if headerContent == "" {
-		err = errors.From(domain.ErrHandlerMissingRequestHeader).
-			WithIdentifier(400002).
-			WithDetailf("header %s is missing", contentRegexp.name).
-			Throw()
+		err = errors.Wrap(domain.ErrHandlerMissingRequestHeader,
+			errors.WithIdentifier(58),
+			errors.WithDetailf("header %s is missing", contentRegexp.name),
+		)
 
 		return start, end, total, err
 	}
@@ -88,14 +86,14 @@ func parseContentHeader(
 	matched := contentRegexp.regexp.FindStringSubmatch(headerContent)
 
 	if len(matched) != contentRegexp.submatches {
-		err = errors.From(domain.ErrHandlerInvalidRequestHeaderFormat).
-			WithIdentifier(400006).
-			WithDetailf("header %s is not in the expected format", contentRegexp.name).
-			WithProperty("received_header", headerContent).
-			WithProperty("expected_format", contentRegexp.format).
-			WithProperty("example_header", contentRegexp.example).
-			WithProperty("validation_regex", contentRegexp.regexp.String()).
-			Throw()
+		err = errors.Wrap(domain.ErrHandlerInvalidRequestHeaderFormat,
+			errors.WithIdentifier(59),
+			errors.WithDetailf("header %s is not in the expected format", contentRegexp.name),
+			errors.WithProperty("received_header", headerContent),
+			errors.WithProperty("expected_format", contentRegexp.format),
+			errors.WithProperty("example_header", contentRegexp.example),
+			errors.WithProperty("validation_regex", contentRegexp.regexp.String()),
+		)
 
 		return start, end, total, err
 	}
@@ -132,15 +130,15 @@ func parseContentHeader(
 	}
 
 	if len(problems) > 0 {
-		err = errors.From(domain.ErrHandlerInvalidRequestHeaderFormat).
-			WithIdentifier(400006).
-			WithDetailf("header %s is not in the expected format", contentRegexp.name).
-			WithProperties(problems).
-			WithProperty("received_header", headerContent).
-			WithProperty("expected_format", contentRegexp.format).
-			WithProperty("example_header", contentRegexp.example).
-			WithProperty("validation_regex", contentRegexp.regexp.String()).
-			Throw()
+		err = errors.Wrap(domain.ErrHandlerInvalidRequestHeaderFormat,
+			errors.WithIdentifier(60),
+			errors.WithDetailf("header %s is not in the expected format", contentRegexp.name),
+			errors.WithProperties(problems),
+			errors.WithProperty("received_header", headerContent),
+			errors.WithProperty("expected_format", contentRegexp.format),
+			errors.WithProperty("example_header", contentRegexp.example),
+			errors.WithProperty("validation_regex", contentRegexp.regexp.String()),
+		)
 
 		start, end, total = 0, 0, 0
 
@@ -148,28 +146,4 @@ func parseContentHeader(
 	}
 
 	return start, end, total, nil
-}
-
-// fillInstanceFromPropertiesMap generates an instance string from a map[string]any.
-func fillInstanceFromPropertiesMap(
-	dst **string,
-	src map[string]any,
-) {
-	b := bytes.NewBuffer(nil)
-
-	if dst != nil && *dst != nil {
-		b.WriteString(**dst)
-		b.WriteString(":")
-	}
-
-	for key, value := range src {
-		if !strings.HasPrefix(key, "problem_") {
-			fmt.Fprintf(b, "%s='%v',", key, value)
-		}
-	}
-
-	if b.Len() > 0 {
-		instance := b.String()[:b.Len()-1]
-		*dst = &instance
-	}
 }

@@ -38,12 +38,24 @@ func (h *DescribeSolutionArchive) DescribeSolutionArchive(
 	var solutionArchive domain.SolutionArchive
 
 	if err := fillSolutionArchiveFromDescribeSolutionArchiveRequestObject(&solutionArchive, &request); err != nil {
-		return h.genDescribeSolutionArchiveResponseObjectFromError(errors.Stamp(err))
+		return h.genDescribeSolutionArchiveResponseObjectFromError(
+			errors.Wrap(err,
+				errors.WithIdentifier(http.StatusBadRequest),
+			),
+		)
 	}
 
 	size, err := h.uc.Execute(&solutionArchive)
 	if err != nil {
-		return h.genDescribeSolutionArchiveResponseObjectFromError(errors.Stamp(err))
+		// Default value for the API error
+		apiErr := errors.Wrap(err,
+			errors.WithIdentifier(http.StatusInternalServerError),
+		)
+		if errors.IdentifierStartsWith(err, "197") {
+			apiErr = errors.Wrap(err, errors.WithIdentifier(http.StatusNotFound))
+		}
+
+		return h.genDescribeSolutionArchiveResponseObjectFromError(apiErr)
 	}
 
 	return intern.DescribeSolutionArchive200Response{
@@ -64,12 +76,14 @@ func (h *DescribeSolutionArchive) genDescribeSolutionArchiveResponseObjectFromEr
 
 	var problemDetails intern.ProblemDetails
 
-	errors.As(err, &apiErr)
+	// no need to test for bad conversion
+	// the error is an underlying *errors.Error, wrapped in DescribeSolutionArchive
+	errors.As(err, &apiErr) // nolint: errcheck
 
 	h.fillProblemDetailsFromAPIErrorsError(&problemDetails, apiErr)
 
-	switch int(apiErr.Identifier / 1000) {
-	case http.StatusBadRequest, http.StatusUnprocessableEntity:
+	switch int(*problemDetails.Status) {
+	case http.StatusBadRequest:
 		return intern.DescribeSolutionArchive400ApplicationProblemPlusJSONResponse{
 			BadRequestApplicationProblemPlusJSONResponse: intern.BadRequestApplicationProblemPlusJSONResponse(
 				problemDetails,
@@ -105,6 +119,6 @@ func (h *DescribeSolutionArchive) genDescribeSolutionArchiveResponseObjectFromEr
 		}, nil
 
 	default:
-		return nil, errors.Stamp(err)
+		return nil, errors.Wrap(err)
 	}
 }

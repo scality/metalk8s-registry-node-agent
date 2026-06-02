@@ -34,25 +34,30 @@ var _ service.BucketManager = &FileSystem{}
 // CreateBucket creates a new bucket in the storage.
 func (f *FileSystem) CreateBucket(bucketName string) error {
 	if err := library.EnforceNamingConventions(bucketName); err != nil {
-		return errors.Stamp(err)
+		return errors.Wrap(err,
+			errors.WithIdentifier(118),
+			errors.WithDetail("unexpected error while enforcing naming conventions before creating bucket"),
+			errors.WithProperty("bucket_name", bucketName),
+		)
 	}
 
 	bucketPath := library.GenBucketPath(f.solutionArchivesLocation, bucketName)
 	if err := library.CheckDir(bucketPath); err != nil &&
-		!errors.Is(err,
-			errors.Intercept(domain.ErrStorageProviderNotFound).
-				WithIdentifier(404000).
-				Throw()) {
-		return errors.Stamp(err)
+		!errors.Is(err, domain.ErrStorageProviderNotFound) {
+		return errors.Wrap(err,
+			errors.WithIdentifier(119),
+			errors.WithDetail("unexpected error while checking bucket availability"),
+			errors.WithProperty("bucket_name", bucketName),
+		)
 	}
 
 	if err := os.Mkdir(bucketPath, library.FileSystemDefaultDirMode); err != nil && !os.IsExist(err) {
-		return errors.From(domain.ErrStorageProviderInternal).
-			WithIdentifier(500000).
-			WithDetail("unable to create the bucket").
-			WithProperty("bucket_path", bucketPath).
-			CausedBy(err).
-			Throw()
+		return errors.Wrap(domain.ErrStorageProviderInternal,
+			errors.WithIdentifier(120),
+			errors.WithDetail("unable to create the bucket"),
+			errors.WithProperty("bucket_path", bucketPath),
+			errors.CausedBy(err),
+		)
 	}
 
 	return nil
@@ -63,14 +68,17 @@ func (f *FileSystem) CreateBucket(bucketName string) error {
 func (f *FileSystem) ListBuckets() ([]string, error) {
 	buckets, err := library.ListDirContentNames(f.solutionArchivesLocation, library.BucketFilter)
 	if err != nil {
-		return nil, errors.Stamp(err)
+		return nil, errors.Wrap(err,
+			errors.WithIdentifier(121),
+			errors.WithDetail("unexpected error while listing buckets"),
+		)
 	}
 
 	if len(buckets) == 0 {
-		return nil, errors.From(domain.ErrStorageProviderNotFound).
-			WithIdentifier(404000).
-			WithDetail("no buckets found").
-			Throw()
+		return nil, errors.Wrap(domain.ErrBucketManagerNotFound,
+			errors.WithIdentifier(122),
+			errors.WithDetail("no buckets found"),
+		)
 	}
 
 	for i, bucket := range buckets {
@@ -83,21 +91,29 @@ func (f *FileSystem) ListBuckets() ([]string, error) {
 // DeleteBucket deletes a bucket from the storage.
 func (f *FileSystem) DeleteBucket(bucketName string) error {
 	if err := library.EnforceNamingConventions(bucketName); err != nil {
-		return errors.Stamp(err)
+		return errors.Wrap(err,
+			errors.WithIdentifier(123),
+			errors.WithDetail("unexpected error while enforcing naming conventions before deletion"),
+			errors.WithProperty("bucket_name", bucketName),
+		)
 	}
 
 	bucketPath := library.GenBucketPath(f.solutionArchivesLocation, bucketName)
 	if err := library.CheckDir(bucketPath); err != nil {
-		return errors.Stamp(err)
+		return errors.Wrap(err,
+			errors.WithIdentifier(124),
+			errors.WithDetail("unexpected error while checking bucket availability before deletion"),
+			errors.WithProperty("bucket_name", bucketName),
+		)
 	}
 
 	if err := os.RemoveAll(bucketPath); err != nil {
-		return errors.From(domain.ErrStorageProviderInternal).
-			WithIdentifier(500000).
-			WithDetail("unable to delete the bucket").
-			WithProperty("bucket_path", bucketPath).
-			CausedBy(err).
-			Throw()
+		return errors.Wrap(domain.ErrBucketManagerInternal,
+			errors.WithIdentifier(125),
+			errors.WithDetail("unable to delete the bucket"),
+			errors.WithProperty("bucket_path", bucketPath),
+			errors.CausedBy(err),
+		)
 	}
 
 	return nil

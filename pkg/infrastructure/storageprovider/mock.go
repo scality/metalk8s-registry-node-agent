@@ -87,11 +87,11 @@ func (f *MockFileSystem) Init() error {
 
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
-		return errors.From(domain.ErrStorageProviderInternal).
-			WithIdentifier(500000).
-			CausedBy(err).
-			WithDetail("failed to create watcher").
-			Throw()
+		return errors.Wrap(domain.ErrStorageProviderInternal,
+			errors.WithIdentifier(81),
+			errors.WithDetail("failed to create watcher"),
+			errors.CausedBy(err),
+		)
 	}
 
 	f.watcher = watcher
@@ -99,18 +99,9 @@ func (f *MockFileSystem) Init() error {
 	return nil
 }
 
-func (f *MockFileSystem) SaveFile(
-	fileName string,
-	content io.Reader,
-	perm os.FileMode,
-) error {
-	f.files = append(f.files, fileName)
-	return nil
-}
-
 // ListFiles lists all the flat files in the root location of the storage
 func (f *MockFileSystem) ListFiles() ([]string, error) {
-	return f.listFiles()
+	return f.files, nil
 }
 
 func (f *MockFileSystem) GetFile(
@@ -130,32 +121,18 @@ func (f *MockFileSystem) GetPart(
 func (f *MockFileSystem) DeleteFile(
 	fileName string,
 ) error {
-	if err := f.deleteFile(fileName); err != nil {
-		return errors.Stamp(err)
-	}
 	return nil
-}
-
-func (f *MockFileSystem) HashFile(
-	fileName string,
-) (string, error) {
-	hash, err := f.hashFile(fileName)
-	if err != nil {
-		return "", errors.Stamp(err)
-	}
-
-	return hash, nil
 }
 
 func (f *MockFileSystem) CreateBucket(
 	bucketName string,
 ) error {
 	if bucketName == "solution-4-4.2.8" {
-		return errors.From(domain.ErrStorageProviderInternal).
-			WithIdentifier(500000).
-			WithDetail("error creating bucket").
-			WithProperty("bucket_name", bucketName).
-			Throw()
+		return errors.Wrap(domain.ErrStorageProviderInternal,
+			errors.WithIdentifier(120),
+			errors.WithDetail("error creating bucket"),
+			errors.WithProperty("bucket_name", bucketName),
+		)
 	}
 	f.buckets = append(f.buckets, bucketName)
 	return nil
@@ -164,16 +141,19 @@ func (f *MockFileSystem) CreateBucket(
 // ListBuckets lists all the buckets in the storage and returns their bucketNames,
 // after having removed FileSystemBucketPrefix.
 func (f *MockFileSystem) ListBuckets() ([]string, error) {
-	return f.listBuckets()
+	return f.buckets, nil
 }
 
 func (f *MockFileSystem) DeleteBucket(
 	bucketName string,
 ) error {
-	if err := f.deleteBucket(bucketName); err != nil {
-		return errors.Stamp(err)
+	for i, b := range f.buckets {
+		if b == bucketName {
+			f.buckets = append(f.buckets[:i], f.buckets[i+1:]...)
+			break
+		}
 	}
-
+	delete(f.multipartMeta, bucketName)
 	return nil
 }
 
@@ -191,45 +171,33 @@ func (f *MockFileSystem) CreateMultipartFiles(
 	bucketName string,
 	solutionArchiveMeta *domain.SolutionArchive,
 ) (*domain.SolutionArchiveStatus, error) {
-	meta, err := f.createMultipartFiles(bucketName, solutionArchiveMeta)
-	if err != nil {
-		return nil, errors.Stamp(err)
-	}
-
-	return meta, nil
+	f.multipartMeta[bucketName] = solutionArchiveMeta
+	return &domain.SolutionArchiveStatus{
+		SolutionArchive: solutionArchiveMeta,
+		Parts:           make(map[int64]*domain.PartMeta),
+	}, nil
 }
 
 func (f *MockFileSystem) GetMultipartFile(
 	bucketName string,
 ) (*domain.SolutionArchive, error) {
-	meta, err := f.getMultipartFile(bucketName)
-	if err != nil {
-		return nil, errors.Stamp(err)
+	if meta, ok := f.multipartMeta[bucketName]; ok {
+		return meta, nil
 	}
-
-	return meta, nil
+	return &domain.SolutionArchive{}, nil
 }
 
 func (f *MockFileSystem) GetMultipartFileStatus(
 	bucketName string,
 	solutionArchiveMeta *domain.SolutionArchive,
 ) (*domain.SolutionArchiveStatus, error) {
-	status, err := f.getSolutionArchiveStatus(bucketName, solutionArchiveMeta)
-	if err != nil {
-		return nil, errors.Stamp(err)
-	}
-
-	return status, nil
+	return &domain.SolutionArchiveStatus{}, nil
 }
 
 func (f *MockFileSystem) DeleteMultipartFile(
 	bucketName string,
 	solutionArchiveMeta *domain.SolutionArchive,
 ) error {
-	if err := f.deleteMultipartFile(bucketName, solutionArchiveMeta); err != nil {
-		return errors.Stamp(err)
-	}
-
 	return nil
 }
 
@@ -243,11 +211,11 @@ func (f *MockFileSystem) StorePart(
 	// trailer-based Content-Digest check on Close() always sees an empty hash.
 	if part.Content != nil {
 		if _, err := io.Copy(io.Discard, part.Content); err != nil {
-			return nil, errors.From(domain.ErrStorageProviderInternal).
-				WithIdentifier(500000).
-				WithDetail("unable to read the part content").
-				CausedBy(err).
-				Throw()
+			return nil, errors.Wrap(domain.ErrStorageProviderInternal,
+				errors.WithIdentifier(175),
+				errors.WithDetail("unable to write the part content"),
+				errors.CausedBy(err),
+			)
 		}
 	}
 
@@ -278,11 +246,11 @@ func (f *MockFileSystem) GetArchiveHash(filename string) (string, error) {
 		return hash, nil
 	}
 
-	return "", errors.From(domain.ErrStorageProviderNotFound).
-		WithIdentifier(404000).
-		WithDetail("file not found").
-		WithProperty("file_name", filename).
-		Throw()
+	return "", errors.Wrap(domain.ErrStorageProviderNotFound,
+		errors.WithIdentifier(77),
+		errors.WithDetail("file not found"),
+		errors.WithProperty("file_name", filename),
+	)
 }
 
 func (f *MockFileSystem) GetArchiveSize(filename string) (int64, error) {
@@ -303,69 +271,6 @@ func (f *MockFileSystem) UnmountFile(
 }
 
 // Bucket handling methods
-
-func (f *MockFileSystem) listBuckets() ([]string, error) {
-	return f.buckets, nil
-}
-
-func (f *MockFileSystem) deleteBucket(
-	bucketName string,
-) error { // nolint: unparam
-	for i, b := range f.buckets {
-		if b == bucketName {
-			f.buckets = append(f.buckets[:i], f.buckets[i+1:]...)
-			break
-		}
-	}
-	delete(f.multipartMeta, bucketName)
-	return nil
-}
-
-func (f *MockFileSystem) listFiles() ([]string, error) {
-	return f.files, nil
-}
-
-func (f *MockFileSystem) deleteFile(
-	_ string,
-) error {
-	return nil
-}
-
-func (f *MockFileSystem) hashFile(
-	fileName string,
-) (string, error) {
-	return f.GetArchiveHash(fileName)
-}
-
-// nolint:unparam
-func (f *MockFileSystem) createMultipartFiles(
-	bucketName string,
-	solutionArchiveMeta *domain.SolutionArchive,
-) (*domain.SolutionArchiveStatus, error) {
-	f.multipartMeta[bucketName] = solutionArchiveMeta
-	return &domain.SolutionArchiveStatus{
-		SolutionArchive: solutionArchiveMeta,
-		Parts:           make(map[int64]*domain.PartMeta),
-	}, nil
-}
-
-func (f *MockFileSystem) getMultipartFile(bucketName string) (*domain.SolutionArchive, error) { // nolint: unparam
-	if meta, ok := f.multipartMeta[bucketName]; ok {
-		return meta, nil
-	}
-	return &domain.SolutionArchive{}, nil
-}
-
-func (f *MockFileSystem) getSolutionArchiveStatus(
-	_ string,
-	_ *domain.SolutionArchive,
-) (*domain.SolutionArchiveStatus, error) {
-	return &domain.SolutionArchiveStatus{}, nil
-}
-
-func (f *MockFileSystem) deleteMultipartFile(_ string, _ *domain.SolutionArchive) error {
-	return nil
-}
 
 func (f *MockFileSystem) StartWatchFiles(_ chan domain.FileEventDetails) error {
 	return nil

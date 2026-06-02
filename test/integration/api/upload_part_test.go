@@ -100,6 +100,7 @@ var _ = Describe("Upload Part API", func() {
 			}
 
 			By("returning a documented http/200 response")
+			Expect(resUpl.HTTPResponse.StatusCode).To(Equal(200))
 			Expect(*resUpl.JSON200.IsCompleted).To(BeTrue())
 
 			By("aggregating and storing the solution archive")
@@ -190,14 +191,17 @@ var _ = Describe("Upload Part API", func() {
 				// The last chunk will return an error due to the bad checksum
 				expected := 200
 				if i == 2 {
-					expected = 400
+					expected = 422
 				}
 				Expect(resUpl.HTTPResponse.StatusCode).To(Equal(expected))
 			}
 
 			By("returning an http/422 response")
-			Expect(*resUpl.ApplicationproblemJSON400.Code).To(Equal("422001"))
-			Expect(*resUpl.ApplicationproblemJSON400.Status).To(Equal(int32(422)))
+			Expect(resUpl.HTTPResponse.StatusCode).To(Equal(422))
+			Expect(*resUpl.ApplicationproblemJSON422.Code).To(Equal("422-238-192-183"))
+			Expect(*resUpl.ApplicationproblemJSON422.Detail).To(ContainSubstring(
+				"the hash of the recipient file does not match the solution archive metadata",
+			))
 
 			By("not storing the solution archive")
 			solutionArchiveNameVersion := library.GenBucketName(solutionArchive)
@@ -256,7 +260,7 @@ var _ = Describe("Upload Part API", func() {
 
 			By("returning a documented http/400 response")
 			Expect(resUpl.HTTPResponse.StatusCode).To(Equal(400))
-			Expect(*resUpl.ApplicationproblemJSON400.Code).To(Equal("400007"))
+			Expect(*resUpl.ApplicationproblemJSON400.Code).To(Equal("400"))
 			Expect(*resUpl.ApplicationproblemJSON400.Status).To(Equal(int32(400)))
 		})
 	})
@@ -326,6 +330,7 @@ var _ = Describe("Upload Part API", func() {
 			}
 
 			By("returning a documented http/200 response")
+			Expect(resUpl.HTTPResponse.StatusCode).To(Equal(200))
 			Expect(*resUpl.JSON200.IsCompleted).To(BeTrue())
 
 			By("aggregating and storing the solution archive")
@@ -394,6 +399,7 @@ var _ = Describe("Upload Part API", func() {
 			}
 
 			By("returning a documented http/200 response")
+			Expect(resUpl.HTTPResponse.StatusCode).To(Equal(200))
 			Expect(*resUpl.JSON200.IsCompleted).To(BeTrue())
 
 			By("aggregating and storing the solution archive")

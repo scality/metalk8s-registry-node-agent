@@ -35,16 +35,26 @@ func (f *FileSystem) DeleteFile(
 	fileName string,
 ) error {
 	if err := library.EnforceNamingConventions(fileName); err != nil {
-		return errors.Stamp(err)
+		return errors.Wrap(err,
+			errors.WithIdentifier(115),
+			errors.WithDetail("unexpected error while enforcing naming conventions before deletion"),
+			errors.WithProperty("file_name", fileName),
+		)
 	}
 
 	filePath := filepath.Join(f.solutionArchivesLocation, fileName)
 	if err := library.CheckFile(filePath); err != nil {
-		return errors.Stamp(err)
+		return errors.Wrap(err,
+			errors.WithIdentifier(116),
+			errors.WithDetail("unexpected error while checking solution archive before deletion"),
+			errors.WithProperty("file_name", fileName))
 	}
 
 	if err := library.DeleteFile(filePath); err != nil {
-		return errors.Stamp(err)
+		return errors.Wrap(err,
+			errors.WithIdentifier(117),
+			errors.WithDetail("unexpected error while deleting solution archive"),
+			errors.WithProperty("file_name", fileName))
 	}
 
 	return nil

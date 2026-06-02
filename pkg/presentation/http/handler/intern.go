@@ -2,13 +2,14 @@
 package handler
 
 import (
-	"fmt"
 	"strings"
 
 	"github.com/rs/zerolog"
 	"github.com/scality/go-errors"
 	"github.com/scality/metalk8s-registry-node-agent/pkg/domain"
+	"github.com/scality/metalk8s-registry-node-agent/pkg/library"
 	"github.com/scality/metalk8s-registry-node-agent/pkg/presentation/http/intern"
+	"k8s.io/utils/ptr"
 )
 
 // fillSolutionArchiveFromDownloadSolutionArchiveRequestObject fills the Solution Archive object
@@ -19,24 +20,31 @@ func fillSolutionArchiveFromDownloadSolutionArchiveRequestObject(
 ) error {
 
 	if src.SolutionArchive == "" {
-		return errors.From(domain.ErrHandlerMissingRequestParameter).
-			WithDetail("parameter 'solution-archive' is missing").
-			Throw()
+		return errors.Wrap(domain.ErrHandlerMissingRequestParameter,
+			errors.WithIdentifier(244),
+			errors.WithDetail("parameter 'solution-archive' is missing"),
+		)
 	}
 
 	if src.Version == "" {
-		return errors.From(domain.ErrHandlerMissingRequestParameter).
-			WithDetail("parameter 'version' is missing").
-			Throw()
+		return errors.Wrap(domain.ErrHandlerMissingRequestParameter,
+			errors.WithIdentifier(245),
+			errors.WithDetail("parameter 'version' is missing"),
+		)
 	}
 	if src.Params.Range == "" {
-		return errors.From(domain.ErrHandlerMissingRequestHeader).
-			WithDetail("header 'Range' is missing").
-			Throw()
+		return errors.Wrap(domain.ErrHandlerMissingRequestHeader,
+			errors.WithIdentifier(246),
+			errors.WithDetail("header 'Range' is missing"),
+		)
 	}
-	start, end, _, err := parseRange(src.Params.Range)
+	start, end, _, err := library.ParseRange(src.Params.Range)
 	if err != nil {
-		return errors.Stamp(err)
+		return errors.Wrap(err,
+			errors.WithIdentifier(247),
+			errors.WithDetail("Range is not valid"),
+			errors.WithProperty("Range", src.Params.Range),
+		)
 	}
 
 	solutionArchive := &domain.SolutionArchive{
@@ -60,15 +68,17 @@ func fillSolutionArchiveFromDescribeSolutionArchiveRequestObject(
 	src *intern.DescribeSolutionArchiveRequestObject,
 ) error {
 	if src.SolutionArchive == "" {
-		return errors.From(domain.ErrHandlerMissingRequestParameter).
-			WithDetail("parameter 'solution-archive' is missing").
-			Throw()
+		return errors.Wrap(domain.ErrHandlerMissingRequestParameter,
+			errors.WithIdentifier(248),
+			errors.WithDetail("parameter 'solution-archive' is missing"),
+		)
 	}
 
 	if src.Version == "" {
-		return errors.From(domain.ErrHandlerMissingRequestParameter).
-			WithDetail("parameter 'version' is missing").
-			Throw()
+		return errors.Wrap(domain.ErrHandlerMissingRequestParameter,
+			errors.WithIdentifier(249),
+			errors.WithDetail("parameter 'version' is missing"),
+		)
 	}
 
 	dst.Name = src.SolutionArchive
@@ -86,17 +96,17 @@ func fillInternProblemDetailsFromAPIErrorsError(
 ) {
 	logger.Error().Err(src).Msg(logMsg)
 
-	status := src.Identifier / 1000 // nolint: gosec // TODO: Refactor this in the "polishing" sprint.
-	code := fmt.Sprintf("%d", src.Identifier)
+	// The HTTP status is the last error identifier.
+	status := int32(src.Identifier[len(src.Identifier)-1])
+	code := src.GetIdentifier()
 
 	dst.Title = src.Title
 	dst.Status = &status
 	dst.Code = &code
 
-	if len(src.Details) > 0 {
-		detail := strings.Join(src.Details, ": ")
-		dst.Detail = &detail
-	}
+	details := []string{}
+	details = append(details, src.Details...)
+	dst.Detail = ptr.To(strings.Join(details, ": "))
 
 	if instance, ok := src.Properties["instance"]; ok {
 		instanceStr, ok := instance.(string)
@@ -105,13 +115,14 @@ func fillInternProblemDetailsFromAPIErrorsError(
 		}
 	}
 
-	if len(src.Properties) > 0 {
-		fillInstanceFromPropertiesMap(&dst.Instance, src.Properties)
-
-		errs := make(intern.Errors, 0, len(src.Properties))
-		fillInternErrorDetailsFromPropertiesMap(&errs, src.Properties)
-
-		dst.Errors = &errs
+	for key, value := range src.Properties {
+		// We consider that properties containing "path" in their name are sensitive information.
+		if !strings.Contains(key, "path") && key != "instance" {
+			if dst.AdditionalInformation == nil {
+				dst.AdditionalInformation = &map[string]interface{}{}
+			}
+			(*dst.AdditionalInformation)[key] = value
+		}
 	}
 }
 
@@ -127,34 +138,4 @@ func (h *DescribeSolutionArchive) fillProblemDetailsFromAPIErrorsError(
 	src *errors.Error,
 ) {
 	fillInternProblemDetailsFromAPIErrorsError(h.logger, dst, src, "Describe API error")
-}
-
-// fillInternErrorDetailsFromPropertiesMap fills the ErrorDetail slice from a map[string]any.
-func fillInternErrorDetailsFromPropertiesMap(
-	dst *intern.Errors,
-	src map[string]any,
-) {
-	*dst = make([]intern.ErrorDetail, 0, len(src))
-
-	for key, value := range src {
-		if strings.HasPrefix(key, "problem_") {
-			var errorDetail intern.ErrorDetail
-
-			fillInternErrorDetailFromProperty(&errorDetail, key, value)
-
-			*dst = append(*dst, errorDetail)
-		}
-	}
-}
-
-// fillInternErrorDetailFromProperty fills the ErrorDetail object from a property name and value.
-func fillInternErrorDetailFromProperty(
-	dst *intern.ErrorDetail,
-	key string, value any,
-) {
-	code := key
-	detail := fmt.Sprintf("%v", value)
-
-	dst.Code = &code
-	dst.Detail = detail
 }

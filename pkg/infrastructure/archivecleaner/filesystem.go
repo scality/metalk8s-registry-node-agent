@@ -38,11 +38,12 @@ func (f *FileSystem) CleanUnusedSolutionArchives(path string, isDir bool) error 
 	if isDir {
 		err := os.RemoveAll(path)
 		if err != nil {
-			return errors.From(domain.ErrSolutionArchiveCleanerInternal).
-				CausedBy(err).
-				WithDetail("failed to delete unused solution archive directory").
-				WithProperty("path", path).
-				Throw()
+			return errors.Wrap(domain.ErrSolutionArchiveCleanerInternal,
+				errors.WithIdentifier(61),
+				errors.WithDetail("failed to delete unused solution archive directory"),
+				errors.WithProperty("path", path),
+				errors.CausedBy(err),
+			)
 		}
 
 		f.logger.Debug().
@@ -54,11 +55,11 @@ func (f *FileSystem) CleanUnusedSolutionArchives(path string, isDir bool) error 
 
 	err := library.DeleteFile(path)
 	if err != nil {
-		return errors.From(domain.ErrSolutionArchiveCleanerInternal).
-			CausedBy(err).
-			WithDetail("failed to delete unused solution archive").
-			WithProperty("path", path).
-			Throw()
+		return errors.Wrap(err,
+			errors.WithIdentifier(62),
+			errors.WithDetail("failed to delete unused solution archive"),
+			errors.WithProperty("path", path),
+		)
 	}
 
 	f.logger.Debug().
@@ -83,11 +84,12 @@ func (f *FileSystem) CleanUnusedSolutions(path string, isDir bool) error {
 		// Delete the directory
 		err = os.RemoveAll(path)
 		if err != nil {
-			return errors.From(domain.ErrSolutionArchiveCleanerInternal).
-				CausedBy(err).
-				WithDetail("failed to delete unused solution directory").
-				WithProperty("path", path).
-				Throw()
+			return errors.Wrap(domain.ErrSolutionArchiveCleanerInternal,
+				errors.WithIdentifier(63),
+				errors.WithDetail("failed to delete unused solution directory"),
+				errors.WithProperty("path", path),
+				errors.CausedBy(err),
+			)
 		}
 
 		f.logger.Debug().
@@ -99,11 +101,11 @@ func (f *FileSystem) CleanUnusedSolutions(path string, isDir bool) error {
 
 	err := library.DeleteFile(path)
 	if err != nil {
-		return errors.From(domain.ErrSolutionArchiveCleanerInternal).
-			CausedBy(err).
-			WithDetail("failed to delete unused solution").
-			WithProperty("path", path).
-			Throw()
+		return errors.Wrap(err,
+			errors.WithIdentifier(64),
+			errors.WithDetail("failed to delete unused solution"),
+			errors.WithProperty("path", path),
+		)
 	}
 
 	f.logger.Debug().
