@@ -40,6 +40,11 @@ func (uc *ValidateSolutionArchive) Execute(solutionArchive *domain.SolutionArchi
 	uc.archiveLocker.Lock(solutionArchive)
 	defer uc.archiveLocker.Unlock(solutionArchive)
 
+	properties := solutionArchive.GetErrorProperties(
+		"validate_solution_archive",
+		"",
+	)
+
 	// List all solution archives in the storage
 	// matching solutionArchiveStorageNamePattern
 	fileNames, err := uc.archiveLister.ListFiles()
@@ -47,9 +52,7 @@ func (uc *ValidateSolutionArchive) Execute(solutionArchive *domain.SolutionArchi
 		return false, errors.Wrap(err,
 			errors.WithIdentifier(239),
 			errors.WithDetail("error on listing solution archives"),
-			errors.WithProperty("usecase", "validate_solution_archive"),
-			errors.WithProperty("solution_archive_name", solutionArchive.Name),
-			errors.WithProperty("solution_archive_version", solutionArchive.Version),
+			errors.WithProperties(properties),
 		)
 	}
 
@@ -64,9 +67,7 @@ func (uc *ValidateSolutionArchive) Execute(solutionArchive *domain.SolutionArchi
 			return false, errors.Wrap(err,
 				errors.WithIdentifier(240),
 				errors.WithDetail("error on getting the archive hash"),
-				errors.WithProperty("usecase", "validate_solution_archive"),
-				errors.WithProperty("solution_archive_name", solutionArchive.Name),
-				errors.WithProperty("solution_archive_version", solutionArchive.Version),
+				errors.WithProperties(properties),
 			)
 		}
 		if hash != *solutionArchive.Hash {
@@ -75,9 +76,7 @@ func (uc *ValidateSolutionArchive) Execute(solutionArchive *domain.SolutionArchi
 				return false, errors.Wrap(err,
 					errors.WithIdentifier(241),
 					errors.WithDetail("error on deleting the solution archive"),
-					errors.WithProperty("usecase", "validate_solution_archive"),
-					errors.WithProperty("solution_archive_name", solutionArchive.Name),
-					errors.WithProperty("solution_archive_version", solutionArchive.Version),
+					errors.WithProperties(properties),
 				)
 			}
 			return false, nil

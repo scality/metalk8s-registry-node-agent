@@ -42,6 +42,11 @@ func (uc *DescribeSolutionArchive) Execute(
 	uc.archiveLocker.RLock(solutionArchive)
 	defer uc.archiveLocker.RUnlock(solutionArchive)
 
+	properties := solutionArchive.GetErrorProperties(
+		"describe_solution_archive",
+		solutionArchive.GetDownloadURL(uc.rootAPIPath),
+	)
+
 	// List all solution archives in the storage
 	// matching solutionArchiveStorageNamePattern
 	fileNames, err := uc.archiveLister.ListFiles()
@@ -49,8 +54,7 @@ func (uc *DescribeSolutionArchive) Execute(
 		return 0, errors.Wrap(err,
 			errors.WithIdentifier(196),
 			errors.WithDetail("error while listing solution archives"),
-			errors.WithProperty("usecase", "describe_solution_archive"),
-			errors.WithProperty("instance", solutionArchive.GetDownloadURL(uc.rootAPIPath)),
+			errors.WithProperties(properties),
 		)
 	}
 
@@ -59,10 +63,7 @@ func (uc *DescribeSolutionArchive) Execute(
 		return 0, errors.Wrap(domain.ErrNotFound,
 			errors.WithIdentifier(197),
 			errors.WithDetail("solution archive not found"),
-			errors.WithProperty("usecase", "describe_solution_archive"),
-			errors.WithProperty("instance", solutionArchive.GetDownloadURL(uc.rootAPIPath)),
-			errors.WithProperty("solution_archive_name", solutionArchive.Name),
-			errors.WithProperty("solution_archive_version", solutionArchive.Version),
+			errors.WithProperties(properties),
 		)
 	}
 
@@ -72,10 +73,7 @@ func (uc *DescribeSolutionArchive) Execute(
 		return 0, errors.Wrap(err,
 			errors.WithIdentifier(198),
 			errors.WithDetail("error while getting archive size"),
-			errors.WithProperty("usecase", "describe_solution_archive"),
-			errors.WithProperty("solution_archive_name", solutionArchive.Name),
-			errors.WithProperty("solution_archive_version", solutionArchive.Version),
-			errors.WithProperty("instance", solutionArchive.GetDownloadURL(uc.rootAPIPath)),
+			errors.WithProperties(properties),
 		)
 	}
 

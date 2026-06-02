@@ -41,6 +41,11 @@ func (uc *MountSolutionArchive) Execute(solutionArchive *domain.SolutionArchive)
 	uc.archiveLocker.Lock(solutionArchive)
 	defer uc.archiveLocker.Unlock(solutionArchive)
 
+	properties := solutionArchive.GetErrorProperties(
+		"mount_solution_archive",
+		"",
+	)
+
 	// List all solution archives in the storage
 	// matching solutionArchiveStorageNamePattern
 	fileNames, err := uc.archiveLister.ListFiles()
@@ -48,9 +53,7 @@ func (uc *MountSolutionArchive) Execute(solutionArchive *domain.SolutionArchive)
 		return errors.Wrap(err,
 			errors.WithIdentifier(222),
 			errors.WithDetail("error on listing solution archives"),
-			errors.WithProperty("usecase", "mount_solution_archive"),
-			errors.WithProperty("solution_archive_name", solutionArchive.Name),
-			errors.WithProperty("solution_archive_version", solutionArchive.Version),
+			errors.WithProperties(properties),
 		)
 	}
 
@@ -63,18 +66,14 @@ func (uc *MountSolutionArchive) Execute(solutionArchive *domain.SolutionArchive)
 				return errors.Wrap(err,
 					errors.WithIdentifier(223),
 					errors.WithDetail("solution archive is not a valid ISO file and is therefore deleted"),
-					errors.WithProperty("usecase", "mount_solution_archive"),
-					errors.WithProperty("solution_archive_name", solutionArchive.Name),
-					errors.WithProperty("solution_archive_version", solutionArchive.Version),
+					errors.WithProperties(properties),
 				)
 			}
 
 			return errors.Wrap(err,
 				errors.WithIdentifier(224),
 				errors.WithDetail("unexpected error while mounting the solution archive"),
-				errors.WithProperty("usecase", "mount_solution_archive"),
-				errors.WithProperty("solution_archive_name", solutionArchive.Name),
-				errors.WithProperty("solution_archive_version", solutionArchive.Version),
+				errors.WithProperties(properties),
 			)
 		}
 		uc.logger.Debug().Any("solution_archive", solutionArchive).Msg("Solution archive mounted")
@@ -84,7 +83,6 @@ func (uc *MountSolutionArchive) Execute(solutionArchive *domain.SolutionArchive)
 	return errors.Wrap(domain.ErrNotFound,
 		errors.WithIdentifier(225),
 		errors.WithDetail("solution archive not found"),
-		errors.WithProperty("solution_archive_name", solutionArchive.Name),
-		errors.WithProperty("solution_archive_version", solutionArchive.Version),
+		errors.WithProperties(properties),
 	)
 }

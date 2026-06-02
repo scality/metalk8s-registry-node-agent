@@ -146,3 +146,17 @@ func (sa *SolutionArchive) GetUploadURL(rootAPIPath string) string {
 func (sa *SolutionArchive) GetDownloadURL(rootAPIPath string) string {
 	return fmt.Sprintf("%s/downloads/%s/%s", rootAPIPath, sa.Name, sa.Version)
 }
+
+func (sa *SolutionArchive) GetErrorProperties(usecase string, instance string) map[string]any {
+	properties := map[string]any{
+		"usecase":                  usecase,
+		"solution_archive_name":    sa.Name,
+		"solution_archive_version": sa.Version,
+	}
+
+	if instance != "" {
+		properties["instance"] = instance
+	}
+
+	return properties
+}
