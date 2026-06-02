@@ -171,8 +171,8 @@ func (r *NodeSolutionArchiveReconciler) Reconcile(ctx context.Context, req ctrl.
 			}
 		}
 		if otherSolutionArchiveAvailable {
-			log.V(1).Info("Getting external solution archive from another node", "url", urlToDownload)
-			err := r.Container.GetGetExternalSolutionArchiveUseCase().Execute(
+			log.V(1).Info("Downloading solution archive from another node", "url", urlToDownload)
+			err := r.Container.GetDownloadPartUseCase().Execute(
 				ctx,
 				solutionArchive,
 				urlToDownload,
@@ -182,7 +182,7 @@ func (r *NodeSolutionArchiveReconciler) Reconcile(ctx context.Context, req ctrl.
 				// it may not be possible to get it.
 				// Example: the watcher has not yet fully indexed the archive.
 				// In this case, we will retry later.
-				log.Error(err, "error getting external solution archive")
+				log.Error(err, "error downloading solution archive")
 				return ctrl.Result{RequeueAfter: 30 * time.Second}, nil
 			}
 		}

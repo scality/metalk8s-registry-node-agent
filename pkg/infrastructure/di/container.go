@@ -50,7 +50,7 @@ type Container struct {
 	archiveLister          service.ArchiveLister
 	multipartInspector     service.MultipartInspector
 	multipartRemover       service.MultipartRemover
-	multipartUploader      service.MultipartUploader
+	multipartStorer        service.MultipartStorer
 
 	inMemoryArchiveLocker service.LockerUnlocker
 	inMemoryBucketLocker  service.LockerUnlocker
@@ -64,17 +64,17 @@ type Container struct {
 
 	httpExternalDownloader *externaldownloader.HTTP
 
-	uploadPartUseCase                 *usecase.UploadPart
-	initializeSessionUseCase          *usecase.InitializeSession
-	removeSolutionArchiveUseCase      *usecase.RemoveSolutionArchive
-	removeSessionUseCase              *usecase.RemoveSession
-	mountSolutionArchiveUseCase       *usecase.MountSolutionArchive
-	unmountSolutionArchiveUseCase     *usecase.UnmountSolutionArchive
-	validateSolutionArchiveUseCase    *usecase.ValidateSolutionArchive
-	downloadSolutionArchiveUseCase    *usecase.DownloadSolutionArchive
-	getExternalSolutionArchiveUseCase *usecase.GetExternalSolutionArchive
-	cleanArchivesUseCase              *usecase.CleanArchive
-	describeSolutionArchiveUseCase    *usecase.DescribeSolutionArchive
+	receivePartUseCase             *usecase.ReceivePart
+	initializeSessionUseCase       *usecase.InitializeSession
+	removeSolutionArchiveUseCase   *usecase.RemoveSolutionArchive
+	removeSessionUseCase           *usecase.RemoveSession
+	mountSolutionArchiveUseCase    *usecase.MountSolutionArchive
+	unmountSolutionArchiveUseCase  *usecase.UnmountSolutionArchive
+	validateSolutionArchiveUseCase *usecase.ValidateSolutionArchive
+	servePartUseCase               *usecase.ServePart
+	downloadPartUseCase            *usecase.DownloadPart
+	cleanArchivesUseCase           *usecase.CleanArchive
+	describeSolutionArchiveUseCase *usecase.DescribeSolutionArchive
 }
 
 func NewContainer(

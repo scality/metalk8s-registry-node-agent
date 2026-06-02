@@ -33,7 +33,7 @@ func NewHTTP(logger *zerolog.Logger, c *http.Client) *HTTP {
 
 var _ service.ExternalDownloader = &HTTP{}
 
-func (h *HTTP) Download(
+func (h *HTTP) DownloadPart(
 	ctx context.Context,
 	downloadURL string,
 	start int64,

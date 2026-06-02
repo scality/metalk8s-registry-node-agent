@@ -32,7 +32,7 @@ var _ = Describe("Get External Solution Archive UseCase", func() {
 	Context("When the target solution archive already exists in storage", func() {
 		It("should be a no-op and return nil", func() {
 			By("calling the use case for an already-stored archive")
-			err := testingSuite.container.GetGetExternalSolutionArchiveUseCase().Execute(
+			err := testingSuite.container.GetDownloadPartUseCase().Execute(
 				context.TODO(),
 				solutionArchive,
 				internDownloadURL(solutionArchive.Name, solutionArchive.Version),
@@ -55,7 +55,7 @@ var _ = Describe("Get External Solution Archive UseCase", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			By("calling the use case to download the archive from another node")
-			err = testingSuite.container.GetGetExternalSolutionArchiveUseCase().Execute(
+			err = testingSuite.container.GetDownloadPartUseCase().Execute(
 				context.TODO(),
 				target,
 				internDownloadURL(solutionArchiveBigSize.Name, solutionArchiveBigSize.Version),
@@ -97,7 +97,7 @@ var _ = Describe("Get External Solution Archive UseCase", func() {
 			}
 
 			By("calling the use case without initializing a session beforehand")
-			err := testingSuite.container.GetGetExternalSolutionArchiveUseCase().Execute(
+			err := testingSuite.container.GetDownloadPartUseCase().Execute(
 				context.TODO(),
 				target,
 				internDownloadURL(solutionArchive.Name, solutionArchive.Version),
@@ -130,7 +130,7 @@ var _ = Describe("Get External Solution Archive UseCase", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			By("calling the use case with a different hash for the same name/version")
-			err = testingSuite.container.GetGetExternalSolutionArchiveUseCase().Execute(
+			err = testingSuite.container.GetDownloadPartUseCase().Execute(
 				context.TODO(),
 				differentTarget,
 				internDownloadURL(solutionArchive.Name, solutionArchive.Version),
@@ -154,7 +154,7 @@ var _ = Describe("Get External Solution Archive UseCase", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			By("calling the use case with a URL pointing to a non-existent archive")
-			err = testingSuite.container.GetGetExternalSolutionArchiveUseCase().Execute(
+			err = testingSuite.container.GetDownloadPartUseCase().Execute(
 				context.TODO(),
 				target,
 				internDownloadURL("non-existent-source-archive", "9.9.9"),
@@ -178,7 +178,7 @@ var _ = Describe("Get External Solution Archive UseCase", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			By("calling the use case with an unreachable URL")
-			err = testingSuite.container.GetGetExternalSolutionArchiveUseCase().Execute(
+			err = testingSuite.container.GetDownloadPartUseCase().Execute(
 				context.TODO(),
 				target,
 				"https://127.0.0.1:1/api/v1/downloads/nope/0.0.0",

@@ -16,12 +16,12 @@ import (
 type UploadPart struct {
 	logger *zerolog.Logger
 
-	uc *usecase.UploadPart
+	uc *usecase.ReceivePart
 }
 
 func NewUploadPart(
 	logger *zerolog.Logger,
-	uc *usecase.UploadPart,
+	uc *usecase.ReceivePart,
 ) *UploadPart {
 	l := logger.With().Str("http_handler", "upload_part").Logger()
 

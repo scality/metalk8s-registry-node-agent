@@ -19,12 +19,12 @@ import (
 type DownloadSolutionArchive struct {
 	logger *zerolog.Logger
 
-	uc *usecase.DownloadSolutionArchive
+	uc *usecase.ServePart
 }
 
 func NewDownloadSolutionArchive(
 	logger *zerolog.Logger,
-	uc *usecase.DownloadSolutionArchive,
+	uc *usecase.ServePart,
 ) *DownloadSolutionArchive {
 	l := logger.With().Str("http_handler", "download_solution_archive").Logger()
 

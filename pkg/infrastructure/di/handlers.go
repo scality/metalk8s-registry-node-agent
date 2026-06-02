@@ -7,7 +7,7 @@ func (c *Container) getUploadPartHandler() *handler.UploadPart {
 	if c.uploadPartHandler == nil {
 		c.uploadPartHandler = handler.NewUploadPart(
 			c.GetLogger(),
-			c.getUploadPartUseCase(),
+			c.getReceivePartUseCase(),
 		)
 	}
 
@@ -18,7 +18,7 @@ func (c *Container) getDownloadSolutionArchiveHandler() *handler.DownloadSolutio
 	if c.downloadSolutionArchiveHandler == nil {
 		c.downloadSolutionArchiveHandler = handler.NewDownloadSolutionArchive(
 			c.GetLogger(),
-			c.GetDownloadSolutionArchiveUseCase(),
+			c.GetServePartUseCase(),
 		)
 	}
 	return c.downloadSolutionArchiveHandler

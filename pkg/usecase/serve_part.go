@@ -12,7 +12,7 @@ import (
 	"github.com/scality/metalk8s-registry-node-agent/pkg/service"
 )
 
-type DownloadSolutionArchive struct {
+type ServePart struct {
 	logger        *zerolog.Logger
 	archiveLister service.ArchiveLister
 	archiveReader service.ArchiveReader
@@ -20,16 +20,16 @@ type DownloadSolutionArchive struct {
 	rootAPIPath   string
 }
 
-func NewDownloadSolutionArchive(
+func NewServePart(
 	logger *zerolog.Logger,
 	archiveLister service.ArchiveLister,
 	archiveReader service.ArchiveReader,
 	archiveLocker service.LockerUnlocker,
 	rootAPIPath string,
-) *DownloadSolutionArchive {
-	l := logger.With().Str("use_case", "download_solution_archive").Logger()
+) *ServePart {
+	l := logger.With().Str("use_case", "serve_part").Logger()
 
-	return &DownloadSolutionArchive{
+	return &ServePart{
 		logger:        &l,
 		archiveLister: archiveLister,
 		archiveReader: archiveReader,
@@ -38,12 +38,12 @@ func NewDownloadSolutionArchive(
 	}
 }
 
-func (uc *DownloadSolutionArchive) Execute(
+func (uc *ServePart) Execute(
 	solutionArchivePart *domain.Part,
 ) (*domain.SolutionArchiveFile, error) {
 	uc.logger.Debug().
 		Any("solution_archive_part", solutionArchivePart).
-		Msg("Downloading solution archive chunk")
+		Msg("Serving part")
 
 	// To avoid simultaneous downloads and deletion of the same solution archive
 	uc.archiveLocker.RLock(solutionArchivePart.SolutionArchive)
@@ -56,7 +56,7 @@ func (uc *DownloadSolutionArchive) Execute(
 		return nil, errors.Wrap(err,
 			errors.WithIdentifier(199),
 			errors.WithDetail("error on listing solution archives"),
-			errors.WithProperty("usecase", "download_solution_archive"),
+			errors.WithProperty("usecase", "serve_part"),
 			errors.WithProperty("instance", fmt.Sprintf(
 				"%s/downloads/%s/%s",
 				uc.rootAPIPath,
@@ -71,7 +71,7 @@ func (uc *DownloadSolutionArchive) Execute(
 		return nil, errors.Wrap(domain.ErrNotFound,
 			errors.WithIdentifier(200),
 			errors.WithDetail("solution archive not found"),
-			errors.WithProperty("usecase", "download_solution_archive"),
+			errors.WithProperty("usecase", "serve_part"),
 			errors.WithProperty("instance", fmt.Sprintf(
 				"%s/downloads/%s/%s",
 				uc.rootAPIPath,
@@ -89,7 +89,7 @@ func (uc *DownloadSolutionArchive) Execute(
 		return nil, errors.Wrap(err,
 			errors.WithIdentifier(201),
 			errors.WithDetail("error on getting size of the solution archive"),
-			errors.WithProperty("usecase", "download_solution_archive"),
+			errors.WithProperty("usecase", "serve_part"),
 			errors.WithProperty("solution_archive_name", solutionArchivePart.SolutionArchive.Name),
 			errors.WithProperty("solution_archive_version", solutionArchivePart.SolutionArchive.Version),
 			errors.WithProperty("instance", fmt.Sprintf(
@@ -107,7 +107,7 @@ func (uc *DownloadSolutionArchive) Execute(
 		return nil, errors.Wrap(domain.ErrHandlerInvalidRequestHeaderFormat,
 			errors.WithIdentifier(202),
 			errors.WithDetail("requested byte range exceeds the solution archive size"),
-			errors.WithProperty("usecase", "download_solution_archive"),
+			errors.WithProperty("usecase", "serve_part"),
 			errors.WithProperty("range_start", start),
 			errors.WithProperty("range_end", end),
 			errors.WithProperty("file_size_bytes", fileSize),
@@ -130,7 +130,7 @@ func (uc *DownloadSolutionArchive) Execute(
 		return nil, errors.Wrap(err,
 			errors.WithIdentifier(203),
 			errors.WithDetail("error on getting part of the solution archive"),
-			errors.WithProperty("usecase", "download_solution_archive"),
+			errors.WithProperty("usecase", "serve_part"),
 			errors.WithProperty("solution_archive_name", solutionArchivePart.SolutionArchive.Name),
 			errors.WithProperty("solution_archive_version", solutionArchivePart.SolutionArchive.Version),
 			errors.WithProperty("instance", fmt.Sprintf(
@@ -142,7 +142,7 @@ func (uc *DownloadSolutionArchive) Execute(
 		)
 	}
 
-	uc.logger.Debug().Any("solution_archive_part", solutionArchivePart).Msg("Solution archive chunk downloaded")
+	uc.logger.Debug().Any("solution_archive_part", solutionArchivePart).Msg("Solution archive part served")
 
 	return &domain.SolutionArchiveFile{
 		File:          file,

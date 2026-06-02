@@ -7,7 +7,7 @@ type containerInterface interface {
 	GetRemoveSolutionArchiveUseCase() *usecase.RemoveSolutionArchive
 	GetValidateSolutionArchiveUseCase() *usecase.ValidateSolutionArchive
 	GetInitializeSessionUseCase() *usecase.InitializeSession
-	GetGetExternalSolutionArchiveUseCase() *usecase.GetExternalSolutionArchive
+	GetDownloadPartUseCase() *usecase.DownloadPart
 	GetUnmountSolutionArchiveUseCase() *usecase.UnmountSolutionArchive
 	GetMountSolutionArchiveUseCase() *usecase.MountSolutionArchive
 }

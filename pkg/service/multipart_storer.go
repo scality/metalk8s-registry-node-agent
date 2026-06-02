@@ -6,9 +6,9 @@ import (
 	"github.com/scality/metalk8s-registry-node-agent/pkg/domain"
 )
 
-// MultipartUploader manages the multipart upload lifecycle: create, write
+// MultipartStorer manages the multipart upload lifecycle: create, write
 // parts, consolidate, and move the completed file to the root location.
-type MultipartUploader interface {
+type MultipartStorer interface {
 	// CreateMultipartFiles creates into a bucket:
 	// - a metadata file
 	// - a multipart file recipient

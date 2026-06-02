@@ -96,9 +96,9 @@ inward**:
                  │                                    │
                  ▼                                    ▼
 ┌──────────────────────────── Use cases ───────────────────────────────┐
-│  pkg/usecase/*  (InitializeSession, UploadPart, ValidateArchive,     │
-│                  DescribeArchive, GetExternalSolutionArchive,        │
-│                  DownloadArchive, MountArchive, UnmountArchive,      │
+│  pkg/usecase/*  (InitializeSession, ReceivePart, ValidateArchive,    │
+│                  DescribeArchive, DownloadPart,                      │
+│                  ServerPart, MountArchive, UnmountArchive,           │
 │                  RemoveArchive, RemoveSession, CleanArchive)         │
 └──────────────────────────────────────────────────────────────────────┘
                        │                       │
@@ -188,7 +188,7 @@ Pseudo-code:
 4. InitializeSessionUseCase  → status.Initialized
 5. If not Available, look for a sibling NSA (same name+version, other node)
    whose status.Available == true:
-       GetExternalSolutionArchiveUseCase(url=peer.status.url)
+       DownloadPartUseCase(url=peer.status.url)
 6. ValidateArchiveUseCase    (size + SHA-256)
    - invalid → Unmount + clear url + return (will retry on next event)
 7. status.url = "<DOWNLOAD_BASE_URL>/<name>/<version>"
@@ -304,7 +304,7 @@ OpenAPI: [`pkg/presentation/http/extern/uploads-openapi.yaml`](pkg/presentation/
 
 - Authentication: **mTLS**, CA configured via `EXTERN_SERVER_AUTHN_CA_CERT_FILE_PATH`.
 - Required headers: `Content-Range: bytes <start>-<end>/<total>` and `Content-Type: application/octet-stream`.
-- Behavior: drives the `UploadPart` use cases.
+- Behavior: drives the `ReceivePart` use cases.
 - Response: a JSON `SolutionArchiveStatus` listing committed chunks and an `isCompleted` flag — completion triggers consolidation and the archive's move to its final path.
 
 ### 7.2 Internal Download API (`:5002`)
@@ -363,7 +363,7 @@ sequenceDiagram
 
   loop For each chunk
     User->>Ext: PUT /uploads/{n}/{v}<br/>Content-Range: bytes ...
-    Ext->>FS: UploadPart (StorePart + CommitPart)
+    Ext->>FS: ReceivePart (StorePart + CommitPart)
     Ext-->>User: 200 SolutionArchiveStatus
   end
 
@@ -413,11 +413,11 @@ sequenceDiagram
 | Use case                       | Triggered by                | Responsibility                                                           |
 |--------------------------------|-----------------------------|--------------------------------------------------------------------------|
 | `InitializeSession`            | Reconciler (step 4)         | Create bucket + metadata + recipient file. Idempotent.                   |
-| `UploadPart`                   | External API                | Persist a chunk, update parts synthesis, consolidate when complete.      |
+| `ReceivePart`                  | External API                | Persist a chunk, update parts synthesis, consolidate when complete.      |
 | `ValidateArchive`              | Reconciler (step 6)         | Compare archive size and SHA-256 against the `validation.checksum`.      |
 | `DescribeArchive`              | Internal API (HEAD)         | Return total size of an archive without reading it.                      |
-| `GetExternalSolutionArchive`   | Reconciler (step 5)         | Pull every missing chunk from a peer's internal API, verify digests.     |
-| `DownloadArchive`              | Internal API (GET)          | Stream one byte range with `Content-Digest` trailer.                     |
+| `DownloadPart`                 | Reconciler (step 5)         | Pull every missing chunk from a peer's internal API, verify digests.     |
+| `ServePart`                    | Internal API (GET)          | Stream one byte range with `Content-Digest` trailer.                     |
 | `MountArchive` / `UnmountArchive` | Reconciler (step 8 / cleanup) | Materialise / unmount the archive under `${SOLUTIONS_LOCATION}`.    |
 | `RemoveArchive` / `RemoveSession` | Reconciler / GC          | Delete the consolidated file / bucket.                                   |
 | `CleanArchive`                 | GC goroutine                | Periodically reconcile FS state with the set of live NSAs.               |

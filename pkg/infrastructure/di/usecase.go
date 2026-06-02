@@ -3,12 +3,12 @@ package di
 
 import "github.com/scality/metalk8s-registry-node-agent/pkg/usecase"
 
-func (c *Container) getUploadPartUseCase() *usecase.UploadPart {
-	if c.uploadPartUseCase == nil {
-		c.uploadPartUseCase = usecase.NewUploadPart(
+func (c *Container) getReceivePartUseCase() *usecase.ReceivePart {
+	if c.receivePartUseCase == nil {
+		c.receivePartUseCase = usecase.NewReceivePart(
 			c.GetLogger(),
 			c.GetFileSystemBucketManager(),
-			c.GetFileSystemMultipartUploader(),
+			c.GetFileSystemMultipartStorer(),
 			c.GetFileSystemMultipartInspector(),
 			c.getInMemoryBucketLocker(),
 			c.getInMemoryArchiveLocker(),
@@ -16,7 +16,7 @@ func (c *Container) getUploadPartUseCase() *usecase.UploadPart {
 		)
 	}
 
-	return c.uploadPartUseCase
+	return c.receivePartUseCase
 }
 
 func (c *Container) GetInitializeSessionUseCase() *usecase.InitializeSession {
@@ -25,7 +25,7 @@ func (c *Container) GetInitializeSessionUseCase() *usecase.InitializeSession {
 			c.GetLogger(),
 			c.GetFileSystemBucketManager(),
 			c.GetFileSystemArchiveLister(),
-			c.GetFileSystemMultipartUploader(),
+			c.GetFileSystemMultipartStorer(),
 			c.GetFileSystemMultipartInspector(),
 			c.getInMemoryBucketLocker(),
 		)
@@ -69,9 +69,9 @@ func (c *Container) GetRemoveSessionUseCase() *usecase.RemoveSession {
 	return c.removeSessionUseCase
 }
 
-func (c *Container) GetDownloadSolutionArchiveUseCase() *usecase.DownloadSolutionArchive {
-	if c.downloadSolutionArchiveUseCase == nil {
-		c.downloadSolutionArchiveUseCase = usecase.NewDownloadSolutionArchive(
+func (c *Container) GetServePartUseCase() *usecase.ServePart {
+	if c.servePartUseCase == nil {
+		c.servePartUseCase = usecase.NewServePart(
 			c.GetLogger(),
 			c.GetFileSystemArchiveLister(),
 			c.GetFileSystemArchiveReader(),
@@ -79,7 +79,7 @@ func (c *Container) GetDownloadSolutionArchiveUseCase() *usecase.DownloadSolutio
 			c.GetRootInternAPIPath(),
 		)
 	}
-	return c.downloadSolutionArchiveUseCase
+	return c.servePartUseCase
 }
 
 func (c *Container) GetDescribeSolutionArchiveUseCase() *usecase.DescribeSolutionArchive {
@@ -94,22 +94,22 @@ func (c *Container) GetDescribeSolutionArchiveUseCase() *usecase.DescribeSolutio
 	return c.describeSolutionArchiveUseCase
 }
 
-func (c *Container) GetGetExternalSolutionArchiveUseCase() *usecase.GetExternalSolutionArchive {
-	if c.getExternalSolutionArchiveUseCase == nil {
-		c.getExternalSolutionArchiveUseCase = usecase.NewGetExternalSolutionArchive(
+func (c *Container) GetDownloadPartUseCase() *usecase.DownloadPart {
+	if c.downloadPartUseCase == nil {
+		c.downloadPartUseCase = usecase.NewDownloadPart(
 			c.GetLogger(),
 			c.getHTTPExternalDownloader(),
 			c.GetFileSystemBucketManager(),
 			c.GetFileSystemArchiveLister(),
 			c.getInMemoryArchiveLocker(),
 			c.getInMemoryBucketLocker(),
-			c.GetFileSystemMultipartUploader(),
+			c.GetFileSystemMultipartStorer(),
 			c.GetFileSystemMultipartInspector(),
 			c.GetRootExternAPIPath(),
 			c.GetChunkSize(),
 		)
 	}
-	return c.getExternalSolutionArchiveUseCase
+	return c.downloadPartUseCase
 }
 
 func (c *Container) GetMountSolutionArchiveUseCase() *usecase.MountSolutionArchive {
