@@ -38,6 +38,11 @@ func (uc *RemoveSession) Execute(solutionArchive *domain.SolutionArchive) error 
 	uc.bucketLocker.Lock(solutionArchive)
 	defer uc.bucketLocker.Unlock(solutionArchive)
 
+	properties := solutionArchive.GetErrorProperties(
+		"remove_session",
+		"",
+	)
+
 	// List all the buckets
 	buckets, err := uc.bucketManager.ListBuckets()
 	if err != nil {
@@ -47,9 +52,7 @@ func (uc *RemoveSession) Execute(solutionArchive *domain.SolutionArchive) error 
 		return errors.Wrap(err,
 			errors.WithIdentifier(228),
 			errors.WithDetail("error on listing buckets"),
-			errors.WithProperty("usecase", "remove_session"),
-			errors.WithProperty("solution_archive_name", solutionArchive.Name),
-			errors.WithProperty("solution_archive_version", solutionArchive.Version),
+			errors.WithProperties(properties),
 		)
 	}
 
@@ -62,9 +65,7 @@ func (uc *RemoveSession) Execute(solutionArchive *domain.SolutionArchive) error 
 		return errors.Wrap(err,
 			errors.WithIdentifier(229),
 			errors.WithDetail("failed to extract the session bucket"),
-			errors.WithProperty("usecase", "remove_session"),
-			errors.WithProperty("solution_archive_name", solutionArchive.Name),
-			errors.WithProperty("solution_archive_version", solutionArchive.Version),
+			errors.WithProperties(properties),
 		)
 	}
 
@@ -73,9 +74,7 @@ func (uc *RemoveSession) Execute(solutionArchive *domain.SolutionArchive) error 
 		return errors.Wrap(err,
 			errors.WithIdentifier(230),
 			errors.WithDetail("unexpected error while deleting the session bucket"),
-			errors.WithProperty("usecase", "remove_session"),
-			errors.WithProperty("solution_archive_name", solutionArchive.Name),
-			errors.WithProperty("solution_archive_version", solutionArchive.Version),
+			errors.WithProperties(properties),
 		)
 	}
 

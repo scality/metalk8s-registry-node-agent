@@ -5,7 +5,7 @@ import (
 	"github.com/scality/metalk8s-registry-node-agent/pkg/service"
 )
 
-func (c *Container) GetFileSystemArchiveReader() service.ArchiveReader {
+func (c *Container) getFileSystemArchiveReader() service.ArchiveReader {
 	if c.archiveReader == nil {
 		c.archiveReader = archivereader.NewFileSystem(
 			c.GetLogger(),

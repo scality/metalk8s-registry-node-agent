@@ -5,13 +5,13 @@ import (
 	"github.com/scality/metalk8s-registry-node-agent/pkg/service"
 )
 
-func (c *Container) GetFileSystemArchiveMounter() service.ArchiveMounter {
+func (c *Container) getFileSystemArchiveMounter() service.ArchiveMounter {
 	if c.archiveMounter == nil {
 		c.archiveMounter = archivemounter.NewFileSystem(
 			c.GetLogger(),
 			c.config.SolutionArchivesLocation,
 			c.config.SolutionsLocation,
-			c.GetFileSystemArchiveRemover(),
+			c.getFileSystemArchiveRemover(),
 			c.GetFileSystemFileWatcher(),
 		)
 	}

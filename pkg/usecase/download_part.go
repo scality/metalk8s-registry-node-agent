@@ -2,7 +2,6 @@ package usecase
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/rs/zerolog"
 	"github.com/scality/go-errors"
@@ -68,6 +67,11 @@ func (uc *DownloadPart) Execute(
 	uc.archiveLocker.Lock(solutionArchive)
 	defer uc.archiveLocker.Unlock(solutionArchive)
 
+	properties := solutionArchive.GetErrorProperties(
+		"download_part",
+		solutionArchive.GetDownloadURL(uc.rootAPIPath),
+	)
+
 	// List all solution archives in the storage
 	// matching solutionArchiveStorageNamePattern
 	fileNames, err := uc.archiveLister.ListFiles()
@@ -75,13 +79,7 @@ func (uc *DownloadPart) Execute(
 		return errors.Wrap(err,
 			errors.WithIdentifier(204),
 			errors.WithDetail("error on listing solution archives"),
-			errors.WithProperty("usecase", "download_part"),
-			errors.WithProperty("instance", fmt.Sprintf(
-				"%s/downloads/%s/%s",
-				uc.rootAPIPath,
-				solutionArchive.Name,
-				solutionArchive.Version,
-			)),
+			errors.WithProperties(properties),
 		)
 	}
 
@@ -96,15 +94,7 @@ func (uc *DownloadPart) Execute(
 		return errors.Wrap(err,
 			errors.WithIdentifier(205),
 			errors.WithDetail("error on getting description of the solution archive"),
-			errors.WithProperty("usecase", "download_part"),
-			errors.WithProperty("solution_archive_name", solutionArchive.Name),
-			errors.WithProperty("solution_archive_version", solutionArchive.Version),
-			errors.WithProperty("instance", fmt.Sprintf(
-				"%s/downloads/%s/%s",
-				uc.rootAPIPath,
-				solutionArchive.Name,
-				solutionArchive.Version,
-			)),
+			errors.WithProperties(properties),
 		)
 	}
 
@@ -114,13 +104,7 @@ func (uc *DownloadPart) Execute(
 		return errors.Wrap(err,
 			errors.WithIdentifier(206),
 			errors.WithDetail("error on listing buckets"),
-			errors.WithProperty("usecase", "download_part"),
-			errors.WithProperty("instance", fmt.Sprintf(
-				"%s/downloads/%s/%s",
-				uc.rootAPIPath,
-				solutionArchive.Name,
-				solutionArchive.Version,
-			)),
+			errors.WithProperties(properties),
 		)
 	}
 
@@ -130,15 +114,7 @@ func (uc *DownloadPart) Execute(
 		return errors.Wrap(err,
 			errors.WithIdentifier(207),
 			errors.WithDetail("failed to extract the session bucket"),
-			errors.WithProperty("usecase", "download_part"),
-			errors.WithProperty("solution_archive_name", solutionArchive.Name),
-			errors.WithProperty("solution_archive_version", solutionArchive.Version),
-			errors.WithProperty("instance", fmt.Sprintf(
-				"%s/downloads/%s/%s",
-				uc.rootAPIPath,
-				solutionArchive.Name,
-				solutionArchive.Version,
-			)),
+			errors.WithProperties(properties),
 		)
 	}
 
@@ -148,15 +124,7 @@ func (uc *DownloadPart) Execute(
 		return errors.Wrap(err,
 			errors.WithIdentifier(208),
 			errors.WithDetail("error on retrieving the manifest file"),
-			errors.WithProperty("usecase", "download_part"),
-			errors.WithProperty("solution_archive_name", solutionArchive.Name),
-			errors.WithProperty("solution_archive_version", solutionArchive.Version),
-			errors.WithProperty("instance", fmt.Sprintf(
-				"%s/downloads/%s/%s",
-				uc.rootAPIPath,
-				solutionArchive.Name,
-				solutionArchive.Version,
-			)),
+			errors.WithProperties(properties),
 		)
 	}
 
@@ -164,15 +132,7 @@ func (uc *DownloadPart) Execute(
 		return errors.Wrap(domain.ErrPartDownloaderNotFound,
 			errors.WithIdentifier(209),
 			errors.WithDetail("error on checking the manifest file"),
-			errors.WithProperty("usecase", "download_part"),
-			errors.WithProperty("solution_archive_name", solutionArchive.Name),
-			errors.WithProperty("solution_archive_version", solutionArchive.Version),
-			errors.WithProperty("instance", fmt.Sprintf(
-				"%s/downloads/%s/%s",
-				uc.rootAPIPath,
-				solutionArchive.Name,
-				solutionArchive.Version,
-			)),
+			errors.WithProperties(properties),
 		)
 	}
 
@@ -182,15 +142,7 @@ func (uc *DownloadPart) Execute(
 		return errors.Wrap(err,
 			errors.WithIdentifier(210),
 			errors.WithDetail("error on getting the solution archive status"),
-			errors.WithProperty("usecase", "download_part"),
-			errors.WithProperty("solution_archive_name", solutionArchive.Name),
-			errors.WithProperty("solution_archive_version", solutionArchive.Version),
-			errors.WithProperty("instance", fmt.Sprintf(
-				"%s/downloads/%s/%s",
-				uc.rootAPIPath,
-				solutionArchive.Name,
-				solutionArchive.Version,
-			)),
+			errors.WithProperties(properties),
 		)
 	}
 
@@ -200,9 +152,6 @@ func (uc *DownloadPart) Execute(
 		Name:    solutionArchive.Name,
 		Version: solutionArchive.Version,
 		Size:    solutionArchiveSize,
-	}
-	if solutionArchive.Hash != nil {
-		partSolutionArchive.Hash = solutionArchive.Hash
 	}
 	for chunkIndex := range numChunks {
 		start := chunkIndex * uc.chunkSize
@@ -225,17 +174,9 @@ func (uc *DownloadPart) Execute(
 			return errors.Wrap(err,
 				errors.WithIdentifier(211),
 				errors.WithDetail("error on downloading a solution archive chunk"),
-				errors.WithProperty("usecase", "download_part"),
-				errors.WithProperty("solution_archive_name", solutionArchive.Name),
-				errors.WithProperty("solution_archive_version", solutionArchive.Version),
+				errors.WithProperties(properties),
 				errors.WithProperty("range_start", start),
 				errors.WithProperty("range_end", end),
-				errors.WithProperty("instance", fmt.Sprintf(
-					"%s/downloads/%s/%s",
-					uc.rootAPIPath,
-					solutionArchive.Name,
-					solutionArchive.Version,
-				)),
 			)
 		}
 
@@ -251,17 +192,9 @@ func (uc *DownloadPart) Execute(
 			return errors.Wrap(err,
 				errors.WithIdentifier(212),
 				errors.WithDetail("error on storing a solution archive chunk"),
-				errors.WithProperty("usecase", "download_part"),
-				errors.WithProperty("solution_archive_name", solutionArchive.Name),
-				errors.WithProperty("solution_archive_version", solutionArchive.Version),
+				errors.WithProperties(properties),
 				errors.WithProperty("range_start", start),
 				errors.WithProperty("range_end", end),
-				errors.WithProperty("instance", fmt.Sprintf(
-					"%s/downloads/%s/%s",
-					uc.rootAPIPath,
-					solutionArchive.Name,
-					solutionArchive.Version,
-				)),
 			)
 		}
 
@@ -270,17 +203,9 @@ func (uc *DownloadPart) Execute(
 			return errors.Wrap(err,
 				errors.WithIdentifier(213),
 				errors.WithDetail("error on verifying the Content-Digest trailer of the solution archive chunk"),
-				errors.WithProperty("usecase", "download_part"),
-				errors.WithProperty("solution_archive_name", solutionArchive.Name),
-				errors.WithProperty("solution_archive_version", solutionArchive.Version),
+				errors.WithProperties(properties),
 				errors.WithProperty("range_start", start),
 				errors.WithProperty("range_end", end),
-				errors.WithProperty("instance", fmt.Sprintf(
-					"%s/downloads/%s/%s",
-					uc.rootAPIPath,
-					solutionArchive.Name,
-					solutionArchive.Version,
-				)),
 			)
 		}
 
@@ -288,17 +213,9 @@ func (uc *DownloadPart) Execute(
 			return errors.Wrap(err,
 				errors.WithIdentifier(214),
 				errors.WithDetail("error on committing a solution archive chunk"),
-				errors.WithProperty("usecase", "download_part"),
-				errors.WithProperty("solution_archive_name", solutionArchive.Name),
-				errors.WithProperty("solution_archive_version", solutionArchive.Version),
+				errors.WithProperties(properties),
 				errors.WithProperty("range_start", start),
 				errors.WithProperty("range_end", end),
-				errors.WithProperty("instance", fmt.Sprintf(
-					"%s/downloads/%s/%s",
-					uc.rootAPIPath,
-					solutionArchive.Name,
-					solutionArchive.Version,
-				)),
 			)
 		}
 	}
@@ -307,15 +224,7 @@ func (uc *DownloadPart) Execute(
 		return errors.Wrap(domain.ErrPartDownloaderNotComplete,
 			errors.WithIdentifier(215),
 			errors.WithDetail("unable to download part because it is not complete"),
-			errors.WithProperty("usecase", "download_part"),
-			errors.WithProperty("solution_archive_name", solutionArchive.Name),
-			errors.WithProperty("solution_archive_version", solutionArchive.Version),
-			errors.WithProperty("instance", fmt.Sprintf(
-				"%s/downloads/%s/%s",
-				uc.rootAPIPath,
-				solutionArchive.Name,
-				solutionArchive.Version,
-			)),
+			errors.WithProperties(properties),
 		)
 	}
 
@@ -331,15 +240,7 @@ func (uc *DownloadPart) Execute(
 		return errors.Wrap(err,
 			errors.WithIdentifier(216),
 			errors.WithDetail("error on consolidating the solution archive"),
-			errors.WithProperty("usecase", "download_part"),
-			errors.WithProperty("solution_archive_name", solutionArchive.Name),
-			errors.WithProperty("solution_archive_version", solutionArchive.Version),
-			errors.WithProperty("instance", fmt.Sprintf(
-				"%s/downloads/%s/%s",
-				uc.rootAPIPath,
-				solutionArchive.Name,
-				solutionArchive.Version,
-			)),
+			errors.WithProperties(properties),
 		)
 	}
 

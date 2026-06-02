@@ -1,5 +1,5 @@
 package di
 
-func (c *Container) GetChunkSize() int64 {
+func (c *Container) getChunkSize() int64 {
 	return c.chunkSize
 }

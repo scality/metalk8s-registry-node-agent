@@ -5,7 +5,7 @@ import (
 	"github.com/scality/metalk8s-registry-node-agent/pkg/service"
 )
 
-func (c *Container) GetFileSystemBucketManager() service.BucketManager {
+func (c *Container) getFileSystemBucketManager() service.BucketManager {
 	if c.bucketManager == nil {
 		c.bucketManager = bucketmanager.NewFileSystem(
 			c.GetLogger(),

@@ -51,6 +51,11 @@ func (uc *InitializeSession) Execute(solutionArchive *domain.SolutionArchive) (*
 	uc.bucketLocker.Lock(solutionArchive)
 	defer uc.bucketLocker.Unlock(solutionArchive)
 
+	properties := solutionArchive.GetErrorProperties(
+		"initialize_session",
+		"",
+	)
+
 	// List all solution archives in the storage
 	// matching solutionArchiveStorageNamePattern
 	fileNames, err := uc.archiveLister.ListFiles()
@@ -58,9 +63,7 @@ func (uc *InitializeSession) Execute(solutionArchive *domain.SolutionArchive) (*
 		return nil, errors.Wrap(err,
 			errors.WithIdentifier(217),
 			errors.WithDetail("error on listing solution archives"),
-			errors.WithProperty("usecase", "initialize_session"),
-			errors.WithProperty("solution_archive_name", solutionArchive.Name),
-			errors.WithProperty("solution_archive_version", solutionArchive.Version),
+			errors.WithProperties(properties),
 		)
 	}
 
@@ -77,7 +80,12 @@ func (uc *InitializeSession) Execute(solutionArchive *domain.SolutionArchive) (*
 	// Check if the session bucket already exists
 	exist, err := uc.sessionBucketAlreadyExists(bucketName)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err,
+			errors.WithIdentifier(218),
+			errors.WithDetail("error on checking if the session bucket already exists"),
+			errors.WithProperties(properties),
+			errors.WithProperty("bucket_name", bucketName),
+		)
 	}
 
 	if exist {
@@ -86,10 +94,8 @@ func (uc *InitializeSession) Execute(solutionArchive *domain.SolutionArchive) (*
 			return nil, errors.Wrap(err,
 				errors.WithIdentifier(219),
 				errors.WithDetail("error on getting multipart file status"),
-				errors.WithProperty("usecase", "initialize_session"),
+				errors.WithProperties(properties),
 				errors.WithProperty("bucket_name", bucketName),
-				errors.WithProperty("solution_archive_name", solutionArchive.Name),
-				errors.WithProperty("solution_archive_version", solutionArchive.Version),
 			)
 		}
 		return &domain.SessionStatus{
@@ -114,10 +120,8 @@ func (uc *InitializeSession) Execute(solutionArchive *domain.SolutionArchive) (*
 		return nil, errors.Wrap(err,
 			errors.WithIdentifier(220),
 			errors.WithDetail("error on creating session bucket"),
-			errors.WithProperty("usecase", "initialize_session"),
 			errors.WithProperty("bucket_name", bucketName),
-			errors.WithProperty("solution_archive_name", solutionArchive.Name),
-			errors.WithProperty("solution_archive_version", solutionArchive.Version),
+			errors.WithProperties(properties),
 		)
 	}
 
@@ -127,10 +131,8 @@ func (uc *InitializeSession) Execute(solutionArchive *domain.SolutionArchive) (*
 		return nil, errors.Wrap(err,
 			errors.WithIdentifier(221),
 			errors.WithDetail("error on creating multipart files"),
-			errors.WithProperty("usecase", "initialize_session"),
+			errors.WithProperties(properties),
 			errors.WithProperty("bucket_name", bucketName),
-			errors.WithProperty("solution_archive_name", solutionArchive.Name),
-			errors.WithProperty("solution_archive_version", solutionArchive.Version),
 		)
 	}
 
@@ -148,12 +150,7 @@ func (uc *InitializeSession) Execute(solutionArchive *domain.SolutionArchive) (*
 func (uc *InitializeSession) sessionBucketAlreadyExists(name string) (bool, error) {
 	buckets, err := uc.bucketManager.ListBuckets()
 	if err != nil && !errors.Is(err, domain.ErrBucketManagerNotFound) {
-		return false, errors.Wrap(err,
-			errors.WithIdentifier(218),
-			errors.WithDetail("error on listing buckets"),
-			errors.WithProperty("usecase", "initialize_session"),
-			errors.WithProperty("bucket_name", name),
-		)
+		return false, err
 	}
 
 	return slices.Contains(buckets, name), nil

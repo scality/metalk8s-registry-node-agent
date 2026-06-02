@@ -40,6 +40,11 @@ func (uc *RemoveSolutionArchive) Execute(solutionArchive *domain.SolutionArchive
 	uc.archiveLocker.Lock(solutionArchive)
 	defer uc.archiveLocker.Unlock(solutionArchive)
 
+	properties := solutionArchive.GetErrorProperties(
+		"remove_solution_archive",
+		"",
+	)
+
 	// List all solution archives in the storage
 	// matching solutionArchiveStorageNamePattern
 	fileNames, err := uc.archiveLister.ListFiles()
@@ -47,9 +52,7 @@ func (uc *RemoveSolutionArchive) Execute(solutionArchive *domain.SolutionArchive
 		return errors.Wrap(err,
 			errors.WithIdentifier(226),
 			errors.WithDetail("error on listing solution archives"),
-			errors.WithProperty("usecase", "remove_solution_archive"),
-			errors.WithProperty("solution_archive_name", solutionArchive.Name),
-			errors.WithProperty("solution_archive_version", solutionArchive.Version),
+			errors.WithProperties(properties),
 		)
 	}
 
@@ -60,9 +63,7 @@ func (uc *RemoveSolutionArchive) Execute(solutionArchive *domain.SolutionArchive
 			return errors.Wrap(err,
 				errors.WithIdentifier(227),
 				errors.WithDetail("unexpected error while removing the solution archive"),
-				errors.WithProperty("usecase", "remove_solution_archive"),
-				errors.WithProperty("solution_archive_name", solutionArchive.Name),
-				errors.WithProperty("solution_archive_version", solutionArchive.Version),
+				errors.WithProperties(properties),
 			)
 		}
 	}

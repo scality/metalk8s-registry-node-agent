@@ -2,8 +2,6 @@
 package usecase
 
 import (
-	"fmt"
-
 	"github.com/rs/zerolog"
 	"github.com/scality/go-errors"
 
@@ -49,6 +47,11 @@ func (uc *ServePart) Execute(
 	uc.archiveLocker.RLock(solutionArchivePart.SolutionArchive)
 	defer uc.archiveLocker.RUnlock(solutionArchivePart.SolutionArchive)
 
+	properties := solutionArchivePart.SolutionArchive.GetErrorProperties(
+		"serve_part",
+		solutionArchivePart.SolutionArchive.GetDownloadURL(uc.rootAPIPath),
+	)
+
 	// List all solution archives in the storage
 	// matching solutionArchiveStorageNamePattern
 	fileNames, err := uc.archiveLister.ListFiles()
@@ -56,13 +59,7 @@ func (uc *ServePart) Execute(
 		return nil, errors.Wrap(err,
 			errors.WithIdentifier(199),
 			errors.WithDetail("error on listing solution archives"),
-			errors.WithProperty("usecase", "serve_part"),
-			errors.WithProperty("instance", fmt.Sprintf(
-				"%s/downloads/%s/%s",
-				uc.rootAPIPath,
-				solutionArchivePart.SolutionArchive.Name,
-				solutionArchivePart.SolutionArchive.Version,
-			)),
+			errors.WithProperties(properties),
 		)
 	}
 
@@ -71,15 +68,7 @@ func (uc *ServePart) Execute(
 		return nil, errors.Wrap(domain.ErrNotFound,
 			errors.WithIdentifier(200),
 			errors.WithDetail("solution archive not found"),
-			errors.WithProperty("usecase", "serve_part"),
-			errors.WithProperty("instance", fmt.Sprintf(
-				"%s/downloads/%s/%s",
-				uc.rootAPIPath,
-				solutionArchivePart.SolutionArchive.Name,
-				solutionArchivePart.SolutionArchive.Version,
-			)),
-			errors.WithProperty("solution_archive_name", solutionArchivePart.SolutionArchive.Name),
-			errors.WithProperty("solution_archive_version", solutionArchivePart.SolutionArchive.Version),
+			errors.WithProperties(properties),
 		)
 	}
 
@@ -89,15 +78,7 @@ func (uc *ServePart) Execute(
 		return nil, errors.Wrap(err,
 			errors.WithIdentifier(201),
 			errors.WithDetail("error on getting size of the solution archive"),
-			errors.WithProperty("usecase", "serve_part"),
-			errors.WithProperty("solution_archive_name", solutionArchivePart.SolutionArchive.Name),
-			errors.WithProperty("solution_archive_version", solutionArchivePart.SolutionArchive.Version),
-			errors.WithProperty("instance", fmt.Sprintf(
-				"%s/downloads/%s/%s",
-				uc.rootAPIPath,
-				solutionArchivePart.SolutionArchive.Name,
-				solutionArchivePart.SolutionArchive.Version,
-			)),
+			errors.WithProperties(properties),
 		)
 	}
 
@@ -107,16 +88,10 @@ func (uc *ServePart) Execute(
 		return nil, errors.Wrap(domain.ErrHandlerInvalidRequestHeaderFormat,
 			errors.WithIdentifier(202),
 			errors.WithDetail("requested byte range exceeds the solution archive size"),
-			errors.WithProperty("usecase", "serve_part"),
+			errors.WithProperties(properties),
 			errors.WithProperty("range_start", start),
 			errors.WithProperty("range_end", end),
 			errors.WithProperty("file_size_bytes", fileSize),
-			errors.WithProperty("instance", fmt.Sprintf(
-				"%s/downloads/%s/%s",
-				uc.rootAPIPath,
-				solutionArchivePart.SolutionArchive.Name,
-				solutionArchivePart.SolutionArchive.Version,
-			)),
 		)
 	}
 
@@ -130,15 +105,7 @@ func (uc *ServePart) Execute(
 		return nil, errors.Wrap(err,
 			errors.WithIdentifier(203),
 			errors.WithDetail("error on getting part of the solution archive"),
-			errors.WithProperty("usecase", "serve_part"),
-			errors.WithProperty("solution_archive_name", solutionArchivePart.SolutionArchive.Name),
-			errors.WithProperty("solution_archive_version", solutionArchivePart.SolutionArchive.Version),
-			errors.WithProperty("instance", fmt.Sprintf(
-				"%s/downloads/%s/%s",
-				uc.rootAPIPath,
-				solutionArchivePart.SolutionArchive.Name,
-				solutionArchivePart.SolutionArchive.Version,
-			)),
+			errors.WithProperties(properties),
 		)
 	}
 
