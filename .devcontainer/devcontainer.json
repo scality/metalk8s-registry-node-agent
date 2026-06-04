@@ -1,25 +1,62 @@
 {
-  "name": "Kubebuilder DevContainer",
-  "image": "golang:1.26",
+  "name": "Registry-Node-Agent DevContainer",
+  "build": {
+    "dockerfile": "Dockerfile"
+  },
+  // GIT_AUTH_TOKEN is required to access private repositories into the container
+  "containerEnv": {
+    "GIT_AUTH_TOKEN": "${localEnv:GIT_AUTH_TOKEN}",
+    "GOPRIVATE": "github.com/scality/*"
+  },
   "features": {
-    "ghcr.io/devcontainers/features/docker-in-docker:3": {},
+    "ghcr.io/devcontainers/features/docker-in-docker:3": {
+      "dockerDashComposeVersion": "none",
+      "moby": false
+    },
+    "ghcr.io/devcontainers/features/github-cli:1": {},
     "ghcr.io/devcontainers/features/git:1": {}
   },
-
-  "runArgs": ["--network=host"],
 
   "customizations": {
     "vscode": {
       "settings": {
-        "terminal.integrated.shell.linux": "/bin/bash"
+        "telemetry.telemetryLevel": "off",
+        "redhat.telemetry.enabled": false,
+        "editor.renderWhitespace": "all",
+        "terminal.integrated.profiles.linux": {
+          "zsh": {
+            "path": "/usr/bin/zsh"
+          }
+        },
+        "terminal.integrated.defaultProfile.linux": "zsh",
+        "python.terminal.activateEnvironment": false
       },
       "extensions": [
+        //Kubernetes support
         "ms-kubernetes-tools.vscode-kubernetes-tools",
-        "ms-azuretools.vscode-docker"
+        //Create TODO and FIXME tree
+        "Gruntfuggly.todo-tree",
+        //Go support
+        "golang.go",
+        //Remote container support
+        "ms-vscode-remote.remote-containers",
+        //YAML support
+        "redhat.vscode-yaml",
+        //Github Action helper
+        "github.vscode-github-actions",
+        //Docker helper
+        "ms-azuretools.vscode-docker",
+        //Gherkin support and helper
+        "CucumberOpen.cucumber-official",
+        //Markdown support
+        "yzhang.markdown-all-in-one",
+        //Compare text selections
+        "ryu1kn.partial-diff",
+        //Ginkgo support
+        "joselitofilho.ginkgotestexplorer"
       ]
     }
   },
-
-  "onCreateCommand": "bash .devcontainer/post-install.sh"
+  "remoteUser": "vscode"
 }
 
