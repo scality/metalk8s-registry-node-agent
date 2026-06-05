@@ -252,6 +252,15 @@ func (f *FileSystem) StorePart(
 		)
 	}
 
+	if err = recipientFile.Sync(); err != nil {
+		return nil, errors.Wrap(domain.ErrStorageProviderInternal,
+			errors.WithIdentifier(195),
+			errors.WithDetail("unable to flush the recipient file to disk after storing part"),
+			errors.WithProperty("file_path", recipientFilePath),
+			errors.CausedBy(err),
+		)
+	}
+
 	solutionArchiveStatus.Parts[part.Meta.Start] = part.Meta
 
 	return solutionArchiveStatus, nil
