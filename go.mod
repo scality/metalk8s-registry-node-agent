@@ -10,7 +10,7 @@ require (
 	github.com/onsi/ginkgo/v2 v2.29.0
 	github.com/onsi/gomega v1.41.0
 	github.com/scality/go-errors v1.2.0
-	github.com/scality/platform-library v0.0.4
+	github.com/scality/platform-library v0.0.7
 	k8s.io/apimachinery v0.33.0
 	k8s.io/client-go v0.33.0
 	sigs.k8s.io/controller-runtime v0.21.0
