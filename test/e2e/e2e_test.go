@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-//nolint:dupl // E2E tests have intentional code duplication for test clarity and independence
+//nolint:dupl,goconst // E2E tests have intentional code duplication for test clarity and independence
 package e2e
 
 import (
