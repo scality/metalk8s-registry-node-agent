@@ -1,4 +1,4 @@
-// nolint: dupl
+// nolint: dupl,goconst
 package domain
 
 import (

@@ -33,7 +33,7 @@ The project follows a clean architecture pattern with clear separation of concer
 
 ### Prerequisites
 
-- Go 1.25.0 or later
+- Go 1.26.0 or later
 - Docker for containerization
 - Kubernetes cluster
 - kubectl for Kubernetes integration

@@ -104,7 +104,7 @@ func fillInternProblemDetailsFromAPIErrorsError(
 	dst.Status = &status
 	dst.Code = &code
 
-	details := []string{}
+	details := []string{} //nolint:prealloc
 	details = append(details, src.Details...)
 	dst.Detail = ptr.To(strings.Join(details, ": "))
 

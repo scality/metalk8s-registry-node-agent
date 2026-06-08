@@ -2,7 +2,7 @@
 ########### Build the manager binary ###########
 ################################################
 # Build the manager binary
-FROM golang:1.25.1-alpine3.22 AS builder
+FROM golang:1.26.0-alpine3.23 AS builder
 ARG TARGETOS
 ARG TARGETARCH
 ARG APPLICATION_VERSION=dev
@@ -37,7 +37,7 @@ RUN CGO_ENABLED=0 GOOS=${TARGETOS:-linux} GOARCH=${TARGETARCH} go build -a -o ma
 ########### Build the setup binary #############
 ################################################
 # Build the setup binary
-FROM golang:1.25.1-alpine3.22 AS builder-setup
+FROM golang:1.26.0-alpine3.23 AS builder-setup
 ARG TARGETOS
 ARG TARGETARCH
 
