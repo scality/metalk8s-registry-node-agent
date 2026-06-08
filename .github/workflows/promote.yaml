@@ -28,7 +28,7 @@ jobs:
           ref: ${{ github.ref }}
 
       - name: Get the artifacts name
-        uses: scality/action-artifacts@v4
+        uses: scality/action-artifacts@4d348ec54efb29b5fc6226e433a1e0302242594f # v4
         id: artifacts
         with:
           method: setup
@@ -46,7 +46,7 @@ jobs:
           curl --fail -LO -u ${{ secrets.ARTIFACTS_USER }}:${{ secrets.ARTIFACTS_PASSWORD }}
           ${{ steps.artifacts.outputs.link }}/crds.yaml
       
-      - uses: softprops/action-gh-release@v3
+      - uses: softprops/action-gh-release@b4309332981a82ec1c5618f44dd2e27cc8bfbfda # v3
         with:
           name: MetalK8s Registry Node Agent ${{ github.ref_name }}
           tag_name: ${{ github.ref_name }}
