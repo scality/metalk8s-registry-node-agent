@@ -28,7 +28,7 @@ jobs:
           ref: ${{ github.ref }}
 
       - name: Get the artifacts name
-        uses: scality/action-artifacts@4d348ec54efb29b5fc6226e433a1e0302242594f # v4
+        uses: scality/action-artifacts@b311c0a0d8017683148906bd3fbe0e681b115608 # 4.3.0
         id: artifacts
         with:
           method: setup
