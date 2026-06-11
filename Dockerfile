@@ -2,7 +2,7 @@
 ########### Build the manager binary ###########
 ################################################
 # Build the manager binary
-FROM golang:1.26.0-alpine3.23 AS builder
+FROM golang:1.26.0-alpine3.23@sha256:d4c4845f5d60c6a974c6000ce58ae079328d03ab7f721a0734277e69905473e5 AS builder
 ARG TARGETOS
 ARG TARGETARCH
 ARG APPLICATION_VERSION=dev
@@ -37,7 +37,7 @@ RUN CGO_ENABLED=0 GOOS=${TARGETOS:-linux} GOARCH=${TARGETARCH} go build -a -o ma
 ########### Build the setup binary #############
 ################################################
 # Build the setup binary
-FROM golang:1.26.0-alpine3.23 AS builder-setup
+FROM golang:1.26.0-alpine3.23@sha256:d4c4845f5d60c6a974c6000ce58ae079328d03ab7f721a0734277e69905473e5 AS builder-setup
 ARG TARGETOS
 ARG TARGETARCH
 
@@ -59,7 +59,7 @@ RUN CGO_ENABLED=0 GOOS=${TARGETOS:-linux} GOARCH=${TARGETARCH} go build -a -o se
 ################################################
 # Use Alpine as minimal base image with mount/umount utilities
 # Alpine includes util-linux package with mount/umount by default
-FROM alpine:3.23
+FROM alpine:3.23@sha256:5b10f432ef3da1b8d4c7eb6c487f2f5a8f096bc91145e68878dd4a5019afde11
 WORKDIR /
 # Install util-linux for mount/umount utilities, libcap for capabilities
 # and ca-certificates for HTTPS connections

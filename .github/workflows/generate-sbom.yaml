@@ -53,14 +53,14 @@ jobs:
           token: ${{ secrets.GIT_ACCESS_TOKEN }}
 
       - name: Login to the registry
-        uses: docker/login-action@v4
+        uses: docker/login-action@650006c6eb7dba73a995cc03b0b2d7f5ca915bee # v4
         with:
           registry: ghcr.io
           username: ${{ github.repository_owner }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Generate sbom for metalk8s-registry-node-agent
-        uses: scality/sbom@v2.1.4
+        uses: scality/sbom@e44e161a0321c285b7437be5b8de46b18a1ecb5c # v2.1.4
         with:
           target: ${{ inputs.image-name }}
           target_type: image
@@ -70,7 +70,7 @@ jobs:
 
       - name: Upload sbom to repository
         if: inputs.upload-sbom == true
-        uses: scality/sbom-upload@v1.0.7
+        uses: scality/sbom-upload@2de9e9b5d10e044067262b250701cca1ed1b6624 # v1.0.7
         with:
           url: ${{ vars.DEPENDENCY_TRACK_HOSTNAME }}
           api-key: ${{ secrets.DEPENDENCY_TRACK_APIKEY }}
