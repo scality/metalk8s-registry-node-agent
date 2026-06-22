@@ -1,3 +1,3 @@
 module github.com/scality/metalk8s-registry-node-agent/setup
 
-go 1.25.0
+go 1.26.4
