@@ -3,7 +3,7 @@ module github.com/scality/metalk8s-registry-node-agent
 go 1.26.4
 
 require (
-	github.com/hashicorp/go-version v1.7.0
+	github.com/hashicorp/go-version v1.9.0
 	github.com/moby/sys/mountinfo v0.7.2
 	github.com/oapi-codegen/nethttp-middleware v1.1.2
 	github.com/oapi-codegen/runtime v1.1.2
