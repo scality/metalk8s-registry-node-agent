@@ -128,8 +128,3 @@ require (
 )
 
 tool github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen
-
-// fsnotify v1.9.0 drops IN_UNMOUNT events, which breaks the controller's
-// automatic remount-on-manual-unmount detection. Pin to v1.8.0 (last version
-// that still delivers unmount events) without downgrading controller-runtime.
-replace github.com/fsnotify/fsnotify => github.com/fsnotify/fsnotify v1.8.0

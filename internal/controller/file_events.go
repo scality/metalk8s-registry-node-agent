@@ -130,7 +130,6 @@ func (f *FileEvents) handleSolutionEvent(eventDetails domain.FileEventDetails) e
 		f.handleSolutionWrite(nsaList, objectIsVersioned)
 	case fsnotify.Chmod.String():
 		return nil
-	// When mounting/unmounting, a [no events] event is raised
 	default:
 		f.handleSolutionDefault(nsaList, objectIsVersioned)
 	}

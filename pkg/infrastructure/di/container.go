@@ -45,6 +45,7 @@ type Container struct {
 	archiveRemover         service.ArchiveRemover
 	archiveReader          service.ArchiveReader
 	fileWatcher            service.FileWatcher
+	mountWatcher           service.MountWatcher
 	archiveMounter         service.ArchiveMounter
 	archiveCleaner         service.ArchiveCleaner
 	archiveLister          service.ArchiveLister
