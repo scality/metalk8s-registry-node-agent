@@ -10,7 +10,7 @@ import (
 
 func (c *Container) GetHTTPInternServer() *http.Server {
 	if c.httpInternServer == nil {
-		swagger, err := intern.GetSwagger()
+		swagger, err := intern.GetSpec()
 		if err != nil {
 			c.GetLogger().Fatal().Err(err).Msg("failed to get swagger")
 		}
