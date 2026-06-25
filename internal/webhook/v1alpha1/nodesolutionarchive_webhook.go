@@ -20,11 +20,9 @@ import (
 	"context"
 	"fmt"
 
-	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
-	"sigs.k8s.io/controller-runtime/pkg/webhook"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
 	"github.com/hashicorp/go-version"
@@ -37,7 +35,7 @@ var nodesolutionarchivelog = logf.Log.WithName("nodesolutionarchive-resource")
 
 // SetupNodeSolutionArchiveWebhookWithManager registers the webhook for NodeSolutionArchive in the manager.
 func SetupNodeSolutionArchiveWebhookWithManager(mgr ctrl.Manager) error {
-	return ctrl.NewWebhookManagedBy(mgr).For(&metalk8sv1alpha1.NodeSolutionArchive{}).
+	return ctrl.NewWebhookManagedBy(mgr, &metalk8sv1alpha1.NodeSolutionArchive{}).
 		WithValidator(&NodeSolutionArchiveCustomValidator{
 			client: mgr.GetClient(),
 		}).
@@ -57,28 +55,24 @@ type NodeSolutionArchiveCustomValidator struct {
 	client client.Client
 }
 
-var _ webhook.CustomValidator = &NodeSolutionArchiveCustomValidator{}
+var _ admission.Validator[*metalk8sv1alpha1.NodeSolutionArchive] = &NodeSolutionArchiveCustomValidator{}
 
-// ValidateCreate implements webhook.CustomValidator so a webhook will be registered for the type NodeSolutionArchive.
-func (v *NodeSolutionArchiveCustomValidator) ValidateCreate(ctx context.Context, obj runtime.Object) (admission.Warnings, error) {
-	nodesolutionarchive, ok := obj.(*metalk8sv1alpha1.NodeSolutionArchive)
-	if !ok {
-		return nil, fmt.Errorf("expected a NodeSolutionArchive object but got %T", obj)
-	}
+// ValidateCreate implements admission.Validator so a webhook will be registered for the type NodeSolutionArchive.
+func (v *NodeSolutionArchiveCustomValidator) ValidateCreate(ctx context.Context, nodesolutionarchive *metalk8sv1alpha1.NodeSolutionArchive) (admission.Warnings, error) {
 	nodesolutionarchivelog.Info("Validation for NodeSolutionArchive upon creation", "name", nodesolutionarchive.GetName())
 
 	return nil, validateNodeSolutionArchive(ctx, v.client, nodesolutionarchive)
 }
 
-// ValidateUpdate implements webhook.CustomValidator so a webhook will be registered for the type NodeSolutionArchive.
-func (v *NodeSolutionArchiveCustomValidator) ValidateUpdate(ctx context.Context, oldObj, newObj runtime.Object) (admission.Warnings, error) {
+// ValidateUpdate implements admission.Validator so a webhook will be registered for the type NodeSolutionArchive.
+func (v *NodeSolutionArchiveCustomValidator) ValidateUpdate(ctx context.Context, oldObj, newObj *metalk8sv1alpha1.NodeSolutionArchive) (admission.Warnings, error) {
 	// Careful: not activated by default
 	// To enable it think about changing "verbs=create" to "verbs=create,update" in "+kubebuilder:webhook" annotation above
 	return nil, nil
 }
 
-// ValidateDelete implements webhook.CustomValidator so a webhook will be registered for the type NodeSolutionArchive.
-func (v *NodeSolutionArchiveCustomValidator) ValidateDelete(ctx context.Context, obj runtime.Object) (admission.Warnings, error) {
+// ValidateDelete implements admission.Validator so a webhook will be registered for the type NodeSolutionArchive.
+func (v *NodeSolutionArchiveCustomValidator) ValidateDelete(ctx context.Context, obj *metalk8sv1alpha1.NodeSolutionArchive) (admission.Warnings, error) {
 	// Careful: not activated by default
 	// To enable it think about changing "verbs=create" to "verbs=create,delete" in "+kubebuilder:webhook" annotation above
 	return nil, nil
