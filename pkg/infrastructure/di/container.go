@@ -6,6 +6,7 @@ import (
 	"net/http"
 
 	"github.com/rs/zerolog"
+	"sigs.k8s.io/controller-runtime/pkg/certwatcher"
 
 	"github.com/scality/metalk8s-registry-node-agent/cmd/config"
 	"github.com/scality/metalk8s-registry-node-agent/pkg/domain"
@@ -36,6 +37,9 @@ type Container struct {
 	ExternTLSConfig           *tls.Config
 	InternTLSConfig           *tls.Config
 	InternTLSClientConfig     *tls.Config
+	externServerCertWatcher   *certwatcher.CertWatcher
+	internServerCertWatcher   *certwatcher.CertWatcher
+	internClientCertWatcher   *certwatcher.CertWatcher
 	rootExternAPIPath         string
 	rootInternAPIPath         string
 	chunkSize                 int64

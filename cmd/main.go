@@ -374,6 +374,16 @@ func main() {
 		}
 	}
 
+	// Add the external/internal server and internal client TLS key-pair
+	// watchers to the manager so cert-manager rotations are picked up live.
+	setupLog.Info("Adding application certificate watchers to manager")
+	for _, certWatcher := range container.GetCertWatchers() {
+		if err := mgr.Add(certWatcher); err != nil {
+			setupLog.Error(err, "unable to add application certificate watcher to manager")
+			os.Exit(1)
+		}
+	}
+
 	if err := mgr.AddHealthzCheck("healthz", healthz.Ping); err != nil {
 		setupLog.Error(err, "unable to set up health check")
 		os.Exit(1)
