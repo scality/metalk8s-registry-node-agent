@@ -13,6 +13,7 @@ func (c *Container) getFileSystemArchiveMounter() service.ArchiveMounter {
 			c.config.SolutionsLocation,
 			c.getFileSystemArchiveRemover(),
 			c.GetFileSystemFileWatcher(),
+			c.GetFileSystemMountWatcher(),
 		)
 	}
 	return c.archiveMounter

@@ -19,6 +19,7 @@ type FileSystem struct {
 	solutionsLocation        string
 	archiveRemover           service.ArchiveRemover
 	watcher                  service.FileWatcher
+	mountWatcher             service.MountWatcher
 }
 
 func NewFileSystem(
@@ -27,6 +28,7 @@ func NewFileSystem(
 	solutionsLocation string,
 	archiveRemover service.ArchiveRemover,
 	watcher service.FileWatcher,
+	mountWatcher service.MountWatcher,
 ) service.ArchiveMounter {
 	l := logger.With().
 		Str("infrastructure", "archive_mounter").
@@ -38,6 +40,7 @@ func NewFileSystem(
 		solutionsLocation:        solutionsLocation,
 		archiveRemover:           archiveRemover,
 		watcher:                  watcher,
+		mountWatcher:             mountWatcher,
 	}
 }
 
@@ -176,6 +179,8 @@ func (f *FileSystem) MountFile(fileName string, mountPoint string) error {
 		}
 	}
 
+	f.mountWatcher.RecordMount(mountPath, mountPoint)
+
 	return nil
 }
 
@@ -212,6 +217,8 @@ func (f *FileSystem) UnmountFile(mountPoint string) error {
 			)
 		}
 	}
+
+	f.mountWatcher.RecordUnmount(mountPath)
 
 	err = os.RemoveAll(mountPath)
 	if err != nil {

@@ -51,7 +51,9 @@ The agent runs as a **single binary** but hosts **three concurrent runtimes** sh
 
 1. A **controller-runtime manager** running the `NodeSolutionArchive` reconciler and the validating webhook.
 2. Two **HTTP servers** (external upload + internal download).
-3. A **filesystem watcher** plus a **garbage-collector goroutine** keeping the on-disk state in sync with the desired state expressed by the CRs.
+3. A **filesystem watcher**, a **mount-table watcher** and a **garbage-collector goroutine** keeping the on-disk state in sync with the desired state expressed by the CRs.
+
+The **filesystem watcher** (fsnotify) reacts to files appearing, changing or being deleted; the **mount-table watcher** complements it by polling the OS mount table to catch out-of-band *unmounts* of solution archives — a case fsnotify does not reliably report (see §5.4 / §5.5).
 
 ```mermaid
 flowchart LR
@@ -68,11 +70,13 @@ flowchart LR
       IntAPI[Internal HTTPS API<br/>Download :5002]
       GC[Garbage<br/>Collector]
       FW[FS Watcher]
+      MW[Mount-Table<br/>Watcher]
       Ctrl --- DI((DI<br/>container))
       ExtAPI --- DI
       IntAPI --- DI
       GC --- DI
       FW --- DI
+      MW --- DI
     end
     FS[(/archives<br/>/solutions)]
   end
@@ -127,9 +131,10 @@ This layout keeps the **domain** and **use cases** pure Go (no Kubernetes, no HT
 | Internal HTTPS server    | `cmd/main.go`        | Until shutdown                    |
 | Garbage collector        | `CleanArchive` UC    | Background loop, started at boot  |
 | FS watcher               | `FileSystemWatcher`  | Background loop, started at boot  |
+| Mount-table watcher      | `mountwatcher.FileSystem` | Background loop, started at boot; stopped *before* `filenameChan` closes |
 | File-event listener      | `controller.FileEvents` | Triggers reconciles from FS events |
 
-Inter-goroutine communication is performed exclusively through three typed channels created in `main()` (`filenameChan`, `reconcileChan`, `deleteChan`), keeping the dependency container immutable after wiring.
+Inter-goroutine communication is performed exclusively through three typed channels created in `main()` (`filenameChan`, `reconcileChan`, `deleteChan`), keeping the dependency container immutable after wiring. The mount-table watcher reuses the existing `filenameChan` rather than introducing a fourth channel — it is therefore shut down first (via `StopWatchMounts`) so that `filenameChan` is never closed while a producer is still writing to it.
 
 ## 5. Custom Resource: `NodeSolutionArchive`
 
@@ -214,11 +219,13 @@ Two predicates split the events:
 
 A third source — the in-process channel `EventChan` — lets the filesystem watcher trigger a reconciliation when the archive file appears, disappears or changes on disk. This handles the "manual `scp`" case and the end-of-upload / end-of-download events.
 
+The same channel is also fed by the **mount-table watcher** (`pkg/infrastructure/mountwatcher`): fsnotify does not reliably emit an event when a mount point is *unmounted*, so a dedicated goroutine polls the OS mount table and, when a solution mount disappears out-of-band (e.g. a manual `umount` or a node reboot leaving the mount stale), enqueues a `FileEventDetails` with `EventType: "unmount"`. That event type matches no fsnotify op and so falls through to `handleSolutionDefault`, queueing a reconcile that re-mounts the archive.
+
 ### 5.5 File-Watcher and File-Event Processes and Garbage Collector
 
 | Channel         | Element type              | Producer                                 | Consumer                                 |
 |-----------------|---------------------------|------------------------------------------|------------------------------------------|
-| `filenameChan`  | `domain.FileEventDetails` | `FileSystem.watchFiles` (fsnotify loop)  | `controller.FileEvents.Listen`           |
+| `filenameChan`  | `domain.FileEventDetails` | `FileSystem.watchFiles` (fsnotify loop) **and** `mountwatcher.FileSystem.watchMounts` (poll(2)) | `controller.FileEvents.Listen`           |
 | `reconcileChan` | `event.GenericEvent`      | `controller.FileEvents.queueReconcile`   | controller-runtime (`source.Channel`)    |
 | `deleteChan`    | `domain.FileEventDetails` | `controller.FileEvents.queueDeletion`    | `usecase.CleanArchive.Execute` (GC loop) |
 
@@ -233,6 +240,10 @@ flowchart LR
 
   subgraph Watcher[FileSystem watcher<br/>pkg/infrastructure/filewatcher]
     FW[watchFiles loop]
+  end
+
+  subgraph MountWatcher[Mount-table watcher<br/>pkg/infrastructure/mountwatcher]
+    MW[watchMounts loop<br/>poll /proc/self/mountinfo]
   end
 
   subgraph Dispatcher[FileEvents.Listen<br/>internal/controller]
@@ -254,7 +265,9 @@ flowchart LR
 
   SA -- fsnotify.Event --> FW
   SO -- fsnotify.Event --> FW
+  SO -- "POLLPRI on unmount" --> MW
   FW -- "filenameChan<br/>domain.FileEventDetails" --> DISP
+  MW -- "filenameChan<br/>EventType: unmount" --> DISP
   DISP -- CR found, alive --> REC
   DISP -- no CR / CR deleting --> DEL
   DISP -- K8s List failed --> REQ
@@ -268,7 +281,7 @@ flowchart LR
 
 Two design properties follow directly from this layout:
 
-- **No shared mutable state between goroutines.** The watcher does not know anything about Kubernetes, the dispatcher does not touch the filesystem, and the GC does not call the API server. Each side-effect is owned by exactly one goroutine.
+- **No shared mutable state between goroutines.** The watcher does not know anything about Kubernetes, the dispatcher does not touch the filesystem, and the GC does not call the API server. Each side-effect is owned by exactly one goroutine. The one exception is the mount-table watcher's mount snapshot, which the reconciler updates through the `ArchiveMounter` (`RecordMount` / `RecordUnmount` on mount / unmount); that snapshot is the watcher's private state and is guarded by a mutex, so a controller-initiated unmount is never mistaken for an out-of-band disappearance.
 - **Bounded and self-healing retry.** A transient API error becomes a `filenameChan` re-enqueue; a transient cleanup error becomes a re-`AddWatch` so the next FS event will recreate the deletion request. This keeps the agent eventually consistent without any explicit retry queue.
 
 Channels are created in `cmd/main.go` and closed in reverse order at shutdown (`filenameChan` → `reconcileChan` → `deleteChan`), guaranteeing that each consumer drains before its producer disappears.

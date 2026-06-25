@@ -443,8 +443,22 @@ func main() {
 		os.Exit(1)
 	}
 
+	// Start the watcher for the OS mount table.
+	// It detects out-of-band unmounts of solution archives and triggers a remount.
+	setupLog.Info("starting mount table watcher")
+	if err := container.GetFileSystemMountWatcher().StartWatchMounts(filenameChan); err != nil {
+		setupLog.Error(err, "problem starting mount table watcher")
+		os.Exit(1)
+	}
+
 	// Wait for a signal to shut down the server and important services.
 	<-sigCh
+
+	// Stop the mount table watcher first: it writes to filenameChan,
+	// which must not be closed while the watcher is still running.
+	if err := container.GetFileSystemMountWatcher().StopWatchMounts(); err != nil {
+		setupLog.Error(err, "problem stopping mount table watcher")
+	}
 
 	setupLog.V(1).Info("closing channels")
 	close(filenameChan)

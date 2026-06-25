@@ -488,11 +488,11 @@ var _ = Describe("Manager", Ordered, func() {
 			Expect(err).NotTo(HaveOccurred(), "Unmount should succeed")
 
 			By("waiting for the controller to detect the unmount and automatically remount")
-			// The controller reconciles continuously and should detect the unmount
-			// and remount the solution archive automatically. In practice, the controller is so fast
-			// that the solution archive may already be remounted by the time we check.
-			// We verify that the solution archive remains mounted (i.e., the controller keeps it mounted).
-			time.Sleep(500 * time.Millisecond)
+			// The mount-table watcher detects the out-of-band unmount and triggers a
+			// reconcile that remounts the solution archive. Detection is event-driven
+			// but asynchronous, so we poll until the mount reappears.
+			Expect(solutionArchive.isMountedOnNode(nodeName)).To(BeTrue(),
+				"Solution archive should be automatically remounted after a manual unmount")
 
 			By("verifying the NodeSolutionArchive status, remains Available and Served")
 			Expect(solutionArchive.isAvailableOnNode(nodeName)).To(BeTrue(),
@@ -1352,6 +1352,22 @@ func (nsa *NodeSolutionArchiveForTest) mountPointOnNode(nodeName string) (mountP
 	Expect(strings.Contains(mountPoint, "/solutions")).To(BeTrue())
 
 	return mountPoint
+}
+
+// isMountedOnNode waits for the NodeSolutionArchive to be mounted on the given node.
+func (nsa *NodeSolutionArchiveForTest) isMountedOnNode(nodeName string) bool {
+	targetPodName := controllerPodNameByNode[nodeName]
+	timeout := 1 * time.Minute
+	interval := 1 * time.Second
+	Eventually(func(g Gomega) {
+		cmd := exec.Command("kubectl", "exec", "-n", namespace, targetPodName, "--",
+			"sh", "-c", "mount | grep "+nsa.name+"/"+nsa.version+" || true")
+		mountOutput, err := utils.Run(cmd)
+		g.Expect(err).NotTo(HaveOccurred())
+		g.Expect(mountOutput).To(ContainSubstring(nsa.name + "/" + nsa.version))
+	}, timeout, interval).Should(Succeed())
+
+	return true
 }
 
 // isNotMountedOnNode checks if the NodeSolutionArchive is not mounted on the given node.
