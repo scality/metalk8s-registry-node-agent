@@ -1,4 +1,4 @@
-FROM mcr.microsoft.com/devcontainers/go:1.26-bookworm@sha256:85fff53e863e8a1cc376085f218b48e728bffc479eb8cda561a39ff2d33e777d
+FROM mcr.microsoft.com/devcontainers/go:1.26-trixie@sha256:638cb8e8c040d29fbd0bb9a0d174b10aef96683437f839048d091eb337a8ea85
 
 # genisoimage is used to generate an ISO file for test E2E
 RUN apt-get update && apt-get install -y --no-install-recommends \
