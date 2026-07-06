@@ -22,21 +22,10 @@ func (c *Container) getExternTLSConfig() *tls.Config {
 				Msg("failed to append external client CA certificates to pool")
 		}
 
-		externServerCert, err := tls.LoadX509KeyPair(
-			c.config.Extern.ServerTLS.CertFilePath,
-			c.config.Extern.ServerTLS.KeyFilePath,
-		)
-		if err != nil {
-			c.GetLogger().Fatal().Err(err).
-				Str("extern_serverTLS_cert_file_path", c.config.Extern.ServerTLS.CertFilePath).
-				Str("extern_serverTLS_key_file_path", c.config.Extern.ServerTLS.KeyFilePath).
-				Msg("failed to read external server certificate file")
-		}
-
 		c.ExternTLSConfig = &tls.Config{
-			Certificates: []tls.Certificate{externServerCert},
-			ClientAuth:   tls.RequireAndVerifyClientCert,
-			ClientCAs:    externClientCAPool,
+			GetCertificate: c.getExternServerCertWatcher().GetCertificate,
+			ClientAuth:     tls.RequireAndVerifyClientCert,
+			ClientCAs:      externClientCAPool,
 		}
 	}
 	return c.ExternTLSConfig
@@ -57,21 +46,10 @@ func (c *Container) getInternTLSConfig() *tls.Config {
 				Msg("failed to append internal client CA certificates to pool")
 		}
 
-		internServerCert, err := tls.LoadX509KeyPair(
-			c.config.Intern.ServerTLS.CertFilePath,
-			c.config.Intern.ServerTLS.KeyFilePath,
-		)
-		if err != nil {
-			c.GetLogger().Fatal().Err(err).
-				Str("intern_serverTLS_cert_file_path", c.config.Intern.ServerTLS.CertFilePath).
-				Str("intern_serverTLS_key_file_path", c.config.Intern.ServerTLS.KeyFilePath).
-				Msg("failed to read internal server certificate file")
-		}
-
 		c.InternTLSConfig = &tls.Config{
-			Certificates: []tls.Certificate{internServerCert},
-			ClientAuth:   tls.RequireAndVerifyClientCert,
-			ClientCAs:    internClientCAPool,
+			GetCertificate: c.getInternServerCertWatcher().GetCertificate,
+			ClientAuth:     tls.RequireAndVerifyClientCert,
+			ClientCAs:      internClientCAPool,
 		}
 	}
 	return c.InternTLSConfig
@@ -79,16 +57,7 @@ func (c *Container) getInternTLSConfig() *tls.Config {
 
 func (c *Container) getInternTLSClientConfig() *tls.Config {
 	if c.InternTLSClientConfig == nil {
-		internClientCert, err := tls.LoadX509KeyPair(
-			c.config.Intern.ClientAuthN.CertFilePath,
-			c.config.Intern.ClientAuthN.KeyFilePath,
-		)
-		if err != nil {
-			c.GetLogger().Fatal().Err(err).
-				Str("intern_clientAuthN_cert_file_path", c.config.Intern.ClientAuthN.CertFilePath).
-				Str("intern_clientAuthN_key_file_path", c.config.Intern.ClientAuthN.KeyFilePath).
-				Msg("failed to read internal client certificate files")
-		}
+		internClientCertWatcher := c.getInternClientCertWatcher()
 
 		internCACertPEM, err := os.ReadFile(c.config.Intern.ClientTLS.CACertFilePath)
 		if err != nil {
@@ -104,8 +73,10 @@ func (c *Container) getInternTLSClientConfig() *tls.Config {
 		}
 
 		c.InternTLSClientConfig = &tls.Config{
-			Certificates: []tls.Certificate{internClientCert},
-			RootCAs:      internServerCAPool,
+			GetClientCertificate: func(_ *tls.CertificateRequestInfo) (*tls.Certificate, error) {
+				return internClientCertWatcher.GetCertificate(nil)
+			},
+			RootCAs: internServerCAPool,
 		}
 	}
 	return c.InternTLSClientConfig
