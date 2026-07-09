@@ -15,6 +15,8 @@ jobs:
       is-stable: false
 
   generate-sbom:
+    # 09/07/2026: Temporarily suspended: SBOM generation and upload to Dependency-Track
+    if: false
     needs: build
     uses: ./.github/workflows/generate-sbom.yaml
     secrets: inherit
