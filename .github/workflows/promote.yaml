@@ -7,6 +7,8 @@ on:
       - "v*"
 
 jobs:
+  # Unchanged: builds and pushes the container image, and publishes the
+  # manifests to artifacts.scality.net, before the release is created.
   build:
     uses: ./.github/workflows/build.yaml
     secrets: inherit
@@ -17,14 +19,21 @@ jobs:
 
   create-release:
     needs: build
+    uses: scality/workflows/.github/workflows/promote.yaml@7d91dc4ebbe136b54518aa42a1ad6014f8f91526 # v2.9.1
+    permissions:
+      contents: write
+
+  # The shared promote only creates the release; re-attach the manifests that
+  # the previous inline job attached at creation time.
+  attach-artifacts:
+    needs: create-release
     runs-on: ubuntu-24.04
+    permissions:
+      contents: write
     steps:
       - name: Checkout
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
-          # NOTE: We explicitly set the refs otherwise the tag
-          # annotations content is not fetched
-          # See: https://github.com/actions/checkout/issues/882
           ref: ${{ github.ref }}
 
       - name: Get the artifacts name
@@ -45,18 +54,9 @@ jobs:
         run: >
           curl --fail -LO -u ${{ secrets.ARTIFACTS_USER }}:${{ secrets.ARTIFACTS_PASSWORD }}
           ${{ steps.artifacts.outputs.link }}/crds.yaml
-      
-      - uses: softprops/action-gh-release@718ea10b132b3b2eba29c1007bb80653f286566b # v3.0.1
-        with:
-          name: MetalK8s Registry Node Agent ${{ github.ref_name }}
-          tag_name: ${{ github.ref_name }}
-          generate_release_notes: true
-          # We consider pre-releases if the tag contains a hyphen
-          # e.g. v1.2.3-alpha.0
-          prerelease: ${{ contains(github.ref_name, '-') }}
-          draft: false
-          files: |
-            bundle.yaml
-            crds.yaml
+
+      - name: Attach the manifests to the release
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ github.ref_name }}
+        run: gh release upload "$TAG" bundle.yaml crds.yaml --clobber
