@@ -64,8 +64,8 @@ var (
 )
 
 const (
-	timeoutDurationInSecond = 5
-	downloadBaseURLFormat   = "https://%s:%s%s/downloads/"
+	configLoadTimeout     = 5 * time.Second
+	downloadBaseURLFormat = "https://%s:%s%s/downloads/"
 )
 
 func init() {
@@ -129,13 +129,18 @@ func main() {
 	// Start API server
 	log.Printf("Starting %s:%s\n", config.ApplicationName, config.ApplicationVersion)
 
-	// Initialize the base context of the application.
-	// Every dependency will be able to use this context.
-	ctx, cancel := context.WithTimeout(context.Background(), timeoutDurationInSecond*time.Second)
+	// Initialize the base context of the application. It is cancelled when
+	// the process receives SIGINT or SIGTERM, so downstream goroutines that
+	// select on ctx.Done() react to real shutdown rather than an arbitrary
+	// startup timeout.
+	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer cancel()
 
-	// Load configuration from environment variables.
-	cfg, err := config.NewEnvironment(ctx)
+	// Load configuration from environment variables under a bounded timeout
+	// so a broken environment fails fast at startup.
+	loadCtx, loadCancel := context.WithTimeout(ctx, configLoadTimeout)
+	cfg, err := config.NewEnvironment(loadCtx)
+	loadCancel()
 	if err != nil {
 		log.Fatalf("failed to load config: %v", err)
 	}
