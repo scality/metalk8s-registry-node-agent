@@ -22,6 +22,7 @@ import (
 	"errors"
 	"fmt"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/fsnotify/fsnotify"
@@ -42,6 +43,9 @@ import (
 type fakeClient struct {
 	mu        sync.RWMutex
 	resources map[string]*metalk8sv1alpha1.NodeSolutionArchive
+	// listCalls counts every call to List so tests can observe retry behavior
+	// (e.g., verifying that a failing event was requeued and re-processed).
+	listCalls atomic.Int64
 }
 
 // newFakeClient creates a new fake client
@@ -53,6 +57,7 @@ func newFakeClient() *fakeClient {
 
 // List retrieves a list of objects
 func (f *fakeClient) List(ctx context.Context, list client.ObjectList, opts ...client.ListOption) error {
+	f.listCalls.Add(1)
 	f.mu.RLock()
 	defer f.mu.RUnlock()
 
@@ -721,6 +726,45 @@ var _ = Describe("FileEvents", func() {
 			// Verify that no reconcile/delete were triggered
 			Consistently(reconcileCh, time.Millisecond*500).ShouldNot(Receive())
 			Consistently(deleteCh, time.Millisecond*500).ShouldNot(Receive())
+		})
+
+		It("must keep retrying a failing event without deadlocking Listen when nothing else reads the channel", func() {
+			// Regression test for the self-deadlock triggered by the initial
+			// filesystem scan firing Create events for empty solution
+			// directories before the controller-runtime cache is warm.
+			//
+			// With the original synchronous requeue (f.filenameChan <-
+			// eventDetails inline in Listen), Listen would block on its own
+			// send because it is the sole consumer of the unbuffered
+			// channel. No retry ever happened, and shutdown could only
+			// proceed by close(filenameChan), which panicked the pending
+			// send.
+			//
+			// The async requeue + throttleAfterFailure combo must let
+			// Listen loop back to receive its own requeued event and keep
+			// retrying — we prove that by observing multiple List calls on
+			// the fake client without any external reader draining
+			// filenameCh.
+			go fileEventHandler.Listen()
+
+			Expect(k8sClient.listCalls.Load()).To(BeZero())
+
+			filenameCh <- domain.FileEventDetails{
+				FullPathName: "/archives/test-kubernetes-connection-failure-1.0.0.iso",
+				ObjectName:   "test-kubernetes-connection-failure-1.0.0",
+				IsDir:        false,
+				Origin:       domain.SolutionArchivesOrigin,
+				EventType:    fsnotify.Create.String(),
+			}
+
+			// throttleAfterFailure sleeps ~500ms between retries; give the
+			// loop ~2s to accumulate at least two List calls (initial +
+			// one retry). Under the old inline send, Listen would be stuck
+			// on the first requeue and the counter would stay at 1.
+			Eventually(func() int64 { return k8sClient.listCalls.Load() }, time.Second*3).
+				Should(BeNumerically(">=", 2),
+					"Listen must retry the failing event via the async requeue; "+
+						"a stuck synchronous send would keep listCalls at 1")
 		})
 	})
 

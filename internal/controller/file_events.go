@@ -4,6 +4,7 @@ package controller
 import (
 	"context"
 	"strings"
+	"time"
 
 	"github.com/fsnotify/fsnotify"
 	"github.com/rs/zerolog"
@@ -14,6 +15,11 @@ import (
 
 	"github.com/scality/go-errors"
 )
+
+// throttleAfterFailureDelay is how long Listen pauses after a failed event
+// handler before receiving the next event. See throttleAfterFailure for the
+// rationale.
+const throttleAfterFailureDelay = 500 * time.Millisecond
 
 type KubernetesClientInterface interface {
 	List(ctx context.Context, list client.ObjectList, opts ...client.ListOption) error
@@ -57,7 +63,8 @@ func (f *FileEvents) Listen() {
 				f.logger.Error().Err(err).
 					Any("origin", "solution_archives").
 					Msg("Failed to handle event, requeuing")
-				f.filenameChan <- eventDetails
+				f.requeue(eventDetails)
+				f.throttleAfterFailure()
 			}
 
 		case domain.SolutionsOrigin:
@@ -66,9 +73,45 @@ func (f *FileEvents) Listen() {
 				f.logger.Error().Err(err).
 					Any("origin", "solutions").
 					Msg("Failed to handle event, requeuing")
-				f.filenameChan <- eventDetails
+				f.requeue(eventDetails)
+				f.throttleAfterFailure()
 			}
 		}
+	}
+}
+
+// requeue re-enqueues an event that failed to process. The send runs in a
+// separate goroutine so Listen — the sole consumer of the unbuffered
+// filenameChan — never blocks on its own write. Sending inline used to
+// deadlock the Listen goroutine on startup when the initial fs scan fired a
+// Create event for an empty solution directory and the controller-runtime
+// cache was not yet warm (the List call inside handleSolutionEvent returned
+// "the cache is not started" and Listen tried to re-push the event onto a
+// channel it was the only reader of).
+//
+// The context guard prevents leaking goroutines past shutdown; the recover
+// swallows the send-on-closed-channel panic if filenameChan is closed while
+// a requeue is still pending.
+func (f *FileEvents) requeue(eventDetails domain.FileEventDetails) {
+	go func() {
+		defer func() { _ = recover() }()
+		select {
+		case f.filenameChan <- eventDetails:
+		case <-f.ctx.Done():
+		}
+	}()
+}
+
+// throttleAfterFailure delays Listen's next receive iteration after a
+// processing failure. Leaving the receive queue briefly (a) gives the
+// requeue goroutine's send a chance to be picked up by a different consumer
+// than Listen itself, and (b) rate-limits tight retry loops on persistent
+// failures like the controller-runtime cache not yet being started. The
+// context guard makes shutdown responsive.
+func (f *FileEvents) throttleAfterFailure() {
+	select {
+	case <-time.After(throttleAfterFailureDelay):
+	case <-f.ctx.Done():
 	}
 }
 
