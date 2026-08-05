@@ -6,9 +6,14 @@ on:
 
 jobs:
   review:
-    uses: scality/workflows/.github/workflows/claude-code-review.yml@174a4246774e3d858cbac6ebacd2f07ecbaeedbf # v2.8.5
+    uses: scality/workflows/.github/workflows/claude-code-review.yml@7d91dc4ebbe136b54518aa42a1ad6014f8f91526 # v2.9.1
     secrets:
       GCP_WORKLOAD_IDENTITY_PROVIDER: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
       GCP_SERVICE_ACCOUNT: ${{ secrets.GCP_SERVICE_ACCOUNT }}
       ANTHROPIC_VERTEX_PROJECT_ID: ${{ secrets.ANTHROPIC_VERTEX_PROJECT_ID }}
       CLOUD_ML_REGION: ${{ secrets.CLOUD_ML_REGION }}
+      # The review prompt is a slash command shipped by the scality-skills
+      # plugin, which the shared workflow clones from the agent-hub marketplace
+      # with this app key. Without it the plugin is skipped and the review
+      # silently does nothing.
+      ACTIONS_APP_PRIVATE_KEY: ${{ secrets.ACTIONS_APP_PRIVATE_KEY }}
