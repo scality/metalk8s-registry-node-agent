@@ -1,6 +1,7 @@
 package service
 
 import (
+	"context"
 	"os"
 
 	"github.com/scality/metalk8s-registry-node-agent/pkg/domain"
@@ -14,6 +15,7 @@ type MultipartStorer interface {
 	// - a multipart file recipient
 	// - a parts synthesis file
 	CreateMultipartFiles(
+		ctx context.Context,
 		bucketName string,
 		solutionArchiveMeta *domain.SolutionArchive,
 	) (*domain.SolutionArchiveStatus, error)
@@ -22,6 +24,7 @@ type MultipartStorer interface {
 	// into the recipient file on the bucket indicated by the given
 	// bucketName.
 	StorePart(
+		ctx context.Context,
 		bucketName string,
 		solutionArchiveFromManifest *domain.SolutionArchive,
 		part *domain.Part,
@@ -29,11 +32,12 @@ type MultipartStorer interface {
 
 	// CommitPart properly updates the parts synthesis file
 	// with the metadata of the given part.
-	CommitPart(bucketName string, part *domain.Part) error
+	CommitPart(ctx context.Context, bucketName string, part *domain.Part) error
 
 	// Consolidate consolidates all the parts of a multipart file
 	// in a single flat file into the same bucket it is located and moves it to the root location.
 	Consolidate(
+		ctx context.Context,
 		bucketName string,
 		solutionArchiveMeta *domain.SolutionArchive,
 		perm os.FileMode,

@@ -2,16 +2,17 @@ package usecase
 
 import (
 	"context"
+	"log/slog"
 
-	"github.com/rs/zerolog"
 	"github.com/scality/go-errors"
+
 	"github.com/scality/metalk8s-registry-node-agent/pkg/domain"
 	"github.com/scality/metalk8s-registry-node-agent/pkg/library"
 	"github.com/scality/metalk8s-registry-node-agent/pkg/service"
 )
 
 type DownloadPart struct {
-	logger             *zerolog.Logger
+	logger             *slog.Logger
 	externalDownloader service.ExternalDownloader
 	bucketManager      service.BucketManager
 	archiveLister      service.ArchiveLister
@@ -24,7 +25,7 @@ type DownloadPart struct {
 }
 
 func NewDownloadPart(
-	logger *zerolog.Logger,
+	logger *slog.Logger,
 	externalDownloader service.ExternalDownloader,
 	bucketManager service.BucketManager,
 	archiveLister service.ArchiveLister,
@@ -35,10 +36,8 @@ func NewDownloadPart(
 	rootAPIPath string,
 	chunkSize int64,
 ) *DownloadPart {
-	l := logger.With().Str("use_case", "download_part").Logger()
-
 	return &DownloadPart{
-		logger:             &l,
+		logger:             logger.With(slog.String("use_case", "download_part")),
 		externalDownloader: externalDownloader,
 		bucketManager:      bucketManager,
 		archiveLister:      archiveLister,
@@ -56,10 +55,10 @@ func (uc *DownloadPart) Execute(
 	solutionArchive *domain.SolutionArchive,
 	downloadURL string,
 ) error {
-	uc.logger.Debug().
-		Any("solution_archive", solutionArchive).
-		Str("download_url", downloadURL).
-		Msg("Downloading part")
+	uc.logger.DebugContext(ctx, "Downloading part",
+		slog.Any("solution_archive", solutionArchive),
+		slog.String("download_url", downloadURL),
+	)
 
 	// To avoid simultaneous downloads and deletions of the same solution archive
 	uc.bucketLocker.Lock(solutionArchive)
@@ -119,7 +118,7 @@ func (uc *DownloadPart) Execute(
 	}
 
 	// Load the manifest from metadata file
-	solutionArchiveFromManifest, err := uc.multipartInspector.GetMultipartFile(sessionBucket)
+	solutionArchiveFromManifest, err := uc.multipartInspector.GetMultipartFile(ctx, sessionBucket)
 	if err != nil {
 		return errors.Wrap(err,
 			errors.WithIdentifier(208),
@@ -137,7 +136,7 @@ func (uc *DownloadPart) Execute(
 	}
 
 	// Load the manifest from the session bucket
-	solutionArchiveStatus, err := uc.multipartInspector.GetMultipartFileStatus(sessionBucket, solutionArchive)
+	solutionArchiveStatus, err := uc.multipartInspector.GetMultipartFileStatus(ctx, sessionBucket, solutionArchive)
 	if err != nil {
 		return errors.Wrap(err,
 			errors.WithIdentifier(210),
@@ -183,6 +182,7 @@ func (uc *DownloadPart) Execute(
 		part.Content = body
 
 		solutionArchiveStatus, err = uc.multipartStorer.StorePart(
+			ctx,
 			sessionBucket,
 			solutionArchiveFromManifest,
 			part,
@@ -209,7 +209,7 @@ func (uc *DownloadPart) Execute(
 			)
 		}
 
-		if err := uc.multipartStorer.CommitPart(sessionBucket, part); err != nil {
+		if err := uc.multipartStorer.CommitPart(ctx, sessionBucket, part); err != nil {
 			return errors.Wrap(err,
 				errors.WithIdentifier(214),
 				errors.WithDetail("error on committing a solution archive chunk"),
@@ -232,6 +232,7 @@ func (uc *DownloadPart) Execute(
 	// move it to the storage root location and then
 	// remove the bucket.
 	err = uc.multipartStorer.Consolidate(
+		ctx,
 		sessionBucket,
 		solutionArchiveFromManifest,
 		library.FileSystemDefaultFileMode,
@@ -244,7 +245,9 @@ func (uc *DownloadPart) Execute(
 		)
 	}
 
-	uc.logger.Debug().Any("solution_archive", solutionArchive).Msg("Part downloaded")
+	uc.logger.DebugContext(ctx, "Part downloaded",
+		slog.Any("solution_archive", solutionArchive),
+	)
 
 	return nil
 }

@@ -3,14 +3,13 @@ package storageprovider
 import (
 	"bytes"
 	"encoding/json"
+	"log/slog"
 
 	"os"
 	"path/filepath"
 	"regexp"
 	"slices"
 	"sync"
-
-	"github.com/rs/zerolog"
 
 	"github.com/scality/go-errors"
 	"github.com/scality/metalk8s-registry-node-agent/pkg/domain"
@@ -23,7 +22,7 @@ type (
 		sync.RWMutex
 		sync.WaitGroup
 
-		logger *zerolog.Logger
+		logger *slog.Logger
 
 		solutionArchivesLocation string
 		solutionsLocation        string
@@ -32,7 +31,7 @@ type (
 	}
 
 	FileOpts struct {
-		Logger                     *zerolog.Logger
+		Logger                     *slog.Logger
 		SolutionArchivesLocation   string
 		SolutionsLocation          string
 		InterestContentFilterRegex *regexp.Regexp
@@ -46,12 +45,11 @@ const (
 var _ service.StorageProvider = &FileSystem{}
 
 func NewFileSystem(opts *FileOpts) *FileSystem {
-	l := opts.Logger.With().
-		Str("infrastructure", "storage_provider").
-		Str("implementation", "filesystem").
-		Logger()
 	return &FileSystem{
-		logger:                   &l,
+		logger: opts.Logger.With(
+			slog.String("infrastructure", "storage_provider"),
+			slog.String("implementation", "filesystem"),
+		),
 		solutionArchivesLocation: opts.SolutionArchivesLocation,
 		solutionsLocation:        opts.SolutionsLocation,
 		interestContentFilter:    library.NewRegexNormalFileFilter(opts.InterestContentFilterRegex),
@@ -186,14 +184,14 @@ func (f *FileSystem) genWatchedFileInfos(fileEntries []os.DirEntry) watchedFiles
 
 			watchedFileInfo, err := f.genWatchedFileInfo(fileEntry)
 			if err != nil {
-				f.logger.Error().Err(err).Msg("failed to generate watched file info")
+				f.logger.Error("failed to generate watched file info", slog.Any("error", err))
 
 				return
 			}
 
-			f.logger.Debug().
-				Str("file_name", fileEntry.Name()).
-				Msg("watched file info generated")
+			f.logger.Debug("watched file info generated",
+				slog.String("file_name", fileEntry.Name()),
+			)
 			watchedFileChan <- &watchedFileEntry{
 				fileName: fileEntry.Name(),
 				fileInfo: watchedFileInfo,
@@ -286,7 +284,7 @@ func (f *FileSystem) updateWatchedFileInfos(saveFunc func(watchedFilesMap) error
 	// Load current stored watched file infos.
 	watchedFileInfos, err := f.loadWatchedFileInfos()
 	if err != nil {
-		f.logger.Warn().Err(err).Msg("Failed to load watched file infos.")
+		f.logger.Warn("Failed to load watched file infos.", slog.Any("error", err))
 
 		watchedFileInfos = make(watchedFilesMap)
 	}
@@ -318,7 +316,7 @@ func (f *FileSystem) updateWatchedFileInfos(saveFunc func(watchedFilesMap) error
 		if ok {
 			entryInfo, err := fileEntry.Info()
 			if err != nil {
-				f.logger.Warn().Err(err).Msg("Failed to get file info.")
+				f.logger.Warn("Failed to get file info.", slog.Any("error", err))
 
 				continue
 			}

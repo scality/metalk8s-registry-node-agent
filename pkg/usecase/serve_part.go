@@ -2,7 +2,9 @@
 package usecase
 
 import (
-	"github.com/rs/zerolog"
+	"context"
+	"log/slog"
+
 	"github.com/scality/go-errors"
 
 	"github.com/scality/metalk8s-registry-node-agent/pkg/domain"
@@ -11,7 +13,7 @@ import (
 )
 
 type ServePart struct {
-	logger        *zerolog.Logger
+	logger        *slog.Logger
 	archiveLister service.ArchiveLister
 	archiveReader service.ArchiveReader
 	archiveLocker service.LockerUnlocker
@@ -19,16 +21,14 @@ type ServePart struct {
 }
 
 func NewServePart(
-	logger *zerolog.Logger,
+	logger *slog.Logger,
 	archiveLister service.ArchiveLister,
 	archiveReader service.ArchiveReader,
 	archiveLocker service.LockerUnlocker,
 	rootAPIPath string,
 ) *ServePart {
-	l := logger.With().Str("use_case", "serve_part").Logger()
-
 	return &ServePart{
-		logger:        &l,
+		logger:        logger.With(slog.String("use_case", "serve_part")),
 		archiveLister: archiveLister,
 		archiveReader: archiveReader,
 		archiveLocker: archiveLocker,
@@ -37,11 +37,12 @@ func NewServePart(
 }
 
 func (uc *ServePart) Execute(
+	ctx context.Context,
 	solutionArchivePart *domain.Part,
 ) (*domain.SolutionArchiveFile, error) {
-	uc.logger.Debug().
-		Any("solution_archive_part", solutionArchivePart).
-		Msg("Serving part")
+	uc.logger.DebugContext(ctx, "Serving part",
+		slog.Any("solution_archive_part", solutionArchivePart),
+	)
 
 	// To avoid simultaneous downloads and deletion of the same solution archive
 	uc.archiveLocker.RLock(solutionArchivePart.SolutionArchive)
@@ -109,7 +110,9 @@ func (uc *ServePart) Execute(
 		)
 	}
 
-	uc.logger.Debug().Any("solution_archive_part", solutionArchivePart).Msg("Solution archive part served")
+	uc.logger.DebugContext(ctx, "Solution archive part served",
+		slog.Any("solution_archive_part", solutionArchivePart),
+	)
 
 	return &domain.SolutionArchiveFile{
 		File:          file,

@@ -6,7 +6,9 @@ import (
 	"crypto/sha256"
 	"encoding/base64"
 	"io"
+	"log/slog"
 	"net/http"
+	"os"
 
 	"github.com/scality/metalk8s-registry-node-agent/pkg/presentation/http/intern"
 )
@@ -30,7 +32,8 @@ func (c *Container) GetGeneratedHTTPInternClient() *intern.ClientWithResponses {
 			intern.WithHTTPClient(c.GetHTTPInternClient()),
 		)
 		if err != nil {
-			c.GetLogger().Fatal().Err(err).Msg("failed to create generated http client")
+			c.GetLogger().ErrorContext(c.ctx, "failed to create generated http client", slog.Any("error", err))
+			os.Exit(1) //nolint:revive // Fatal-equivalent for DI initialization failure.
 		}
 
 		c.generatedHTTPInternClient = client

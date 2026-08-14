@@ -5,7 +5,6 @@ import (
 
 	"github.com/scality/go-errors"
 	"github.com/scality/metalk8s-registry-node-agent/pkg/domain"
-	logger "github.com/scality/platform-library/pkg/infrastructure/logger/zerolog"
 	"github.com/sethvargo/go-envconfig"
 )
 
@@ -23,7 +22,7 @@ const (
 
 type (
 	Environment struct {
-		Logger logger.Config `env:",prefix=LOGGER_"`
+		Logger LoggerConfig `env:",prefix=LOGGER_"`
 
 		SolutionArchivesLocation string `env:"SOLUTION_ARCHIVES_LOCATION, default=/archives"`
 		SolutionsLocation        string `env:"SOLUTIONS_LOCATION, default=/solutions"`
@@ -68,6 +67,11 @@ type (
 	ClientAuthN struct {
 		CertFilePath string `env:"CERT_FILE_PATH"`
 		KeyFilePath  string `env:"KEY_FILE_PATH"`
+	}
+
+	// LoggerConfig holds the logging configuration loaded from the environment.
+	LoggerConfig struct {
+		LogLevel string `env:"LOG_LEVEL, default=info"`
 	}
 )
 

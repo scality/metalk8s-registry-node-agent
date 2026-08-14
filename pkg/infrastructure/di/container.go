@@ -3,10 +3,8 @@ package di
 import (
 	"context"
 	"crypto/tls"
+	"log/slog"
 	"net/http"
-
-	"github.com/rs/zerolog"
-	"sigs.k8s.io/controller-runtime/pkg/certwatcher"
 
 	"github.com/scality/metalk8s-registry-node-agent/cmd/config"
 	"github.com/scality/metalk8s-registry-node-agent/pkg/domain"
@@ -16,17 +14,18 @@ import (
 	"github.com/scality/metalk8s-registry-node-agent/pkg/presentation/http/intern"
 	"github.com/scality/metalk8s-registry-node-agent/pkg/service"
 	"github.com/scality/metalk8s-registry-node-agent/pkg/usecase"
+	"sigs.k8s.io/controller-runtime/pkg/certwatcher"
 )
 
 type Container struct {
-	// This is the base context for the application, and is
+	// ctx is the base context for the application, and is
 	// 	needed to sync shutdown of all dependencies.
 	// 	Required by DI pattern.
-	baseCtx context.Context //nolint:containedctx //
+	ctx context.Context //nolint:containedctx //
 
 	config *config.Environment
 
-	logger *zerolog.Logger
+	logger *slog.Logger
 
 	filenameChan              chan domain.FileEventDetails
 	deleteChan                chan domain.FileEventDetails
@@ -89,7 +88,7 @@ func NewContainer(
 	deleteChan chan domain.FileEventDetails,
 ) *Container {
 	return &Container{
-		baseCtx:           ctx,
+		ctx:               ctx,
 		config:            cfg,
 		filenameChan:      filenameChan,
 		deleteChan:        deleteChan,

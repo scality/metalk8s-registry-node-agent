@@ -2,7 +2,10 @@
 package di
 
 import (
+	"context"
+	"log/slog"
 	"net/http"
+	"os"
 
 	middleware "github.com/oapi-codegen/nethttp-middleware"
 	"github.com/scality/metalk8s-registry-node-agent/pkg/presentation/http/intern"
@@ -12,7 +15,8 @@ func (c *Container) GetHTTPInternServer() *http.Server {
 	if c.httpInternServer == nil {
 		swagger, err := intern.GetSpec()
 		if err != nil {
-			c.GetLogger().Fatal().Err(err).Msg("failed to get swagger")
+			c.GetLogger().ErrorContext(c.ctx, "failed to get swagger", slog.Any("error", err))
+			os.Exit(1) //nolint:revive // Fatal-equivalent for DI initialization failure.
 		}
 
 		mainRouter := http.NewServeMux()
@@ -28,13 +32,19 @@ func (c *Container) GetHTTPInternServer() *http.Server {
 		intern.HandlerFromMux(intern.NewStrictHandler(c.getHTTPInternResolver(), nil), apiRouter)
 
 		validatorOptions := &middleware.Options{
-			ErrorHandler: func(writer http.ResponseWriter, message string, statusCode int) {
-				c.GetLogger().Error().
-					Str("message", message).
-					Int("status_code", statusCode).
-					Msg("OAPI request validation error")
+			ErrorHandlerWithOpts: func(
+				ctx context.Context,
+				err error,
+				writer http.ResponseWriter,
+				_ *http.Request,
+				opts middleware.ErrorHandlerOpts,
+			) {
+				c.GetLogger().ErrorContext(ctx, "OAPI request validation error",
+					slog.String("message", err.Error()),
+					slog.Int("status_code", opts.StatusCode),
+				)
 
-				http.Error(writer, message, statusCode)
+				http.Error(writer, err.Error(), opts.StatusCode)
 			},
 			DoNotValidateServers: true,
 		}

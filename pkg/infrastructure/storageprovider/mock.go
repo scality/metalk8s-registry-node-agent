@@ -1,13 +1,14 @@
 package storageprovider
 
 import (
+	"context"
 	"io"
+	"log/slog"
 	"os"
 	"regexp"
 	"sync"
 
 	"github.com/fsnotify/fsnotify"
-	"github.com/rs/zerolog"
 
 	"github.com/scality/go-errors"
 	"github.com/scality/metalk8s-registry-node-agent/pkg/domain"
@@ -20,7 +21,7 @@ type (
 		sync.RWMutex
 		sync.WaitGroup
 
-		logger *zerolog.Logger
+		logger *slog.Logger
 
 		solutionArchivesLocation string
 		solutionsLocation        string
@@ -32,7 +33,7 @@ type (
 	}
 
 	MockFileOpts struct {
-		Logger                     *zerolog.Logger
+		Logger                     *slog.Logger
 		SolutionArchivesLocation   string
 		SolutionsLocation          string
 		InterestContentFilterRegex *regexp.Regexp
@@ -158,6 +159,7 @@ func (f *MockFileSystem) DeleteBucket(
 }
 
 func (f *MockFileSystem) Consolidate(
+	_ context.Context,
 	sessionBucket string,
 	solutionArchiveFromManifest *domain.SolutionArchive,
 	perm os.FileMode,
@@ -168,6 +170,7 @@ func (f *MockFileSystem) Consolidate(
 }
 
 func (f *MockFileSystem) CreateMultipartFiles(
+	_ context.Context,
 	bucketName string,
 	solutionArchiveMeta *domain.SolutionArchive,
 ) (*domain.SolutionArchiveStatus, error) {
@@ -179,6 +182,7 @@ func (f *MockFileSystem) CreateMultipartFiles(
 }
 
 func (f *MockFileSystem) GetMultipartFile(
+	_ context.Context,
 	bucketName string,
 ) (*domain.SolutionArchive, error) {
 	if meta, ok := f.multipartMeta[bucketName]; ok {
@@ -188,6 +192,7 @@ func (f *MockFileSystem) GetMultipartFile(
 }
 
 func (f *MockFileSystem) GetMultipartFileStatus(
+	_ context.Context,
 	bucketName string,
 	solutionArchiveMeta *domain.SolutionArchive,
 ) (*domain.SolutionArchiveStatus, error) {
@@ -202,6 +207,7 @@ func (f *MockFileSystem) DeleteMultipartFile(
 }
 
 func (f *MockFileSystem) StorePart(
+	_ context.Context,
 	bucketName string,
 	solutionArchiveFromManifest *domain.SolutionArchive,
 	part *domain.Part,
@@ -232,7 +238,7 @@ func (f *MockFileSystem) StorePart(
 	}, nil
 }
 
-func (f *MockFileSystem) CommitPart(bucketName string, part *domain.Part) error {
+func (f *MockFileSystem) CommitPart(_ context.Context, bucketName string, part *domain.Part) error {
 	return nil
 }
 
@@ -291,10 +297,10 @@ func (f *MockFileSystem) RemoveWatchFileOrDirectory(path string) error {
 	return nil
 }
 
-func (f *MockFileSystem) CleanUnusedSolutionArchives(path string, isDir bool) error {
+func (f *MockFileSystem) CleanUnusedSolutionArchives(_ context.Context, path string, isDir bool) error {
 	return nil
 }
 
-func (f *MockFileSystem) CleanUnusedSolutions(path string, isDir bool) error {
+func (f *MockFileSystem) CleanUnusedSolutions(_ context.Context, path string, isDir bool) error {
 	return nil
 }

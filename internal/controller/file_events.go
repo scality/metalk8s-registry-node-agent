@@ -3,11 +3,11 @@ package controller
 
 import (
 	"context"
+	"log/slog"
 	"strings"
 	"time"
 
 	"github.com/fsnotify/fsnotify"
-	"github.com/rs/zerolog"
 	metalk8sv1alpha1 "github.com/scality/metalk8s-registry-node-agent/api/v1alpha1"
 	"github.com/scality/metalk8s-registry-node-agent/pkg/domain"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -26,8 +26,8 @@ type KubernetesClientInterface interface {
 }
 
 type FileEvents struct {
-	ctx           context.Context
-	logger        *zerolog.Logger
+	ctx           context.Context //nolint:containedctx // application context for background logging
+	logger        *slog.Logger
 	client        KubernetesClientInterface
 	filenameChan  chan domain.FileEventDetails
 	reconcileChan chan event.GenericEvent
@@ -36,7 +36,7 @@ type FileEvents struct {
 
 func NewFileEvents(
 	ctx context.Context,
-	l *zerolog.Logger,
+	l *slog.Logger,
 	c KubernetesClientInterface,
 	filenameChan chan domain.FileEventDetails,
 	reconcileChan chan event.GenericEvent,
@@ -60,9 +60,10 @@ func (f *FileEvents) Listen() {
 		case domain.SolutionArchivesOrigin:
 			err = f.handleSolutionArchiveEvent(eventDetails)
 			if err != nil {
-				f.logger.Error().Err(err).
-					Any("origin", "solution_archives").
-					Msg("Failed to handle event, requeuing")
+				f.logger.ErrorContext(f.ctx, "Failed to handle event, requeuing",
+					slog.String("origin", "solution_archives"),
+					slog.Any("error", err),
+				)
 				f.requeue(eventDetails)
 				f.throttleAfterFailure()
 			}
@@ -70,9 +71,10 @@ func (f *FileEvents) Listen() {
 		case domain.SolutionsOrigin:
 			err = f.handleSolutionEvent(eventDetails)
 			if err != nil {
-				f.logger.Error().Err(err).
-					Any("origin", "solutions").
-					Msg("Failed to handle event, requeuing")
+				f.logger.ErrorContext(f.ctx, "Failed to handle event, requeuing",
+					slog.String("origin", "solutions"),
+					slog.Any("error", err),
+				)
 				f.requeue(eventDetails)
 				f.throttleAfterFailure()
 			}
@@ -322,9 +324,9 @@ func (f *FileEvents) handleSolutionDefault(nsaList *metalk8sv1alpha1.NodeSolutio
 
 // queueReconcile queues a CR for reconciliation
 func (f *FileEvents) queueReconcile(cr *metalk8sv1alpha1.NodeSolutionArchive) {
-	f.logger.Info().
-		Any("custom_resource", cr.Name).
-		Msg("Found matching Custom Resource, queueing for reconcile")
+	f.logger.InfoContext(f.ctx, "Found matching Custom Resource, queueing for reconcile",
+		slog.Any("custom_resource", cr.Name),
+	)
 	f.reconcileChan <- event.GenericEvent{
 		Object: cr,
 	}
@@ -332,8 +334,8 @@ func (f *FileEvents) queueReconcile(cr *metalk8sv1alpha1.NodeSolutionArchive) {
 
 // queueDeletion queues an eventDetails for deletion
 func (f *FileEvents) queueDeletion(eventDetails domain.FileEventDetails) {
-	f.logger.Info().
-		Any("object_name", eventDetails.ObjectName).
-		Msg("queueing for deletion")
+	f.logger.InfoContext(f.ctx, "queueing for deletion",
+		slog.Any("object_name", eventDetails.ObjectName),
+	)
 	f.deleteChan <- eventDetails
 }

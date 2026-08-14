@@ -7,9 +7,9 @@ import (
 	"encoding/base64"
 	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
 
-	"github.com/rs/zerolog"
 	"github.com/scality/go-errors"
 	"github.com/scality/metalk8s-registry-node-agent/pkg/domain"
 	"github.com/scality/metalk8s-registry-node-agent/pkg/presentation/http/intern"
@@ -17,39 +17,38 @@ import (
 )
 
 type DownloadSolutionArchive struct {
-	logger *zerolog.Logger
+	logger *slog.Logger
 
 	uc *usecase.ServePart
 }
 
 func NewDownloadSolutionArchive(
-	logger *zerolog.Logger,
+	logger *slog.Logger,
 	uc *usecase.ServePart,
 ) *DownloadSolutionArchive {
-	l := logger.With().Str("http_handler", "download_solution_archive").Logger()
-
 	return &DownloadSolutionArchive{
-		logger: &l,
+		logger: logger.With(slog.String("http_handler", "download_solution_archive")),
 		uc:     uc,
 	}
 }
 
 //nolint:ireturn // Generated code forces to return an interface.
 func (h *DownloadSolutionArchive) DownloadSolutionArchive(
-	_ context.Context,
+	ctx context.Context,
 	request intern.DownloadSolutionArchiveRequestObject,
 ) (intern.DownloadSolutionArchiveResponseObject, error) {
 	var solutionArchivePart domain.Part
 
 	if err := fillSolutionArchiveFromDownloadSolutionArchiveRequestObject(&solutionArchivePart, &request); err != nil {
 		return h.genDownloadSolutionArchiveResponseObjectFromError(
+			ctx,
 			errors.Wrap(err,
 				errors.WithIdentifier(http.StatusBadRequest),
 			),
 		)
 	}
 
-	partFile, err := h.uc.Execute(&solutionArchivePart)
+	partFile, err := h.uc.Execute(ctx, &solutionArchivePart)
 	if err != nil {
 		// Default value for the API error
 		apiErr := errors.Wrap(err,
@@ -62,7 +61,7 @@ func (h *DownloadSolutionArchive) DownloadSolutionArchive(
 			apiErr = errors.Wrap(err, errors.WithIdentifier(http.StatusBadRequest))
 		}
 
-		return h.genDownloadSolutionArchiveResponseObjectFromError(apiErr)
+		return h.genDownloadSolutionArchiveResponseObjectFromError(ctx, apiErr)
 
 	}
 
@@ -110,6 +109,7 @@ func (r *downloadWithTrailer) VisitDownloadSolutionArchiveResponse(w http.Respon
 //
 //nolint:funlen,ireturn // Needs refactoring
 func (h *DownloadSolutionArchive) genDownloadSolutionArchiveResponseObjectFromError(
+	ctx context.Context,
 	err error,
 ) (intern.DownloadSolutionArchiveResponseObject, error) {
 	var apiErr *errors.Error
@@ -120,7 +120,7 @@ func (h *DownloadSolutionArchive) genDownloadSolutionArchiveResponseObjectFromEr
 	// the error is an underlying *errors.Error, wrapped in DownloadSolutionArchive
 	errors.As(err, &apiErr) // nolint: errcheck
 
-	h.fillProblemDetailsFromAPIErrorsError(&problemDetails, apiErr)
+	h.fillProblemDetailsFromAPIErrorsError(ctx, &problemDetails, apiErr)
 
 	switch int(*problemDetails.Status) {
 	case http.StatusBadRequest:

@@ -2,9 +2,10 @@
 package handler
 
 import (
+	"context"
+	"log/slog"
 	"strings"
 
-	"github.com/rs/zerolog"
 	"github.com/scality/go-errors"
 	"github.com/scality/metalk8s-registry-node-agent/pkg/domain"
 	"github.com/scality/metalk8s-registry-node-agent/pkg/library"
@@ -89,12 +90,13 @@ func fillSolutionArchiveFromDescribeSolutionArchiveRequestObject(
 
 // fillInternProblemDetailsFromAPIErrorsError fills the ProblemDetails object from the apierrors.Error object.
 func fillInternProblemDetailsFromAPIErrorsError(
-	logger *zerolog.Logger,
+	ctx context.Context,
+	logger *slog.Logger,
 	dst *intern.ProblemDetails,
 	src *errors.Error,
 	logMsg string,
 ) {
-	logger.Error().Err(src).Msg(logMsg)
+	logger.ErrorContext(ctx, logMsg, slog.Any("error", src))
 
 	// The HTTP status is the last error identifier.
 	status := int32(src.Identifier[len(src.Identifier)-1])
@@ -127,15 +129,17 @@ func fillInternProblemDetailsFromAPIErrorsError(
 }
 
 func (h *DownloadSolutionArchive) fillProblemDetailsFromAPIErrorsError(
+	ctx context.Context,
 	dst *intern.ProblemDetails,
 	src *errors.Error,
 ) {
-	fillInternProblemDetailsFromAPIErrorsError(h.logger, dst, src, "Downloads API error")
+	fillInternProblemDetailsFromAPIErrorsError(ctx, h.logger, dst, src, "Downloads API error")
 }
 
 func (h *DescribeSolutionArchive) fillProblemDetailsFromAPIErrorsError(
+	ctx context.Context,
 	dst *intern.ProblemDetails,
 	src *errors.Error,
 ) {
-	fillInternProblemDetailsFromAPIErrorsError(h.logger, dst, src, "Describe API error")
+	fillInternProblemDetailsFromAPIErrorsError(ctx, h.logger, dst, src, "Describe API error")
 }

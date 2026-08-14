@@ -1,12 +1,13 @@
 package multipartinspector
 
 import (
+	"context"
 	"encoding/binary"
 	"encoding/json"
 	"io"
+	"log/slog"
 	"path/filepath"
 
-	"github.com/rs/zerolog"
 	"github.com/scality/go-errors"
 	"github.com/scality/metalk8s-registry-node-agent/pkg/domain"
 	"github.com/scality/metalk8s-registry-node-agent/pkg/library"
@@ -14,20 +15,19 @@ import (
 )
 
 type FileSystem struct {
-	logger                   *zerolog.Logger
+	logger                   *slog.Logger
 	solutionArchivesLocation string
 }
 
 func NewFileSystem(
-	logger *zerolog.Logger,
+	logger *slog.Logger,
 	solutionArchivesLocation string,
 ) service.MultipartInspector {
-	l := logger.With().
-		Str("infrastructure", "multipart_inspector").
-		Str("implementation", "filesystem").
-		Logger()
 	return &FileSystem{
-		logger:                   &l,
+		logger: logger.With(
+			slog.String("infrastructure", "multipart_inspector"),
+			slog.String("implementation", "filesystem"),
+		),
 		solutionArchivesLocation: solutionArchivesLocation,
 	}
 }
@@ -36,7 +36,7 @@ var _ service.MultipartInspector = &FileSystem{}
 
 // GetMultipartFile retrieves the multipart file recipient from a given bucket
 // and returns its Solution Archive.
-func (f *FileSystem) GetMultipartFile(bucketName string) (*domain.SolutionArchive, error) {
+func (f *FileSystem) GetMultipartFile(ctx context.Context, bucketName string) (*domain.SolutionArchive, error) {
 	bucketPath := library.GenBucketPath(f.solutionArchivesLocation, bucketName)
 	if err := library.CheckDir(bucketPath); err != nil {
 		return nil, errors.Wrap(err,
@@ -46,7 +46,7 @@ func (f *FileSystem) GetMultipartFile(bucketName string) (*domain.SolutionArchiv
 		)
 	}
 
-	solutionArchiveMeta, err := f.getSolutionArchiveMeta(bucketPath)
+	solutionArchiveMeta, err := f.getSolutionArchiveMeta(ctx, bucketPath)
 	if err != nil {
 		return nil, errors.Wrap(err,
 			errors.WithIdentifier(141),
@@ -61,6 +61,7 @@ func (f *FileSystem) GetMultipartFile(bucketName string) (*domain.SolutionArchiv
 // GetMultipartFileStatus retrieves the Solution Archive Status of a multipart file recipient
 // based on bucketName and solutionArchiveMeta.
 func (f *FileSystem) GetMultipartFileStatus(
+	_ context.Context,
 	bucketName string,
 	solutionArchive *domain.SolutionArchive,
 ) (*domain.SolutionArchiveStatus, error) {
@@ -172,7 +173,7 @@ func (f *FileSystem) GetMultipartFileStatus(
 
 // getSolutionArchiveMeta returns the Solution Archive Meta instance
 // in the bucket with the given bucketPath.
-func (f *FileSystem) getSolutionArchiveMeta(bucketPath string) (*domain.SolutionArchive, error) {
+func (f *FileSystem) getSolutionArchiveMeta(ctx context.Context, bucketPath string) (*domain.SolutionArchive, error) {
 	metaFileNames, err := library.ListDirContentNames(bucketPath, library.MultipartMetaFilter)
 	if err != nil {
 		return nil, errors.Wrap(err,
@@ -198,7 +199,7 @@ func (f *FileSystem) getSolutionArchiveMeta(bucketPath string) (*domain.Solution
 		solutionArchiveMetas = append(solutionArchiveMetas, &solutionArchiveMeta)
 	}
 
-	solutionArchiveMetas = f.filterOrphansMeta(bucketPath, solutionArchiveMetas)
+	solutionArchiveMetas = f.filterOrphansMeta(ctx, bucketPath, solutionArchiveMetas)
 	if len(solutionArchiveMetas) < 1 {
 		return nil, errors.Wrap(domain.ErrStorageProviderNotFound,
 			errors.WithIdentifier(153),
@@ -220,6 +221,7 @@ func (f *FileSystem) getSolutionArchiveMeta(bucketPath string) (*domain.Solution
 // filterOrphansMeta filters the orphaned SolutionArchiveMeta instances from the given
 // solutionArchiveMetas list and returns the filtered list.
 func (f *FileSystem) filterOrphansMeta(
+	ctx context.Context,
 	bucketPath string,
 	solutionArchives []*domain.SolutionArchive,
 ) []*domain.SolutionArchive {
@@ -232,7 +234,7 @@ func (f *FileSystem) filterOrphansMeta(
 				solutionArchive.Name+library.FileSystemMultipartPartsSuffix,
 			),
 		); err != nil {
-			f.logger.Warn().Err(err).Msg("The parts file is missing for the multipart file.")
+			f.logger.WarnContext(ctx, "The parts file is missing for the multipart file.", slog.Any("error", err))
 
 			continue
 		}
@@ -243,7 +245,7 @@ func (f *FileSystem) filterOrphansMeta(
 				solutionArchive.Name+library.FileSystemMultipartRecipientSuffix,
 			),
 		); err != nil {
-			f.logger.Warn().Err(err).Msg("The recipient file is missing for the multipart file.")
+			f.logger.WarnContext(ctx, "The recipient file is missing for the multipart file.", slog.Any("error", err))
 
 			continue
 		}

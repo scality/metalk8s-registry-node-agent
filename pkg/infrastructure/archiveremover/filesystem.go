@@ -1,29 +1,28 @@
 package archiveremover
 
 import (
+	"log/slog"
 	"path/filepath"
 
-	"github.com/rs/zerolog"
 	"github.com/scality/go-errors"
 	"github.com/scality/metalk8s-registry-node-agent/pkg/library"
 	"github.com/scality/metalk8s-registry-node-agent/pkg/service"
 )
 
 type FileSystem struct {
-	logger                   *zerolog.Logger
+	logger                   *slog.Logger
 	solutionArchivesLocation string
 }
 
 func NewFileSystem(
-	logger *zerolog.Logger,
+	logger *slog.Logger,
 	solutionArchivesLocation string,
 ) service.ArchiveRemover {
-	l := logger.With().
-		Str("infrastructure", "archive_remover").
-		Str("implementation", "filesystem").
-		Logger()
 	return &FileSystem{
-		logger:                   &l,
+		logger: logger.With(
+			slog.String("infrastructure", "archive_remover"),
+			slog.String("implementation", "filesystem"),
+		),
 		solutionArchivesLocation: solutionArchivesLocation,
 	}
 }

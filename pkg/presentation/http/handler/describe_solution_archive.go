@@ -3,9 +3,9 @@ package handler
 
 import (
 	"context"
+	"log/slog"
 	"net/http"
 
-	"github.com/rs/zerolog"
 	"github.com/scality/go-errors"
 	"github.com/scality/metalk8s-registry-node-agent/pkg/domain"
 	"github.com/scality/metalk8s-registry-node-agent/pkg/presentation/http/intern"
@@ -13,39 +13,38 @@ import (
 )
 
 type DescribeSolutionArchive struct {
-	logger *zerolog.Logger
+	logger *slog.Logger
 
 	uc *usecase.DescribeSolutionArchive
 }
 
 func NewDescribeSolutionArchive(
-	logger *zerolog.Logger,
+	logger *slog.Logger,
 	uc *usecase.DescribeSolutionArchive,
 ) *DescribeSolutionArchive {
-	l := logger.With().Str("http_handler", "describe_solution_archive").Logger()
-
 	return &DescribeSolutionArchive{
-		logger: &l,
+		logger: logger.With(slog.String("http_handler", "describe_solution_archive")),
 		uc:     uc,
 	}
 }
 
 //nolint:ireturn // Generated code forces to return an interface.
 func (h *DescribeSolutionArchive) DescribeSolutionArchive(
-	_ context.Context,
+	ctx context.Context,
 	request intern.DescribeSolutionArchiveRequestObject,
 ) (intern.DescribeSolutionArchiveResponseObject, error) {
 	var solutionArchive domain.SolutionArchive
 
 	if err := fillSolutionArchiveFromDescribeSolutionArchiveRequestObject(&solutionArchive, &request); err != nil {
 		return h.genDescribeSolutionArchiveResponseObjectFromError(
+			ctx,
 			errors.Wrap(err,
 				errors.WithIdentifier(http.StatusBadRequest),
 			),
 		)
 	}
 
-	size, err := h.uc.Execute(&solutionArchive)
+	size, err := h.uc.Execute(ctx, &solutionArchive)
 	if err != nil {
 		// Default value for the API error
 		apiErr := errors.Wrap(err,
@@ -55,7 +54,7 @@ func (h *DescribeSolutionArchive) DescribeSolutionArchive(
 			apiErr = errors.Wrap(err, errors.WithIdentifier(http.StatusNotFound))
 		}
 
-		return h.genDescribeSolutionArchiveResponseObjectFromError(apiErr)
+		return h.genDescribeSolutionArchiveResponseObjectFromError(ctx, apiErr)
 	}
 
 	return intern.DescribeSolutionArchive200Response{
@@ -70,6 +69,7 @@ func (h *DescribeSolutionArchive) DescribeSolutionArchive(
 //
 //nolint:funlen,ireturn
 func (h *DescribeSolutionArchive) genDescribeSolutionArchiveResponseObjectFromError(
+	ctx context.Context,
 	err error,
 ) (intern.DescribeSolutionArchiveResponseObject, error) {
 	var apiErr *errors.Error
@@ -80,7 +80,7 @@ func (h *DescribeSolutionArchive) genDescribeSolutionArchiveResponseObjectFromEr
 	// the error is an underlying *errors.Error, wrapped in DescribeSolutionArchive
 	errors.As(err, &apiErr) // nolint: errcheck
 
-	h.fillProblemDetailsFromAPIErrorsError(&problemDetails, apiErr)
+	h.fillProblemDetailsFromAPIErrorsError(ctx, &problemDetails, apiErr)
 
 	switch int(*problemDetails.Status) {
 	case http.StatusBadRequest:

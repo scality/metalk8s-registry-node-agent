@@ -2,10 +2,10 @@
 package usecase
 
 import (
-	"log"
+	"context"
+	"log/slog"
 	"slices"
 
-	"github.com/rs/zerolog"
 	"github.com/scality/go-errors"
 
 	"github.com/scality/metalk8s-registry-node-agent/pkg/domain"
@@ -14,7 +14,7 @@ import (
 )
 
 type InitializeSession struct {
-	logger             *zerolog.Logger
+	logger             *slog.Logger
 	bucketManager      service.BucketManager
 	archiveLister      service.ArchiveLister
 	multipartStorer    service.MultipartStorer
@@ -23,17 +23,15 @@ type InitializeSession struct {
 }
 
 func NewInitializeSession(
-	logger *zerolog.Logger,
+	logger *slog.Logger,
 	bucketManager service.BucketManager,
 	archiveLister service.ArchiveLister,
 	multipartStorer service.MultipartStorer,
 	multipartInspector service.MultipartInspector,
 	bucketLocker service.LockerUnlocker,
 ) *InitializeSession {
-	l := logger.With().Str("use_case", "initialize_session").Logger()
-
 	return &InitializeSession{
-		logger:             &l,
+		logger:             logger.With(slog.String("use_case", "initialize_session")),
 		bucketManager:      bucketManager,
 		archiveLister:      archiveLister,
 		multipartStorer:    multipartStorer,
@@ -42,10 +40,12 @@ func NewInitializeSession(
 	}
 }
 
-func (uc *InitializeSession) Execute(solutionArchive *domain.SolutionArchive) (*domain.SessionStatus, error) {
-	uc.logger.Debug().
-		Any("solution_archive", solutionArchive).
-		Msg("Initializing session")
+func (uc *InitializeSession) Execute(
+	ctx context.Context, solutionArchive *domain.SolutionArchive,
+) (*domain.SessionStatus, error) {
+	uc.logger.DebugContext(ctx, "Initializing session",
+		slog.Any("solution_archive", solutionArchive),
+	)
 
 	// To avoid simultaneous uploads and deletions of the same solution archive
 	uc.bucketLocker.Lock(solutionArchive)
@@ -89,7 +89,7 @@ func (uc *InitializeSession) Execute(solutionArchive *domain.SolutionArchive) (*
 	}
 
 	if exist {
-		solutionArchiveStatus, err := uc.multipartInspector.GetMultipartFileStatus(bucketName, solutionArchive)
+		solutionArchiveStatus, err := uc.multipartInspector.GetMultipartFileStatus(ctx, bucketName, solutionArchive)
 		if err != nil {
 			return nil, errors.Wrap(err,
 				errors.WithIdentifier(219),
@@ -107,7 +107,10 @@ func (uc *InitializeSession) Execute(solutionArchive *domain.SolutionArchive) (*
 	cleanup := func() {
 		deleteBucket := func(bucketManager service.BucketManager, bucketName string) {
 			if err := bucketManager.DeleteBucket(bucketName); err != nil {
-				log.Println("Failed to delete the bucket", bucketName, err)
+				uc.logger.ErrorContext(ctx, "Failed to delete the bucket",
+					slog.String("bucket_name", bucketName),
+					slog.Any("error", err),
+				)
 			}
 		}
 		deleteBucket(uc.bucketManager, bucketName)
@@ -125,7 +128,7 @@ func (uc *InitializeSession) Execute(solutionArchive *domain.SolutionArchive) (*
 		)
 	}
 
-	solutionArchiveStatus, err := uc.multipartStorer.CreateMultipartFiles(bucketName, solutionArchive)
+	solutionArchiveStatus, err := uc.multipartStorer.CreateMultipartFiles(ctx, bucketName, solutionArchive)
 	if err != nil {
 		cleanup()
 		return nil, errors.Wrap(err,
@@ -136,7 +139,7 @@ func (uc *InitializeSession) Execute(solutionArchive *domain.SolutionArchive) (*
 		)
 	}
 
-	uc.logger.Debug().Msg("Session initialized")
+	uc.logger.DebugContext(ctx, "Session initialized")
 
 	return &domain.SessionStatus{
 		Version:                   solutionArchive.Version,
