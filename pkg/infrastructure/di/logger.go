@@ -21,8 +21,8 @@ func (c *Container) GetLogger() *slog.Logger {
 			slog.String("application_version", config.ApplicationVersion),
 		)
 
-		if hostname, err := os.Hostname(); err == nil {
-			logger = logger.With(slog.String("host", hostname))
+		if c.config.NodeName != "" {
+			logger = logger.With(slog.String("node", c.config.NodeName))
 		}
 
 		c.logger = logger

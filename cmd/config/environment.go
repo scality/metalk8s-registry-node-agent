@@ -24,6 +24,10 @@ type (
 	Environment struct {
 		Logger LoggerConfig `env:",prefix=LOGGER_"`
 
+		// NodeName is the Kubernetes node this agent runs on, injected by the
+		// StatefulSet from spec.nodeName.
+		NodeName string `env:"NODE_NAME"`
+
 		SolutionArchivesLocation string `env:"SOLUTION_ARCHIVES_LOCATION, default=/archives"`
 		SolutionsLocation        string `env:"SOLUTIONS_LOCATION, default=/solutions"`
 
