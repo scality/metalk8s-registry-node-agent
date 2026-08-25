@@ -70,7 +70,7 @@ jobs:
 
       - name: Upload sbom to repository
         if: inputs.upload-sbom == true
-        uses: scality/sbom-upload@2de9e9b5d10e044067262b250701cca1ed1b6624 # v1.0.7
+        uses: scality/sbom-upload@61aa17125ab1475f19d39dcb397902b283a60649 # v1.0.8
         with:
           url: ${{ vars.DEPENDENCY_TRACK_HOSTNAME }}
           api-key: ${{ secrets.DEPENDENCY_TRACK_APIKEY }}
