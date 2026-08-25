@@ -1,7 +1,6 @@
 package di
 
 import (
-	"log"
 	"log/slog"
 	"os"
 
@@ -15,18 +14,18 @@ func (c *Container) GetLogger() *slog.Logger {
 			level = slog.LevelInfo
 		}
 
-		hostname, err := os.Hostname()
-		if err != nil {
-			log.Fatalf("failed to get hostname: %v", err)
-		}
-
 		handler := slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: level})
 
-		c.logger = slog.New(handler).With(
+		logger := slog.New(handler).With(
 			slog.String("application_name", config.ApplicationName),
 			slog.String("application_version", config.ApplicationVersion),
-			slog.String("host", hostname),
 		)
+
+		if hostname, err := os.Hostname(); err == nil {
+			logger = logger.With(slog.String("host", hostname))
+		}
+
+		c.logger = logger
 	}
 
 	return c.logger
