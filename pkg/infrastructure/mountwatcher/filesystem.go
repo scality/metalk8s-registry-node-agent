@@ -2,6 +2,7 @@ package mountwatcher
 
 import (
 	"io"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"strings"
@@ -9,7 +10,6 @@ import (
 	"time"
 
 	"github.com/moby/sys/mountinfo"
-	"github.com/rs/zerolog"
 	"github.com/scality/go-errors"
 	"github.com/scality/metalk8s-registry-node-agent/pkg/domain"
 	"github.com/scality/metalk8s-registry-node-agent/pkg/service"
@@ -35,7 +35,7 @@ const (
 type FileSystem struct {
 	sync.WaitGroup
 	knownMu           sync.Mutex
-	logger            *zerolog.Logger
+	logger            *slog.Logger
 	solutionsLocation string
 	done              chan struct{}
 	// wakeFD is an eventfd used to interrupt a blocked poll() on shutdown so the
@@ -51,13 +51,12 @@ type FileSystem struct {
 
 var _ service.MountWatcher = &FileSystem{}
 
-func NewFileSystem(logger *zerolog.Logger, solutionsLocation string) service.MountWatcher {
-	l := logger.With().
-		Str("infrastructure", "mount_watcher").
-		Str("implementation", "filesystem").
-		Logger()
+func NewFileSystem(logger *slog.Logger, solutionsLocation string) service.MountWatcher {
 	return &FileSystem{
-		logger:            &l,
+		logger: logger.With(
+			slog.String("infrastructure", "mount_watcher"),
+			slog.String("implementation", "filesystem"),
+		),
 		solutionsLocation: solutionsLocation,
 		done:              make(chan struct{}),
 		wakeFD:            -1,
@@ -165,7 +164,7 @@ func (f *FileSystem) watchMounts(filenameChan chan domain.FileEventDetails, file
 			if errors.Is(err, unix.EINTR) {
 				continue
 			}
-			f.logger.Error().Err(err).Msg("poll on mountinfo failed")
+			f.logger.Error("poll on mountinfo failed", slog.Any("error", err))
 			time.Sleep(errorBackoff)
 			continue
 		}
@@ -190,7 +189,7 @@ func (f *FileSystem) watchMounts(filenameChan chan domain.FileEventDetails, file
 func (f *FileSystem) reconcileMountChanges(filenameChan chan domain.FileEventDetails) {
 	current, err := f.currentSolutionMounts()
 	if err != nil {
-		f.logger.Error().Err(err).Msg("failed to list solution mounts")
+		f.logger.Error("failed to list solution mounts", slog.Any("error", err))
 		return
 	}
 
@@ -222,10 +221,10 @@ func (f *FileSystem) collectDisappearedMounts(current map[string]string) []domai
 		if _, stillMounted := current[mountPoint]; stillMounted {
 			continue
 		}
-		f.logger.Info().
-			Str("mount_point", mountPoint).
-			Str("object_name", objectName).
-			Msg("solution mount disappeared, queueing reconcile")
+		f.logger.Info("solution mount disappeared, queueing reconcile",
+			slog.String("mount_point", mountPoint),
+			slog.String("object_name", objectName),
+		)
 
 		events = append(events, domain.FileEventDetails{
 			FullPathName: mountPoint,

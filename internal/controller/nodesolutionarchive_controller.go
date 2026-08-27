@@ -102,7 +102,7 @@ func (r *NodeSolutionArchiveReconciler) Reconcile(ctx context.Context, req ctrl.
 		if controllerutil.ContainsFinalizer(nodeSolutionArchive, FINALIZER_NAME) {
 			// our finalizer is present, so lets handle any external dependency
 			log.V(1).Info("Deleting external resources")
-			if err := r.deleteSolutionArchiveResources(nodeSolutionArchive); err != nil {
+			if err := r.deleteSolutionArchiveResources(ctx, nodeSolutionArchive); err != nil {
 				// if fail to delete the external dependency here, return with error
 				// so that it can be retried.
 				log.Error(err, "error deleting external Resources")
@@ -142,7 +142,7 @@ func (r *NodeSolutionArchiveReconciler) Reconcile(ctx context.Context, req ctrl.
 		solutionArchive.Hash = &nodeSolutionArchive.Spec.Validation.Checksum.Value
 	}
 	log.V(1).Info("Initializing session, if needed")
-	_, err := r.Container.GetInitializeSessionUseCase().Execute(solutionArchive)
+	_, err := r.Container.GetInitializeSessionUseCase().Execute(ctx, solutionArchive)
 	if err != nil {
 		nodeSolutionArchive.SetNotInitialized()
 		log.Error(err, "error initializing session")
@@ -192,7 +192,7 @@ func (r *NodeSolutionArchiveReconciler) Reconcile(ctx context.Context, req ctrl.
 	// 5. Validation of the solution archive
 	//    A solution archive file exists and is valid (Checksum if provided)
 	log.V(1).Info("Checking if the solution archive is valid")
-	isValid, err := r.isValidSolutionArchive(nodeSolutionArchive)
+	isValid, err := r.isValidSolutionArchive(ctx, nodeSolutionArchive)
 	if err != nil {
 		log.Error(err, "error validating solution archive")
 		return ctrl.Result{RequeueAfter: 30 * time.Second}, nil
@@ -202,7 +202,7 @@ func (r *NodeSolutionArchiveReconciler) Reconcile(ctx context.Context, req ctrl.
 		log.V(1).Info("solution archive is not valid")
 		nodeSolutionArchive.SetUnavailable()
 		// Unmount the solution archive on file system
-		err = r.Container.GetUnmountSolutionArchiveUseCase().Execute(solutionArchive)
+		err = r.Container.GetUnmountSolutionArchiveUseCase().Execute(ctx, solutionArchive)
 		if err != nil {
 			log.Error(err, "error unmounting solution archive")
 			return ctrl.Result{}, err
@@ -221,7 +221,7 @@ func (r *NodeSolutionArchiveReconciler) Reconcile(ctx context.Context, req ctrl.
 	nodeSolutionArchive.Status.URL = downloadURL
 	nodeSolutionArchive.SetAvailable()
 	// Session may persist in case of manual upload of solution archive
-	err = r.Container.GetRemoveSessionUseCase().Execute(solutionArchive)
+	err = r.Container.GetRemoveSessionUseCase().Execute(ctx, solutionArchive)
 	if err != nil {
 		log.Error(err, "error removing session")
 		return ctrl.Result{RequeueAfter: 30 * time.Second}, nil
@@ -229,7 +229,7 @@ func (r *NodeSolutionArchiveReconciler) Reconcile(ctx context.Context, req ctrl.
 
 	// 6. Mount the solution archive on file system
 	log.V(1).Info("mounting the solution archive on file system")
-	err = r.Container.GetMountSolutionArchiveUseCase().Execute(solutionArchive)
+	err = r.Container.GetMountSolutionArchiveUseCase().Execute(ctx, solutionArchive)
 	if err != nil {
 		log.Error(err, "error mounting solution archive")
 		return ctrl.Result{RequeueAfter: 30 * time.Second}, nil
@@ -239,23 +239,23 @@ func (r *NodeSolutionArchiveReconciler) Reconcile(ctx context.Context, req ctrl.
 	return ctrl.Result{}, nil
 }
 
-func (r *NodeSolutionArchiveReconciler) deleteSolutionArchiveResources(nodeSolutionArchive *metalk8sv1alpha1.NodeSolutionArchive) error {
+func (r *NodeSolutionArchiveReconciler) deleteSolutionArchiveResources(ctx context.Context, nodeSolutionArchive *metalk8sv1alpha1.NodeSolutionArchive) error {
 	solutionArchive := &domain.SolutionArchive{
 		Name:    nodeSolutionArchive.Spec.Name,
 		Version: nodeSolutionArchive.Spec.Version,
 	}
 
-	err := r.Container.GetUnmountSolutionArchiveUseCase().Execute(solutionArchive)
+	err := r.Container.GetUnmountSolutionArchiveUseCase().Execute(ctx, solutionArchive)
 	if err != nil {
 		return err
 	}
 
-	err = r.Container.GetRemoveSolutionArchiveUseCase().Execute(solutionArchive)
+	err = r.Container.GetRemoveSolutionArchiveUseCase().Execute(ctx, solutionArchive)
 	if err != nil {
 		return err
 	}
 
-	return r.Container.GetRemoveSessionUseCase().Execute(solutionArchive)
+	return r.Container.GetRemoveSessionUseCase().Execute(ctx, solutionArchive)
 }
 
 func getNodeName(o client.Object) string {
@@ -265,7 +265,7 @@ func getNodeName(o client.Object) string {
 	return ""
 }
 
-func (r *NodeSolutionArchiveReconciler) isValidSolutionArchive(nodeSolutionArchive *metalk8sv1alpha1.NodeSolutionArchive) (bool, error) {
+func (r *NodeSolutionArchiveReconciler) isValidSolutionArchive(ctx context.Context, nodeSolutionArchive *metalk8sv1alpha1.NodeSolutionArchive) (bool, error) {
 	solutionArchive := &domain.SolutionArchive{
 		Name:    nodeSolutionArchive.Spec.Name,
 		Version: nodeSolutionArchive.Spec.Version,
@@ -273,7 +273,7 @@ func (r *NodeSolutionArchiveReconciler) isValidSolutionArchive(nodeSolutionArchi
 	if nodeSolutionArchive.Spec.Validation != nil {
 		solutionArchive.Hash = &nodeSolutionArchive.Spec.Validation.Checksum.Value
 	}
-	return r.Container.GetValidateSolutionArchiveUseCase().Execute(solutionArchive)
+	return r.Container.GetValidateSolutionArchiveUseCase().Execute(ctx, solutionArchive)
 }
 
 // mapNodeSolutionArchiveToAvailableNodeSolutionArchive generate a []reconcile.Request based on a NodeSolutionArchive entry

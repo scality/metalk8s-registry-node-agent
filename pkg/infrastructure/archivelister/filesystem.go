@@ -1,31 +1,31 @@
 package archivelister
 
 import (
-	"github.com/rs/zerolog"
+	"log/slog"
+
 	"github.com/scality/go-errors"
 	"github.com/scality/metalk8s-registry-node-agent/pkg/library"
 	"github.com/scality/metalk8s-registry-node-agent/pkg/service"
 )
 
 type FileSystem struct {
-	logger                   *zerolog.Logger
+	logger                   *slog.Logger
 	solutionArchivesLocation string
 	interestContentFilter    library.ContentFilter
 	store                    service.StorageProvider
 }
 
 func NewFileSystem(
-	logger *zerolog.Logger,
+	logger *slog.Logger,
 	solutionArchivesLocation string,
 	interestContentFilter library.ContentFilter,
 	store service.StorageProvider,
 ) service.ArchiveLister {
-	l := logger.With().
-		Str("infrastructure", "archive_lister").
-		Str("implementation", "filesystem").
-		Logger()
 	return &FileSystem{
-		logger:                   &l,
+		logger: logger.With(
+			slog.String("infrastructure", "archive_lister"),
+			slog.String("implementation", "filesystem"),
+		),
 		solutionArchivesLocation: solutionArchivesLocation,
 		interestContentFilter:    interestContentFilter,
 		store:                    store,

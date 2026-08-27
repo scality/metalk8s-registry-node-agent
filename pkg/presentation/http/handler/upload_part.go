@@ -3,50 +3,48 @@ package handler
 
 import (
 	"context"
+	"log/slog"
 	"net/http"
 
-	"github.com/rs/zerolog"
 	"github.com/scality/go-errors"
-
 	"github.com/scality/metalk8s-registry-node-agent/pkg/domain"
 	"github.com/scality/metalk8s-registry-node-agent/pkg/presentation/http/extern"
 	"github.com/scality/metalk8s-registry-node-agent/pkg/usecase"
 )
 
 type UploadPart struct {
-	logger *zerolog.Logger
+	logger *slog.Logger
 
 	uc *usecase.ReceivePart
 }
 
 func NewUploadPart(
-	logger *zerolog.Logger,
+	logger *slog.Logger,
 	uc *usecase.ReceivePart,
 ) *UploadPart {
-	l := logger.With().Str("http_handler", "upload_part").Logger()
-
 	return &UploadPart{
-		logger: &l,
+		logger: logger.With(slog.String("http_handler", "upload_part")),
 		uc:     uc,
 	}
 }
 
 //nolint:ireturn // Generated code forces to return an interface.
 func (h *UploadPart) UploadChunk(
-	_ context.Context,
+	ctx context.Context,
 	request extern.UploadChunkRequestObject,
 ) (extern.UploadChunkResponseObject, error) {
 	var part domain.Part
 
 	if err := fillPartFromUploadChunkRequestObject(&part, &request); err != nil {
 		return h.genUploadChunkResponseObjectFromError(
+			ctx,
 			errors.Wrap(err,
 				errors.WithIdentifier(http.StatusBadRequest),
 			),
 		)
 	}
 
-	solutionArchiveStatus, err := h.uc.Execute(&part)
+	solutionArchiveStatus, err := h.uc.Execute(ctx, &part)
 	if err != nil {
 		// Default value for the API error
 		apiErr := errors.Wrap(err,
@@ -64,7 +62,7 @@ func (h *UploadPart) UploadChunk(
 			apiErr = errors.Wrap(err, errors.WithIdentifier(http.StatusUnprocessableEntity))
 		}
 
-		return h.genUploadChunkResponseObjectFromError(apiErr)
+		return h.genUploadChunkResponseObjectFromError(ctx, apiErr)
 	}
 
 	var response extern.UploadChunkSuccessResponse
@@ -79,6 +77,7 @@ func (h *UploadPart) UploadChunk(
 //
 //nolint:funlen,ireturn // Needs refactoring
 func (h *UploadPart) genUploadChunkResponseObjectFromError(
+	ctx context.Context,
 	err error,
 ) (extern.UploadChunkResponseObject, error) {
 	var apiErr *errors.Error
@@ -89,7 +88,7 @@ func (h *UploadPart) genUploadChunkResponseObjectFromError(
 	// the error is an underlying *errors.Error, wrapped in UploadChunk
 	errors.As(err, &apiErr) // nolint: errcheck
 
-	h.fillProblemDetailsFromAPIErrorsError(&problemDetails, apiErr)
+	h.fillProblemDetailsFromAPIErrorsError(ctx, &problemDetails, apiErr)
 
 	switch int(*problemDetails.Status) {
 	case http.StatusBadRequest:

@@ -1,11 +1,11 @@
 package archivemounter
 
 import (
+	"log/slog"
 	"os"
 	"path/filepath"
 	"strings"
 
-	"github.com/rs/zerolog"
 	"github.com/scality/go-errors"
 	"github.com/scality/metalk8s-registry-node-agent/pkg/domain"
 	"github.com/scality/metalk8s-registry-node-agent/pkg/library"
@@ -14,7 +14,7 @@ import (
 )
 
 type FileSystem struct {
-	logger                   *zerolog.Logger
+	logger                   *slog.Logger
 	solutionArchivesLocation string
 	solutionsLocation        string
 	archiveRemover           service.ArchiveRemover
@@ -23,19 +23,18 @@ type FileSystem struct {
 }
 
 func NewFileSystem(
-	logger *zerolog.Logger,
+	logger *slog.Logger,
 	solutionArchivesLocation string,
 	solutionsLocation string,
 	archiveRemover service.ArchiveRemover,
 	watcher service.FileWatcher,
 	mountWatcher service.MountWatcher,
 ) service.ArchiveMounter {
-	l := logger.With().
-		Str("infrastructure", "archive_mounter").
-		Str("implementation", "filesystem").
-		Logger()
 	return &FileSystem{
-		logger:                   &l,
+		logger: logger.With(
+			slog.String("infrastructure", "archive_mounter"),
+			slog.String("implementation", "filesystem"),
+		),
 		solutionArchivesLocation: solutionArchivesLocation,
 		solutionsLocation:        solutionsLocation,
 		archiveRemover:           archiveRemover,

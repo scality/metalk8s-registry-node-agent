@@ -32,6 +32,7 @@ func (c *Container) GetHTTPExternServer() *http.Server {
 				urlParts := strings.Split(request.URL.Path, "/")
 				if len(urlParts) < 4 {
 					handler.WriteExternProblemDetails(
+						request.Context(),
 						c.GetLogger(),
 						writer,
 						errors.Wrap(
@@ -48,6 +49,7 @@ func (c *Container) GetHTTPExternServer() *http.Server {
 				version := urlParts[3]
 				if version == "" {
 					handler.WriteExternProblemDetails(
+						request.Context(),
 						c.GetLogger(),
 						writer,
 						errors.Wrap(
@@ -73,6 +75,7 @@ func (c *Container) GetHTTPExternServer() *http.Server {
 				headerStart, headerEnd, _, err := library.ParseContentRange(contentRange)
 				if err != nil {
 					handler.WriteExternProblemDetails(
+						request.Context(),
 						c.GetLogger(),
 						writer,
 						errors.Wrap(err, errors.WithIdentifier(http.StatusBadRequest)),
@@ -89,7 +92,13 @@ func (c *Container) GetHTTPExternServer() *http.Server {
 						errors.WithProperty("content_range_size", rangeSize),
 						errors.WithProperty("content_length", request.ContentLength),
 					)
-					handler.WriteExternProblemDetails(c.GetLogger(), writer, bodySizeErr, "Body size does not match Content-Range")
+					handler.WriteExternProblemDetails(
+						request.Context(),
+						c.GetLogger(),
+						writer,
+						bodySizeErr,
+						"Body size does not match Content-Range",
+					)
 					return
 				}
 

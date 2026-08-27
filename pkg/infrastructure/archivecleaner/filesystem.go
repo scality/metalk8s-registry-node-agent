@@ -1,9 +1,10 @@
 package archivecleaner
 
 import (
+	"context"
+	"log/slog"
 	"os"
 
-	"github.com/rs/zerolog"
 	"github.com/scality/go-errors"
 	"github.com/scality/metalk8s-registry-node-agent/pkg/domain"
 	"github.com/scality/metalk8s-registry-node-agent/pkg/library"
@@ -11,22 +12,21 @@ import (
 )
 
 type FileSystem struct {
-	logger         *zerolog.Logger
+	logger         *slog.Logger
 	store          service.StorageProvider
 	archiveMounter service.ArchiveMounter
 }
 
 func NewFileSystem(
-	logger *zerolog.Logger,
+	logger *slog.Logger,
 	store service.StorageProvider,
 	archiveMounter service.ArchiveMounter,
 ) service.ArchiveCleaner {
-	l := logger.With().
-		Str("infrastructure", "solution_archives_cleaner").
-		Str("implementation", "filesystem").
-		Logger()
 	return &FileSystem{
-		logger:         &l,
+		logger: logger.With(
+			slog.String("infrastructure", "solution_archives_cleaner"),
+			slog.String("implementation", "filesystem"),
+		),
 		store:          store,
 		archiveMounter: archiveMounter,
 	}
@@ -34,7 +34,7 @@ func NewFileSystem(
 
 var _ service.ArchiveCleaner = &FileSystem{}
 
-func (f *FileSystem) CleanUnusedSolutionArchives(path string, isDir bool) error {
+func (f *FileSystem) CleanUnusedSolutionArchives(ctx context.Context, path string, isDir bool) error {
 	if isDir {
 		err := os.RemoveAll(path)
 		if err != nil {
@@ -46,9 +46,9 @@ func (f *FileSystem) CleanUnusedSolutionArchives(path string, isDir bool) error 
 			)
 		}
 
-		f.logger.Debug().
-			Str("path", path).
-			Msg("finished to clean unused solution archive directory")
+		f.logger.DebugContext(ctx, "finished to clean unused solution archive directory",
+			slog.String("path", path),
+		)
 
 		return nil
 	}
@@ -62,22 +62,22 @@ func (f *FileSystem) CleanUnusedSolutionArchives(path string, isDir bool) error 
 		)
 	}
 
-	f.logger.Debug().
-		Str("path", path).
-		Msg("finished to clean unused solution archive")
+	f.logger.DebugContext(ctx, "finished to clean unused solution archive",
+		slog.String("path", path),
+	)
 
 	return nil
 }
 
-func (f *FileSystem) CleanUnusedSolutions(path string, isDir bool) error {
+func (f *FileSystem) CleanUnusedSolutions(ctx context.Context, path string, isDir bool) error {
 	if isDir {
 		// Unmount the solution
 		err := f.archiveMounter.UnmountFile(path)
 		if err != nil {
-			f.logger.Error().
-				Err(err).
-				Str("mount_point", path).
-				Msg("failed to unmount unused solution")
+			f.logger.ErrorContext(ctx, "failed to unmount unused solution",
+				slog.String("mount_point", path),
+				slog.Any("error", err),
+			)
 			// Continue to try to delete the directory anyway
 		}
 
@@ -92,9 +92,9 @@ func (f *FileSystem) CleanUnusedSolutions(path string, isDir bool) error {
 			)
 		}
 
-		f.logger.Debug().
-			Str("path", path).
-			Msg("finished to clean unused solution directory")
+		f.logger.DebugContext(ctx, "finished to clean unused solution directory",
+			slog.String("path", path),
+		)
 
 		return nil
 	}
@@ -108,9 +108,9 @@ func (f *FileSystem) CleanUnusedSolutions(path string, isDir bool) error {
 		)
 	}
 
-	f.logger.Debug().
-		Str("path", path).
-		Msg("finished to clean unused solution")
+	f.logger.DebugContext(ctx, "finished to clean unused solution",
+		slog.String("path", path),
+	)
 
 	return nil
 }

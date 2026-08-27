@@ -2,13 +2,14 @@ package multipartstorer
 
 import (
 	"bytes"
+	"context"
 	"encoding/binary"
 	"encoding/json"
 	"io"
+	"log/slog"
 	"os"
 	"path/filepath"
 
-	"github.com/rs/zerolog"
 	"github.com/scality/go-errors"
 	"github.com/scality/metalk8s-registry-node-agent/pkg/domain"
 	"github.com/scality/metalk8s-registry-node-agent/pkg/library"
@@ -16,7 +17,7 @@ import (
 )
 
 type FileSystem struct {
-	logger                   *zerolog.Logger
+	logger                   *slog.Logger
 	solutionArchivesLocation string
 	multipartInspector       service.MultipartInspector
 	multipartRemover         service.MultipartRemover
@@ -24,18 +25,17 @@ type FileSystem struct {
 }
 
 func NewFileSystem(
-	logger *zerolog.Logger,
+	logger *slog.Logger,
 	solutionArchivesLocation string,
 	multipartInspector service.MultipartInspector,
 	multipartRemover service.MultipartRemover,
 	bucketManager service.BucketManager,
 ) service.MultipartStorer {
-	l := logger.With().
-		Str("infrastructure", "multipart_storer").
-		Str("implementation", "filesystem").
-		Logger()
 	return &FileSystem{
-		logger:                   &l,
+		logger: logger.With(
+			slog.String("infrastructure", "multipart_storer"),
+			slog.String("implementation", "filesystem"),
+		),
 		solutionArchivesLocation: solutionArchivesLocation,
 		multipartInspector:       multipartInspector,
 		multipartRemover:         multipartRemover,
@@ -47,6 +47,7 @@ var _ service.MultipartStorer = &FileSystem{}
 
 // CreateMultipartFiles creates into a bucket: a metadata file, a multipart file recipient and a parts synthesis file.
 func (f *FileSystem) CreateMultipartFiles(
+	ctx context.Context,
 	bucketName string,
 	solutionArchive *domain.SolutionArchive,
 ) (*domain.SolutionArchiveStatus, error) {
@@ -74,7 +75,7 @@ func (f *FileSystem) CreateMultipartFiles(
 
 	err := library.CheckFile(metaFilePath)
 	if err == nil {
-		solutionArchiveStatus, err := f.multipartInspector.GetMultipartFileStatus(bucketName, solutionArchive)
+		solutionArchiveStatus, err := f.multipartInspector.GetMultipartFileStatus(ctx, bucketName, solutionArchive)
 		if err != nil {
 			return nil, errors.Wrap(err,
 				errors.WithIdentifier(164),
@@ -163,6 +164,7 @@ func (f *FileSystem) CreateMultipartFiles(
 // StorePart writes the content of the given part into the multipart file recipient
 // on the bucket indicated by the given bucketName.
 func (f *FileSystem) StorePart(
+	ctx context.Context,
 	bucketName string,
 	solutionArchiveFromManifest *domain.SolutionArchive,
 	part *domain.Part,
@@ -181,7 +183,7 @@ func (f *FileSystem) StorePart(
 			)
 		}
 
-		if _, err := f.CreateMultipartFiles(bucketName, solutionArchiveFromManifest); err != nil {
+		if _, err := f.CreateMultipartFiles(ctx, bucketName, solutionArchiveFromManifest); err != nil {
 			return nil, errors.Wrap(err,
 				errors.WithIdentifier(171),
 				errors.WithDetail("unexpected error while recreating multipart files before storing part"),
@@ -192,7 +194,7 @@ func (f *FileSystem) StorePart(
 	}
 	part.SolutionArchive = solutionArchiveFromManifest
 
-	solutionArchiveStatus, err := f.multipartInspector.GetMultipartFileStatus(bucketName, part.SolutionArchive)
+	solutionArchiveStatus, err := f.multipartInspector.GetMultipartFileStatus(ctx, bucketName, part.SolutionArchive)
 	if err != nil {
 		return nil, errors.Wrap(err,
 			errors.WithIdentifier(172),
@@ -268,7 +270,7 @@ func (f *FileSystem) StorePart(
 
 // CommitPart properly updates the .part files
 // with the metadata of the given part.
-func (f *FileSystem) CommitPart(bucketName string, part *domain.Part) error {
+func (f *FileSystem) CommitPart(_ context.Context, bucketName string, part *domain.Part) error {
 	partsFilePath := library.GenMultipartPartsFilePath(
 		f.solutionArchivesLocation,
 		bucketName,
@@ -313,11 +315,12 @@ func (f *FileSystem) CommitPart(bucketName string, part *domain.Part) error {
 // consolidateMultipartFile consolidates all the parts of a multipart file in a single flat file
 // into the same bucket it is located.
 func (f *FileSystem) consolidateMultipartFile(
+	ctx context.Context,
 	bucketName string,
 	solutionArchive *domain.SolutionArchive,
 	perm os.FileMode,
 ) error {
-	solutionArchiveStatus, err := f.multipartInspector.GetMultipartFileStatus(bucketName, solutionArchive)
+	solutionArchiveStatus, err := f.multipartInspector.GetMultipartFileStatus(ctx, bucketName, solutionArchive)
 	if err != nil {
 		return errors.Wrap(err,
 			errors.WithIdentifier(180),
@@ -464,25 +467,29 @@ func (f *FileSystem) moveFileToRoot(
 // Consolidate consolidates all the parts of a multipart file
 // in a single flat file into the same bucket it is located and moves it to the root location.
 func (f *FileSystem) Consolidate(
+	ctx context.Context,
 	bucketName string,
 	solutionArchive *domain.SolutionArchive,
 	perm os.FileMode,
 ) error {
 	cleanUpCorrupted := func() {
 		if err := f.multipartRemover.DeleteMultipartFile(bucketName, solutionArchive); err != nil {
-			f.logger.Error().Err(err).
-				Any("solution archive", solutionArchive).
-				Msg("failed to delete multipart file")
+			f.logger.ErrorContext(ctx, "failed to delete multipart file",
+				slog.Any("solution_archive", solutionArchive),
+				slog.Any("error", err),
+			)
 		}
 
-		if _, err := f.CreateMultipartFiles(bucketName, solutionArchive); err != nil {
-			f.logger.Error().Err(err).
-				Any("solution archive", solutionArchive).
-				Msg("failed to create multipart file")
+		if _, err := f.CreateMultipartFiles(ctx, bucketName, solutionArchive); err != nil {
+			f.logger.ErrorContext(ctx, "failed to create multipart file",
+				slog.Any("solution_archive", solutionArchive),
+				slog.Any("error", err),
+			)
 		}
 	}
 
 	err := f.consolidateMultipartFile(
+		ctx,
 		bucketName,
 		solutionArchive,
 		perm,

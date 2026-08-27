@@ -2,19 +2,18 @@
 package mountwatcher
 
 import (
+	"log/slog"
 	"reflect"
 	"testing"
 
 	"github.com/moby/sys/mountinfo"
-	"github.com/rs/zerolog"
 
 	"github.com/scality/metalk8s-registry-node-agent/pkg/domain"
 )
 
 func newTestFS(solutionsLocation string, mounts []*mountinfo.Info) *FileSystem {
-	l := zerolog.Nop()
 	return &FileSystem{
-		logger:            &l,
+		logger:            slog.New(slog.DiscardHandler),
 		solutionsLocation: solutionsLocation,
 		done:              make(chan struct{}),
 		listMounts:        func() ([]*mountinfo.Info, error) { return mounts, nil },

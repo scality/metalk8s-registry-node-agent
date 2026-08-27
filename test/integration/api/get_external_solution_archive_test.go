@@ -52,7 +52,7 @@ var _ = Describe("Get External Solution Archive UseCase", func() {
 			}
 
 			By("initializing a session for the target archive")
-			_, err := testingSuite.container.GetInitializeSessionUseCase().Execute(target)
+			_, err := testingSuite.container.GetInitializeSessionUseCase().Execute(ctx, target)
 			Expect(err).NotTo(HaveOccurred())
 
 			By("calling the use case to download the archive from another node")
@@ -127,7 +127,7 @@ var _ = Describe("Get External Solution Archive UseCase", func() {
 			}
 
 			By("initializing a session with one hash")
-			_, err := testingSuite.container.GetInitializeSessionUseCase().Execute(sessionTarget)
+			_, err := testingSuite.container.GetInitializeSessionUseCase().Execute(ctx, sessionTarget)
 			Expect(err).NotTo(HaveOccurred())
 
 			By("calling the use case with a different hash for the same name/version")
@@ -151,7 +151,7 @@ var _ = Describe("Get External Solution Archive UseCase", func() {
 			}
 
 			By("initializing a session for the target archive")
-			_, err := testingSuite.container.GetInitializeSessionUseCase().Execute(target)
+			_, err := testingSuite.container.GetInitializeSessionUseCase().Execute(ctx, target)
 			Expect(err).NotTo(HaveOccurred())
 
 			By("calling the use case with a URL pointing to a non-existent archive")
@@ -175,7 +175,7 @@ var _ = Describe("Get External Solution Archive UseCase", func() {
 			}
 
 			By("initializing a session for the target archive")
-			_, err := testingSuite.container.GetInitializeSessionUseCase().Execute(target)
+			_, err := testingSuite.container.GetInitializeSessionUseCase().Execute(ctx, target)
 			Expect(err).NotTo(HaveOccurred())
 
 			By("calling the use case with an unreachable URL")

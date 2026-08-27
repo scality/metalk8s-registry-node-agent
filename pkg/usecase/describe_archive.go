@@ -2,30 +2,31 @@
 package usecase
 
 import (
-	"github.com/rs/zerolog"
+	"context"
+	"log/slog"
+
 	"github.com/scality/go-errors"
+
 	"github.com/scality/metalk8s-registry-node-agent/pkg/domain"
 	"github.com/scality/metalk8s-registry-node-agent/pkg/library"
 	"github.com/scality/metalk8s-registry-node-agent/pkg/service"
 )
 
 type DescribeSolutionArchive struct {
-	logger        *zerolog.Logger
+	logger        *slog.Logger
 	archiveLister service.ArchiveLister
 	archiveLocker service.LockerUnlocker
 	rootAPIPath   string
 }
 
 func NewDescribeSolutionArchive(
-	logger *zerolog.Logger,
+	logger *slog.Logger,
 	archiveLister service.ArchiveLister,
 	archiveLocker service.LockerUnlocker,
 	rootAPIPath string,
 ) *DescribeSolutionArchive {
-	l := logger.With().Str("use_case", "describe_solution_archive").Logger()
-
 	return &DescribeSolutionArchive{
-		logger:        &l,
+		logger:        logger.With(slog.String("use_case", "describe_solution_archive")),
 		archiveLister: archiveLister,
 		archiveLocker: archiveLocker,
 		rootAPIPath:   rootAPIPath,
@@ -33,11 +34,12 @@ func NewDescribeSolutionArchive(
 }
 
 func (uc *DescribeSolutionArchive) Execute(
+	ctx context.Context,
 	solutionArchive *domain.SolutionArchive,
 ) (int64, error) {
-	uc.logger.Debug().
-		Any("solution_archive", solutionArchive).
-		Msg("Describing solution archive")
+	uc.logger.DebugContext(ctx, "Describing solution archive",
+		slog.Any("solution_archive", solutionArchive),
+	)
 
 	uc.archiveLocker.RLock(solutionArchive)
 	defer uc.archiveLocker.RUnlock(solutionArchive)
@@ -77,7 +79,9 @@ func (uc *DescribeSolutionArchive) Execute(
 		)
 	}
 
-	uc.logger.Debug().Any("solution_archive", solutionArchive).Msg("Solution archive described")
+	uc.logger.DebugContext(ctx, "Solution archive described",
+		slog.Any("solution_archive", solutionArchive),
+	)
 
 	return size, nil
 }

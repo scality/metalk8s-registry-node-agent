@@ -21,6 +21,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -28,7 +29,6 @@ import (
 	"github.com/fsnotify/fsnotify"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"github.com/rs/zerolog"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/utils/ptr"
@@ -156,7 +156,7 @@ var _ = Describe("FileEvents", func() {
 		deleteCh         chan domain.FileEventDetails
 		testCtx          context.Context
 		testCancel       context.CancelFunc
-		logger           zerolog.Logger
+		logger           *slog.Logger
 		k8sClient        *fakeClient
 	)
 
@@ -170,7 +170,7 @@ var _ = Describe("FileEvents", func() {
 		deleteCh = make(chan domain.FileEventDetails)
 
 		// Set up logger
-		logger = zerolog.Nop()
+		logger = slog.New(slog.DiscardHandler)
 
 		// Create fake client
 		k8sClient = newFakeClient()
@@ -178,7 +178,7 @@ var _ = Describe("FileEvents", func() {
 		// Create FileEvents instance
 		fileEventHandler = NewFileEvents(
 			testCtx,
-			&logger,
+			logger,
 			k8sClient,
 			filenameCh,
 			reconcileCh,

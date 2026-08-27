@@ -1,7 +1,9 @@
 package usecase
 
 import (
-	"github.com/rs/zerolog"
+	"context"
+	"log/slog"
+
 	"github.com/scality/go-errors"
 
 	"github.com/scality/metalk8s-registry-node-agent/pkg/domain"
@@ -10,32 +12,30 @@ import (
 )
 
 type MountSolutionArchive struct {
-	logger         *zerolog.Logger
+	logger         *slog.Logger
 	archiveMounter service.ArchiveMounter
 	archiveLister  service.ArchiveLister
 	archiveLocker  service.LockerUnlocker
 }
 
 func NewMountSolutionArchive(
-	logger *zerolog.Logger,
+	logger *slog.Logger,
 	archiveMounter service.ArchiveMounter,
 	archiveLister service.ArchiveLister,
 	archiveLocker service.LockerUnlocker,
 ) *MountSolutionArchive {
-	l := logger.With().Str("use_case", "mount_solution_archive").Logger()
-
 	return &MountSolutionArchive{
-		logger:         &l,
+		logger:         logger.With(slog.String("use_case", "mount_solution_archive")),
 		archiveMounter: archiveMounter,
 		archiveLister:  archiveLister,
 		archiveLocker:  archiveLocker,
 	}
 }
 
-func (uc *MountSolutionArchive) Execute(solutionArchive *domain.SolutionArchive) error {
-	uc.logger.Debug().
-		Any("solution_archive", solutionArchive).
-		Msg("Mounting solution archive")
+func (uc *MountSolutionArchive) Execute(ctx context.Context, solutionArchive *domain.SolutionArchive) error {
+	uc.logger.DebugContext(ctx, "Mounting solution archive",
+		slog.Any("solution_archive", solutionArchive),
+	)
 
 	// To avoid simultaneous mounts and unmounts of the same solution archive
 	uc.archiveLocker.Lock(solutionArchive)
@@ -76,7 +76,9 @@ func (uc *MountSolutionArchive) Execute(solutionArchive *domain.SolutionArchive)
 				errors.WithProperties(properties),
 			)
 		}
-		uc.logger.Debug().Any("solution_archive", solutionArchive).Msg("Solution archive mounted")
+		uc.logger.DebugContext(ctx, "Solution archive mounted",
+			slog.Any("solution_archive", solutionArchive),
+		)
 		return nil
 	}
 

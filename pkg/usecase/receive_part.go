@@ -1,7 +1,9 @@
 package usecase
 
 import (
-	"github.com/rs/zerolog"
+	"context"
+	"log/slog"
+
 	"github.com/scality/go-errors"
 
 	"github.com/scality/metalk8s-registry-node-agent/pkg/domain"
@@ -10,7 +12,7 @@ import (
 )
 
 type ReceivePart struct {
-	logger             *zerolog.Logger
+	logger             *slog.Logger
 	bucketManager      service.BucketManager
 	multipartStorer    service.MultipartStorer
 	multipartInspector service.MultipartInspector
@@ -20,7 +22,7 @@ type ReceivePart struct {
 }
 
 func NewReceivePart(
-	logger *zerolog.Logger,
+	logger *slog.Logger,
 	bucketManager service.BucketManager,
 	multipartStorer service.MultipartStorer,
 	multipartInspector service.MultipartInspector,
@@ -28,10 +30,8 @@ func NewReceivePart(
 	archiveLocker service.LockerUnlocker,
 	rootAPIPath string,
 ) *ReceivePart {
-	l := logger.With().Str("use_case", "receive_part").Logger()
-
 	return &ReceivePart{
-		logger:             &l,
+		logger:             logger.With(slog.String("use_case", "receive_part")),
 		bucketManager:      bucketManager,
 		multipartStorer:    multipartStorer,
 		multipartInspector: multipartInspector,
@@ -41,8 +41,8 @@ func NewReceivePart(
 	}
 }
 
-func (uc *ReceivePart) Execute(part *domain.Part) (*domain.SolutionArchiveStatus, error) {
-	uc.logger.Info().Msg("Receiving part")
+func (uc *ReceivePart) Execute(ctx context.Context, part *domain.Part) (*domain.SolutionArchiveStatus, error) {
+	uc.logger.InfoContext(ctx, "Receiving part")
 
 	uc.bucketLocker.Lock(part.SolutionArchive)
 	defer uc.bucketLocker.Unlock(part.SolutionArchive)
@@ -75,7 +75,7 @@ func (uc *ReceivePart) Execute(part *domain.Part) (*domain.SolutionArchiveStatus
 	}
 
 	// Load the manifest from metadata file
-	solutionArchiveFromManifest, err := uc.multipartInspector.GetMultipartFile(sessionBucket)
+	solutionArchiveFromManifest, err := uc.multipartInspector.GetMultipartFile(ctx, sessionBucket)
 	if err != nil {
 		return nil, errors.Wrap(err,
 			errors.WithIdentifier(234),
@@ -95,6 +95,7 @@ func (uc *ReceivePart) Execute(part *domain.Part) (*domain.SolutionArchiveStatus
 	}
 
 	solutionArchiveStatus, err := uc.multipartStorer.StorePart(
+		ctx,
 		sessionBucket,
 		solutionArchiveFromManifest,
 		part,
@@ -107,7 +108,7 @@ func (uc *ReceivePart) Execute(part *domain.Part) (*domain.SolutionArchiveStatus
 		)
 	}
 
-	err = uc.multipartStorer.CommitPart(sessionBucket, part)
+	err = uc.multipartStorer.CommitPart(ctx, sessionBucket, part)
 	if err != nil {
 		return nil, errors.Wrap(err,
 			errors.WithIdentifier(237),
@@ -124,6 +125,7 @@ func (uc *ReceivePart) Execute(part *domain.Part) (*domain.SolutionArchiveStatus
 	// move it to the storage root location and then
 	// remove the bucket.
 	err = uc.multipartStorer.Consolidate(
+		ctx,
 		sessionBucket,
 		solutionArchiveFromManifest,
 		library.FileSystemDefaultFileMode,
@@ -136,7 +138,7 @@ func (uc *ReceivePart) Execute(part *domain.Part) (*domain.SolutionArchiveStatus
 		)
 	}
 
-	uc.logger.Info().Msg("Part received")
+	uc.logger.InfoContext(ctx, "Part received")
 
 	return solutionArchiveStatus, nil
 }

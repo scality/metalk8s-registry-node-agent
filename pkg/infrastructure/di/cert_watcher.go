@@ -1,6 +1,9 @@
 package di
 
 import (
+	"log/slog"
+	"os"
+
 	"sigs.k8s.io/controller-runtime/pkg/certwatcher"
 )
 
@@ -14,10 +17,14 @@ func (c *Container) getExternServerCertWatcher() *certwatcher.CertWatcher {
 			c.config.Extern.ServerTLS.KeyFilePath,
 		)
 		if err != nil {
-			c.GetLogger().Fatal().Err(err).
-				Str("extern_serverTLS_cert_file_path", c.config.Extern.ServerTLS.CertFilePath).
-				Str("extern_serverTLS_key_file_path", c.config.Extern.ServerTLS.KeyFilePath).
-				Msg("failed to initialize external server certificate watcher")
+			c.GetLogger().ErrorContext(
+				c.ctx,
+				"failed to initialize external server certificate watcher",
+				slog.String("extern_server_tls_cert_file_path", c.config.Extern.ServerTLS.CertFilePath),
+				slog.String("extern_server_tls_key_file_path", c.config.Extern.ServerTLS.KeyFilePath),
+				slog.Any("error", err),
+			)
+			os.Exit(1) //nolint:revive // Fatal-equivalent for DI initialization failure.
 		}
 
 		c.externServerCertWatcher = watcher
@@ -34,10 +41,14 @@ func (c *Container) getInternServerCertWatcher() *certwatcher.CertWatcher {
 			c.config.Intern.ServerTLS.KeyFilePath,
 		)
 		if err != nil {
-			c.GetLogger().Fatal().Err(err).
-				Str("intern_serverTLS_cert_file_path", c.config.Intern.ServerTLS.CertFilePath).
-				Str("intern_serverTLS_key_file_path", c.config.Intern.ServerTLS.KeyFilePath).
-				Msg("failed to initialize internal server certificate watcher")
+			c.GetLogger().ErrorContext(
+				c.ctx,
+				"failed to initialize internal server certificate watcher",
+				slog.String("intern_server_tls_cert_file_path", c.config.Intern.ServerTLS.CertFilePath),
+				slog.String("intern_server_tls_key_file_path", c.config.Intern.ServerTLS.KeyFilePath),
+				slog.Any("error", err),
+			)
+			os.Exit(1) //nolint:revive // Fatal-equivalent for DI initialization failure.
 		}
 
 		c.internServerCertWatcher = watcher
@@ -54,10 +65,14 @@ func (c *Container) getInternClientCertWatcher() *certwatcher.CertWatcher {
 			c.config.Intern.ClientAuthN.KeyFilePath,
 		)
 		if err != nil {
-			c.GetLogger().Fatal().Err(err).
-				Str("intern_clientAuthN_cert_file_path", c.config.Intern.ClientAuthN.CertFilePath).
-				Str("intern_clientAuthN_key_file_path", c.config.Intern.ClientAuthN.KeyFilePath).
-				Msg("failed to initialize internal client certificate watcher")
+			c.GetLogger().ErrorContext(
+				c.ctx,
+				"failed to initialize internal client certificate watcher",
+				slog.String("intern_client_authn_cert_file_path", c.config.Intern.ClientAuthN.CertFilePath),
+				slog.String("intern_client_authn_key_file_path", c.config.Intern.ClientAuthN.KeyFilePath),
+				slog.Any("error", err),
+			)
+			os.Exit(1) //nolint:revive // Fatal-equivalent for DI initialization failure.
 		}
 
 		c.internClientCertWatcher = watcher

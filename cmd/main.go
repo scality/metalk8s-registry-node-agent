@@ -77,10 +77,6 @@ func init() {
 
 // nolint:gocyclo
 func main() {
-	// Get the node name from the environment variable
-	// to ensure the controller is aware of its node context
-	nodeName := os.Getenv("NODE_NAME")
-
 	// Get the node IP from the environment variable
 	// to expose the download API URL
 	downloadHost := os.Getenv("DOWNLOAD_HOST")
@@ -266,7 +262,7 @@ func main() {
 	if err := (&controller.NodeSolutionArchiveReconciler{
 		Client:          mgr.GetClient(),
 		Scheme:          mgr.GetScheme(),
-		NodeName:        nodeName,
+		NodeName:        cfg.NodeName,
 		DownloadBaseURL: downloadBaseURL,
 		Container:       container,
 		EventChan:       reconcileChan,
@@ -306,7 +302,7 @@ func main() {
 	// Create a field index for the NodeSolutionArchive object that match only the local node
 	fLocal := func(rawObj client.Object) []string {
 		versionedNamed := ""
-		if rawObj.(*metalk8sv1alpha1.NodeSolutionArchive).Spec.NodeName == nodeName {
+		if rawObj.(*metalk8sv1alpha1.NodeSolutionArchive).Spec.NodeName == cfg.NodeName {
 			versionedNamed = library.GetSolutionArchiveNameVersion(
 				rawObj.(*metalk8sv1alpha1.NodeSolutionArchive).Spec.Name,
 				rawObj.(*metalk8sv1alpha1.NodeSolutionArchive).Spec.Version,
@@ -328,7 +324,7 @@ func main() {
 	// Create a field index for the NodeSolutionArchive object that match only the local node (without versioning)
 	fUnversionedLocal := func(rawObj client.Object) []string {
 		unversionedNamed := ""
-		if rawObj.(*metalk8sv1alpha1.NodeSolutionArchive).Spec.NodeName == nodeName {
+		if rawObj.(*metalk8sv1alpha1.NodeSolutionArchive).Spec.NodeName == cfg.NodeName {
 			unversionedNamed = rawObj.(*metalk8sv1alpha1.NodeSolutionArchive).Spec.Name
 		}
 		return []string{unversionedNamed}
@@ -360,7 +356,7 @@ func main() {
 	// It will remove unused solutions archives
 	go func() {
 		setupLog.Info("starting garbage collector")
-		container.GetCleanArchivesUseCase().Execute()
+		container.GetCleanArchivesUseCase().Execute(ctx)
 	}()
 
 	if metricsCertWatcher != nil {
@@ -443,7 +439,7 @@ func main() {
 
 	go func() {
 		setupLog.Info("starting manager",
-			"NODE_NAME", nodeName, "DOWNLOAD_BASE_URL", downloadBaseURL,
+			"NODE_NAME", cfg.NodeName, "DOWNLOAD_BASE_URL", downloadBaseURL,
 		)
 		if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {
 			setupLog.Error(err, "problem running manager")
@@ -490,5 +486,5 @@ func main() {
 		os.Exit(1)
 	}
 
-	logger.Info().Msg("service stopped")
+	logger.InfoContext(ctx, "service stopped")
 }

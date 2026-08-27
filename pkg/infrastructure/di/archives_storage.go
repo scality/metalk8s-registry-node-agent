@@ -1,6 +1,8 @@
 package di
 
 import (
+	"log/slog"
+	"os"
 	"regexp"
 
 	"github.com/scality/metalk8s-registry-node-agent/pkg/infrastructure/storageprovider"
@@ -24,10 +26,11 @@ func (c *Container) GetFSSolutionArchiveStorage() service.StorageProvider {
 
 		err := c.solutionArchiveStorage.Init()
 		if err != nil {
-			c.GetLogger().Fatal().Err(err).Msg("could not initialize solution archives storage")
+			c.GetLogger().ErrorContext(c.ctx, "could not initialize solution archives storage", slog.Any("error", err))
+			os.Exit(1) //nolint:revive // Fatal-equivalent for DI initialization failure.
 		}
 
-		c.GetLogger().Info().Msg("solution archives storage initialized")
+		c.GetLogger().InfoContext(c.ctx, "solution archives storage initialized")
 	}
 
 	return c.solutionArchiveStorage
@@ -46,10 +49,11 @@ func (c *Container) GetMockFSSolutionArchiveStorage() service.StorageProvider {
 
 		err := c.solutionArchiveStorage.Init()
 		if err != nil {
-			c.GetLogger().Fatal().Err(err).Msg("could not initialize solution archives storage")
+			c.GetLogger().ErrorContext(c.ctx, "could not initialize solution archives storage", slog.Any("error", err))
+			os.Exit(1) //nolint:revive // Fatal-equivalent for DI initialization failure.
 		}
 
-		c.GetLogger().Info().Msg("solution archives storage initialized")
+		c.GetLogger().InfoContext(c.ctx, "solution archives storage initialized")
 	}
 
 	return c.solutionArchiveStorage
