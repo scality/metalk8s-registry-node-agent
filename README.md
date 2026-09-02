@@ -1,3 +1,8 @@
+[![Post Merge](https://github.com/scality/metalk8s-registry-node-agent/actions/workflows/post-merge.yaml/badge.svg)](https://github.com/scality/metalk8s-registry-node-agent/actions/workflows/post-merge.yaml)
+[![GitHub release](https://img.shields.io/github/v/release/scality/metalk8s-registry-node-agent)](https://github.com/scality/metalk8s-registry-node-agent/releases/latest)
+[![Go version](https://img.shields.io/github/go-mod/go-version/scality/metalk8s-registry-node-agent)](go.mod)
+[![License](https://img.shields.io/github/license/scality/metalk8s-registry-node-agent)](LICENSE)
+
 # MetalK8s Registry Node Agent
 
 A Kubernetes operator and HTTP service for managing solution archive uploads and distribution in MetalK8s clusters. This agent runs on each node labelled as `node-role.kubernetes.io/registry` and provides a local registry for MetalK8s components, enabling efficient solution archive distribution and management.
