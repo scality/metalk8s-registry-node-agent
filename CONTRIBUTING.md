@@ -42,6 +42,31 @@ change lands where it belongs. Dependencies always point inward:
 - helpers shared across layers with no framework dependency (filesystem, filters) go in
   `pkg/library`.
 
+### Repository layout
+
+```
+├── api/                   # Kubernetes API definitions (CRDs)
+│   └── v1alpha1/          # API version v1alpha1 types
+├── cmd/                   # Application entry point
+│   └── config/            # Environment configuration
+├── config/                # Kubernetes manifests and kustomize overlays
+├── hack/                  # Build and development scripts
+├── internal/              # Internal packages (not importable)
+│   ├── controller/        # Kubernetes controller logic
+│   └── webhook/           # Admission webhook handlers
+├── pkg/
+│   ├── domain/            # Core business entities and types
+│   ├── usecase/           # Business logic and use cases
+│   ├── service/           # Service interfaces
+│   ├── infrastructure/    # Infrastructure implementations and DI
+│   ├── library/           # Shared utilities (filesystem, filters)
+│   └── presentation/      # HTTP API layer
+└── test/                  # Test suites
+    ├── e2e/               # End-to-end tests
+    ├── integration/       # Integration tests
+    └── utils/             # Test utilities
+```
+
 ## Coding conventions
 
 - **Errors**: `github.com/scality/go-errors`, imported unaliased as `errors`. Define
