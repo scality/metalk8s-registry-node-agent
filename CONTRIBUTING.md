@@ -523,8 +523,8 @@ curl -X PUT \
 
 - Conventional-commit subjects with an explicit action verb, e.g. `feat: ...`, `fix: ...`,
   `chore: ...`, `ci: ...`, with a short (< 50 char) summary.
-- Keep each commit a single coherent change. Reference the tracking ticket (e.g. an
-  `ARTESCA-xxxxx` Jira id) in the body, never in the subject.
+- Keep each commit a single coherent change. Reference any related GitHub issue in the body
+  (e.g. `Refs #123`), never in the subject.
 - Make sure `make test` and `make lint` pass and generated code is up to date before opening a
   PR, and keep PRs focused. A PR needs at least one approving review and a green CI run to merge.
 
