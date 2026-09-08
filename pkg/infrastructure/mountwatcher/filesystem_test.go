@@ -15,6 +15,7 @@ func newTestFS(solutionsLocation string, mounts []*mountinfo.Info) *FileSystem {
 	return &FileSystem{
 		logger:            slog.New(slog.DiscardHandler),
 		solutionsLocation: solutionsLocation,
+		pollTimeoutMillis: 600000,
 		done:              make(chan struct{}),
 		listMounts:        func() ([]*mountinfo.Info, error) { return mounts, nil },
 		known:             map[string]string{},

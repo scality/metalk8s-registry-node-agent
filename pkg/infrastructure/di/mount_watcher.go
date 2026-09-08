@@ -10,6 +10,7 @@ func (c *Container) GetFileSystemMountWatcher() service.MountWatcher {
 		c.mountWatcher = mountwatcher.NewFileSystem(
 			c.GetLogger(),
 			c.config.SolutionsLocation,
+			c.config.MountWatcherPollTimeoutMS,
 		)
 	}
 

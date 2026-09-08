@@ -480,9 +480,9 @@ var _ = Describe("Manager", Ordered, func() {
 
 			By("manually unmounting the solution archive")
 			podName := controllerPodNameByNode[nodeName]
-			// Use lazy unmount (-l) to handle the case where the mount is still in use
+			// Use force unmount (-f) to handle the case where the mount is still in use
 			cmd := exec.Command("kubectl", "exec", "-n", namespace, podName, "--",
-				"umount", "-l", mountPoint)
+				"umount", "-f", mountPoint)
 			output, err := utils.Run(cmd)
 			fmt.Fprintf(GinkgoWriter, "Unmount command output: %s\n", output) // nolint: errcheck // No need to check.
 			Expect(err).NotTo(HaveOccurred(), "Unmount should succeed")
