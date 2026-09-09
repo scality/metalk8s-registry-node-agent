@@ -15,7 +15,7 @@ RUN curl -sSfLO https://github.com/operator-framework/operator-sdk/releases/down
     sudo mv operator-sdk_linux_amd64 /usr/local/bin/operator-sdk
 
 # renovate: datasource=github-releases depName=golangci/golangci-lint extractVersion=^v(?<version>.*)$
-ARG GOLANGCI_LINT_VERSION=2.12.2
+ARG GOLANGCI_LINT_VERSION=2.13.2
 
 RUN curl -sSfL  https://raw.githubusercontent.com/golangci/golangci-lint/HEAD/install.sh | sudo sh -s -- v${GOLANGCI_LINT_VERSION}
 
