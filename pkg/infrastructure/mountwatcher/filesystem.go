@@ -156,7 +156,7 @@ func (f *FileSystem) watchMounts(filenameChan chan domain.FileEventDetails, file
 	defer f.Done()
 
 	fds := []unix.PollFd{
-		{Fd: int32(file.Fd()), Events: unix.POLLPRI | unix.POLLERR},
+		{Fd: int32(file.Fd()), Events: unix.POLLPRI | unix.POLLERR | unix.POLLIN},
 		{Fd: int32(f.wakeFD), Events: unix.POLLIN},
 	}
 
