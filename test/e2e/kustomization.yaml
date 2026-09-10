@@ -10,6 +10,11 @@ patches:
     - op: add
       path: /spec/template/spec/nodeSelector/role
       value: "worker"
+    - op: add
+      path: /spec/template/spec/containers/0/env/-
+      value:
+        name: MOUNT_WATCHER_POLL_TIMEOUT_MS
+        value: "10000"
   target:
     kind: StatefulSet
 - path: tls_volumes_patch.yaml

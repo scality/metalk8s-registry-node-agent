@@ -38,6 +38,11 @@ type (
 		RootInternAPIPath string
 
 		ChunkSizeMB int64 `env:"CHUNK_SIZE_MB, default=10"`
+
+		// MountWatcherPollTimeoutMS bounds the mount-table watcher poll(2) and
+		// therefore how long an out-of-band unmount can stay unnoticed when the
+		// kernel does not report it through POLLPRI.
+		MountWatcherPollTimeoutMS int `env:"MOUNT_WATCHER_POLL_TIMEOUT_MS, default=600000"`
 	}
 
 	Extern struct {
@@ -109,6 +114,13 @@ func (cfg *Environment) Load(ctx context.Context) error {
 		return errors.Wrap(domain.ErrConfigurationLoading,
 			errors.WithIdentifier(2),
 			errors.WithDetail("chunk size must be greater than 0"),
+		)
+	}
+
+	if cfg.MountWatcherPollTimeoutMS <= 0 {
+		return errors.Wrap(domain.ErrConfigurationLoading,
+			errors.WithIdentifier(254),
+			errors.WithDetail("mount watcher poll timeout must be greater than 0"),
 		)
 	}
 

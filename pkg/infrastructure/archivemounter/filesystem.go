@@ -194,6 +194,9 @@ func (f *FileSystem) UnmountFile(mountPoint string) error {
 				errors.WithProperty("mount_path", mountPath),
 			)
 		}
+		// The mount path is already gone: drop it from the watcher snapshot too,
+		// otherwise the next mount table change is reported as a disappearance.
+		f.mountWatcher.RecordUnmount(mountPath)
 		return nil
 	}
 

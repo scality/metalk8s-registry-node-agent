@@ -18,9 +18,6 @@ import (
 
 const (
 	mountInfoPath = "/proc/self/mountinfo"
-	// pollTimeoutMillis bounds poll() so the goroutine can observe shutdown and
-	// acts as a periodic safety net if a POLLPRI is ever missed.
-	pollTimeoutMillis = 600000 // 10 minutes
 	// EventTypeUnmount does not match any fsnotify op, so it falls through to
 	// handleSolutionDefault (reconcile) in the file events pipeline.
 	EventTypeUnmount = "unmount"
@@ -30,13 +27,20 @@ const (
 
 // FileSystem watches the OS mount table and emits an event whenever a solution
 // archive mount point disappears out-of-band (e.g. a manual umount), so the
-// controller can remount it. It relies on poll(2) on /proc/self/mountinfo,
-// which the kernel marks readable (POLLPRI) on every mount table change.
+// controller can remount it. It relies on poll(2) on /proc/self/mountinfo, which
+// the kernel marks readable (POLLPRI) on most mount table changes, and on the
+// pollTimeoutMillis re-list as a safety net: an unmount is sometimes not
+// reported through POLLPRI at all (a blocked poll() has been observed staying
+// blocked while a solution mount vanished from the table).
 type FileSystem struct {
 	sync.WaitGroup
 	knownMu           sync.Mutex
 	logger            *slog.Logger
 	solutionsLocation string
+	// pollTimeoutMillis bounds poll(2): it is both the shutdown responsiveness
+	// ceiling and the worst-case detection latency for an unmount the kernel
+	// never reports through POLLPRI.
+	pollTimeoutMillis int
 	done              chan struct{}
 	// wakeFD is an eventfd used to interrupt a blocked poll() on shutdown so the
 	// watch loop observes f.done immediately instead of after pollTimeoutMillis.
@@ -51,13 +55,18 @@ type FileSystem struct {
 
 var _ service.MountWatcher = &FileSystem{}
 
-func NewFileSystem(logger *slog.Logger, solutionsLocation string) service.MountWatcher {
+func NewFileSystem(
+	logger *slog.Logger,
+	solutionsLocation string,
+	pollTimeoutMillis int,
+) service.MountWatcher {
 	return &FileSystem{
 		logger: logger.With(
 			slog.String("infrastructure", "mount_watcher"),
 			slog.String("implementation", "filesystem"),
 		),
 		solutionsLocation: solutionsLocation,
+		pollTimeoutMillis: pollTimeoutMillis,
 		done:              make(chan struct{}),
 		wakeFD:            -1,
 		listMounts:        func() ([]*mountinfo.Info, error) { return mountinfo.GetMounts(nil) },
@@ -114,7 +123,7 @@ func (f *FileSystem) StopWatchMounts() error {
 	close(f.done)
 
 	// Wake the blocked poll() so the loop observes f.done immediately rather
-	// than after the pollTimeoutMillis ceiling.
+	// than after the poll timeout ceiling.
 	if f.wakeFD >= 0 {
 		var buf [8]byte
 		buf[7] = 1
@@ -160,7 +169,7 @@ func (f *FileSystem) watchMounts(filenameChan chan domain.FileEventDetails, file
 
 		// poll() returns when the mount table changes (POLLPRI), when
 		// StopWatchMounts writes to wakeFD (POLLIN), or on timeout.
-		if _, err := unix.Poll(fds, pollTimeoutMillis); err != nil {
+		if _, err := unix.Poll(fds, f.pollTimeoutMillis); err != nil {
 			if errors.Is(err, unix.EINTR) {
 				continue
 			}
