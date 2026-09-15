@@ -2,7 +2,7 @@
 ########### Build the manager binary ###########
 ################################################
 # Build the manager binary
-FROM golang:1.26.4-alpine3.23@sha256:f23e8b227fb4493eabe03bede4d5a32d04092da71962f1fb79b5f7d1e6c2a17f AS builder
+FROM golang:1.27.1-alpine3.24@sha256:cf6fca6641884b8433441b2b0652976f975e1d0fdd26d177eaaf8596087f3125 AS builder
 ARG TARGETOS
 ARG TARGETARCH
 ARG APPLICATION_VERSION=dev
@@ -37,7 +37,7 @@ RUN CGO_ENABLED=0 GOOS=${TARGETOS:-linux} GOARCH=${TARGETARCH} go build -a -o ma
 ########### Build the setup binary #############
 ################################################
 # Build the setup binary
-FROM golang:1.26.4-alpine3.23@sha256:f23e8b227fb4493eabe03bede4d5a32d04092da71962f1fb79b5f7d1e6c2a17f AS builder-setup
+FROM golang:1.27.1-alpine3.24@sha256:cf6fca6641884b8433441b2b0652976f975e1d0fdd26d177eaaf8596087f3125 AS builder-setup
 ARG TARGETOS
 ARG TARGETARCH
 
