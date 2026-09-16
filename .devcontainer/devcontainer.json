@@ -3,11 +3,6 @@
   "build": {
     "dockerfile": "Dockerfile"
   },
-  // GIT_AUTH_TOKEN is required to access private repositories into the container
-  "containerEnv": {
-    "GIT_AUTH_TOKEN": "${localEnv:GIT_AUTH_TOKEN}",
-    "GOPRIVATE": "github.com/scality/*"
-  },
   "features": {
     "ghcr.io/devcontainers/features/docker-in-docker:3": {
       "dockerDashComposeVersion": "none",

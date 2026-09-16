@@ -14,9 +14,7 @@ COPY go.mod go.mod
 COPY go.sum go.sum
 # cache deps before building and copying source so that we don't need to re-download as much
 # and so that source changes don't invalidate our downloaded layer
-RUN --mount=type=secret,id=GIT_AUTH_TOKEN \
-    git config --global url."https://oauth2:$(cat /run/secrets/GIT_AUTH_TOKEN)@github.com/".insteadOf "https://github.com/" && \
-    go mod download
+RUN go mod download
 
 # Copy the go source
 COPY cmd/ cmd/

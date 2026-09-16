@@ -70,8 +70,6 @@ jobs:
           tags: ${{ steps.tags.outputs.tags }}
           cache-from: type=gha,scope=metalk8s-registry-node-agent
           cache-to: type=gha,mode=max,scope=metalk8s-registry-node-agent
-          secrets: |
-            GIT_AUTH_TOKEN=${{ secrets.GIT_ACCESS_TOKEN }}
 
   upload-artifacts:
     runs-on: ubuntu-24.04
@@ -84,10 +82,10 @@ jobs:
           fetch-depth: 0
           ref: ${{ github.ref }}
 
-      - name: Setup Private Go Environment
-        uses: ./.github/actions/setup-go
+      - name: Set up Go
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
-          token: ${{ secrets.GIT_ACCESS_TOKEN }}
+          go-version-file: 'go.mod'
 
       - name: Build manifest and CRDs
         run: |
