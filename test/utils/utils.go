@@ -43,10 +43,12 @@ import (
 )
 
 const (
+	// renovate: datasource=github-releases depName=prometheus-operator/prometheus-operator
 	prometheusOperatorVersion = "v0.77.1"
 	prometheusOperatorURL     = "https://github.com/prometheus-operator/prometheus-operator/" +
 		"releases/download/%s/bundle.yaml"
 
+	// renovate: datasource=github-releases depName=cert-manager/cert-manager
 	certmanagerVersion = "v1.16.3"
 	certmanagerURLTmpl = "https://github.com/cert-manager/cert-manager/releases/download/%s/cert-manager.yaml"
 )
@@ -97,6 +99,7 @@ func UninstallPrometheusOperator() {
 func IsPrometheusCRDsInstalled() bool {
 	// List of common Prometheus CRDs
 	prometheusCRDs := []string{
+		"servicemonitors.monitoring.coreos.com",
 		"prometheuses.monitoring.coreos.com",
 		"prometheusrules.monitoring.coreos.com",
 		"prometheusagents.monitoring.coreos.com",
