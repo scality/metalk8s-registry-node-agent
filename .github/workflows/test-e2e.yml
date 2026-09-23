@@ -10,10 +10,11 @@ jobs:
     steps:
       - name: Clone the code
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - name: Setup Private Go Environment
-        uses: ./.github/actions/setup-go
+
+      - name: Set up Go
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
-          token: ${{ secrets.GIT_ACCESS_TOKEN }}
+          go-version-file: 'go.mod'
 
       - name: Install the latest version of kind
         env:
@@ -31,8 +32,6 @@ jobs:
         run: sudo apt update && sudo apt install -y genisoimage
 
       - name: Running Test e2e
-        env:
-          GIT_AUTH_TOKEN: ${{ secrets.GIT_ACCESS_TOKEN }}
         run: |
           go mod tidy
           make test-e2e
