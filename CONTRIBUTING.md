@@ -399,14 +399,14 @@ kubectl apply -f config/samples/metalk8s_v1alpha1_nodesolutionarchive.yaml
 
 **4. Upload parts**
 ```shell
-export CERT_DIR="/tmp/certs"
+export CERT_DIR="/certs"
 curl -X PUT \
   --http1.1 \
   -H "Content-Range: bytes 0-6153011/30765056" \
   -H "Content-Type: application/octet-stream" \
-  --cert "${CERT_DIR}/tls.crt" \
-  --key "${CERT_DIR}/tls.key" \
-  --cacert "${CERT_DIR}/ca.crt" \
+  --cert "${CERT_DIR}/client/external/tls.crt" \
+  --key "${CERT_DIR}/client/external/tls.key" \
+  --cacert "${CERT_DIR}/server/external/ca.crt" \
   --data-binary @test.iso.00 \
   https://localhost:5001/api/v1/uploads/metalk8s/1.25.3
 ```
@@ -428,13 +428,19 @@ curl -X PUT \
 }
 ```
 ```shell
-export CERT_DIR="/tmp/certs"
+export CERT_DIR="/certs"
 
-curl -X PUT --http1.1 -H "Content-Range: bytes 6153012-12306022/30765056" -H "Content-Type: application/octet-stream" --cert "${CERT_DIR}/tls.crt" --key "${CERT_DIR}/tls.key" --cacert "${CERT_DIR}/ca.crt" --data-binary @test.iso.01 https://localhost:5001/api/v1/uploads/metalk8s/1.25.3
+curl -X PUT --http1.1 -H "Content-Range: bytes 6153012-12306022/30765056" -H "Content-Type: application/octet-stream" \
+  --cert "${CERT_DIR}/client/external/tls.crt" --key "${CERT_DIR}/client/external/tls.key" --cacert "${CERT_DIR}/server/external/ca.crt" \
+  --data-binary @test.iso.01 https://localhost:5001/api/v1/uploads/metalk8s/1.25.3
 
-curl -X PUT --http1.1 -H "Content-Range: bytes 12306023-18459033/30765056" -H "Content-Type: application/octet-stream" --cert "${CERT_DIR}/tls.crt" --key "${CERT_DIR}/tls.key" --cacert "${CERT_DIR}/ca.crt" --data-binary @test.iso.02 https://localhost:5001/api/v1/uploads/metalk8s/1.25.3
+curl -X PUT --http1.1 -H "Content-Range: bytes 12306023-18459033/30765056" -H "Content-Type: application/octet-stream" \
+  --cert "${CERT_DIR}/client/external/tls.crt" --key "${CERT_DIR}/client/external/tls.key" --cacert "${CERT_DIR}/server/external/ca.crt" \
+  --data-binary @test.iso.02 https://localhost:5001/api/v1/uploads/metalk8s/1.25.3
 
-curl -X PUT --http1.1 -H "Content-Range: bytes 18459034-24612044/30765056" -H "Content-Type: application/octet-stream" --cert "${CERT_DIR}/tls.crt" --key "${CERT_DIR}/tls.key" --cacert "${CERT_DIR}/ca.crt" --data-binary @test.iso.03 https://localhost:5001/api/v1/uploads/metalk8s/1.25.3
+curl -X PUT --http1.1 -H "Content-Range: bytes 18459034-24612044/30765056" -H "Content-Type: application/octet-stream" \
+  --cert "${CERT_DIR}/client/external/tls.crt" --key "${CERT_DIR}/client/external/tls.key" --cacert "${CERT_DIR}/server/external/ca.crt" \
+  --data-binary @test.iso.03 https://localhost:5001/api/v1/uploads/metalk8s/1.25.3
 ```
 ```json
 {
@@ -470,14 +476,14 @@ curl -X PUT --http1.1 -H "Content-Range: bytes 18459034-24612044/30765056" -H "C
 ```
 Last part uploaded:
 ```shell
-export CERT_DIR="/tmp/certs"
+export CERT_DIR="/certs"
 curl -X PUT \
   --http1.1 \
   -H "Content-Range: bytes 24612045-30765055/30765056" \
   -H "Content-Type: application/octet-stream" \
-  --cert "${CERT_DIR}/tls.crt" \
-  --key "${CERT_DIR}/tls.key" \
-  --cacert "${CERT_DIR}/ca.crt" \
+  --cert "${CERT_DIR}/client/external/tls.crt" \
+  --key "${CERT_DIR}/client/external/tls.key" \
+  --cacert "${CERT_DIR}/server/external/ca.crt" \
   --data-binary @test.iso.04 \
   https://localhost:5001/api/v1/uploads/metalk8s/1.25.3
 ```
