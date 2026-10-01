@@ -16,6 +16,7 @@ type ValidateSolutionArchive struct {
 	archiveLister  service.ArchiveLister
 	archiveRemover service.ArchiveRemover
 	archiveLocker  service.LockerUnlocker
+	metrics        service.MetricsRecorder
 }
 
 func NewValidateSolutionArchive(
@@ -23,12 +24,14 @@ func NewValidateSolutionArchive(
 	archiveLister service.ArchiveLister,
 	archiveRemover service.ArchiveRemover,
 	archiveLocker service.LockerUnlocker,
+	metrics service.MetricsRecorder,
 ) *ValidateSolutionArchive {
 	return &ValidateSolutionArchive{
 		logger:         logger.With(slog.String("use_case", "validate_solution_archive")),
 		archiveLister:  archiveLister,
 		archiveRemover: archiveRemover,
 		archiveLocker:  archiveLocker,
+		metrics:        metrics,
 	}
 }
 
@@ -71,6 +74,7 @@ func (uc *ValidateSolutionArchive) Execute(ctx context.Context, solutionArchive 
 			)
 		}
 		if hash != *solutionArchive.Hash {
+			uc.metrics.IncIntegrityFailure(solutionArchive, domain.IntegrityStageArchiveChecksum)
 			err := uc.archiveRemover.DeleteFile(library.GenSolutionArchiveFileName(solutionArchive))
 			if err != nil {
 				return false, errors.Wrap(err,

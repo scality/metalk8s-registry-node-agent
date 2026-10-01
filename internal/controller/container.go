@@ -1,6 +1,9 @@
 package controller
 
-import "github.com/scality/metalk8s-registry-node-agent/pkg/usecase"
+import (
+	"github.com/scality/metalk8s-registry-node-agent/pkg/service"
+	"github.com/scality/metalk8s-registry-node-agent/pkg/usecase"
+)
 
 type containerInterface interface {
 	GetRemoveSessionUseCase() *usecase.RemoveSession
@@ -10,4 +13,5 @@ type containerInterface interface {
 	GetDownloadPartUseCase() *usecase.DownloadPart
 	GetUnmountSolutionArchiveUseCase() *usecase.UnmountSolutionArchive
 	GetMountSolutionArchiveUseCase() *usecase.MountSolutionArchive
+	GetMetricsRecorder() service.MetricsRecorder
 }

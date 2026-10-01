@@ -2,6 +2,7 @@
 package di
 
 import (
+	"context"
 	"net/http"
 	"strings"
 
@@ -10,6 +11,7 @@ import (
 	"github.com/scality/metalk8s-registry-node-agent/pkg/library"
 	"github.com/scality/metalk8s-registry-node-agent/pkg/presentation/http/extern"
 	"github.com/scality/metalk8s-registry-node-agent/pkg/presentation/http/handler"
+	"github.com/scality/metalk8s-registry-node-agent/pkg/service"
 )
 
 func (c *Container) GetHTTPExternServer() *http.Server {
@@ -62,7 +64,12 @@ func (c *Container) GetHTTPExternServer() *http.Server {
 					return
 				}
 
-				next.ServeHTTP(writer, request)
+				solutionArchive := &domain.SolutionArchive{
+					Name:    urlParts[2],
+					Version: version,
+				}
+				ctx := context.WithValue(request.Context(), uploadedSolutionArchiveKey{}, solutionArchive)
+				next.ServeHTTP(writer, request.WithContext(ctx))
 			})
 		}
 
@@ -133,7 +140,9 @@ func (c *Container) GetHTTPExternServer() *http.Server {
 			c.getRootExternAPIPath()+"/",
 			http.StripPrefix(
 				c.getRootExternAPIPath(),
-				validateVersion(apiRouter),
+				validateVersion(
+					countUploadRequests(c.GetMetricsRecorder(), apiRouter),
+				),
 			),
 		)
 
@@ -145,4 +154,45 @@ func (c *Container) GetHTTPExternServer() *http.Server {
 	}
 
 	return c.httpExternServer
+}
+
+// countUploadRequests records the targeted solution archive and the HTTP status code
+// of every upload request whose path carries a solution archive version.
+func countUploadRequests(metrics service.MetricsRecorder, next http.Handler) http.Handler {
+	return http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+		recorder := &statusRecorder{ResponseWriter: writer, statusCode: http.StatusOK}
+		next.ServeHTTP(recorder, request)
+		metrics.IncUploadRequest(uploadedSolutionArchiveFrom(request.Context()), recorder.statusCode)
+	})
+}
+
+type uploadedSolutionArchiveKey struct{}
+
+// uploadedSolutionArchiveFrom returns the solution archive targeted by the upload request,
+// or an empty one when unknown.
+func uploadedSolutionArchiveFrom(ctx context.Context) *domain.SolutionArchive {
+	if solutionArchive, ok := ctx.Value(uploadedSolutionArchiveKey{}).(*domain.SolutionArchive); ok {
+		return solutionArchive
+	}
+	return &domain.SolutionArchive{}
+}
+
+type statusRecorder struct {
+	http.ResponseWriter
+
+	statusCode  int
+	wroteHeader bool
+}
+
+func (r *statusRecorder) WriteHeader(statusCode int) {
+	if !r.wroteHeader {
+		r.statusCode = statusCode
+		r.wroteHeader = true
+	}
+	r.ResponseWriter.WriteHeader(statusCode)
+}
+
+// Unwrap lets http.ResponseController reach the underlying ResponseWriter.
+func (r *statusRecorder) Unwrap() http.ResponseWriter {
+	return r.ResponseWriter
 }

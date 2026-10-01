@@ -15,6 +15,7 @@ import (
 	"github.com/scality/metalk8s-registry-node-agent/pkg/domain"
 	"github.com/scality/metalk8s-registry-node-agent/pkg/library"
 	"github.com/scality/metalk8s-registry-node-agent/pkg/presentation/http/extern"
+	"github.com/scality/metalk8s-registry-node-agent/test/utils"
 )
 
 const uploadPartTestString = "\x00\nIs there any interesting thing here\n"
@@ -49,6 +50,14 @@ var _ = Describe("Upload Part API", func() {
 			Expect(resUpl.HTTPResponse.StatusCode).To(Equal(200))
 			Expect(*resUpl.JSON200.IsCompleted).To(BeFalse())
 			Expect(*resUpl.JSON200.Version).To(Equal("3.0.0-preview.2"))
+
+			By("counting the http/200 response")
+			okRequests, _ := utils.MetricValue("registry_nsa_upload_requests_total", map[string]string{
+				"name":    "artesca-base",
+				"version": "3.0.0-preview.2",
+				"code":    "200",
+			})
+			Expect(okRequests).To(BeNumerically(">=", 1))
 			Expect(*resUpl.JSON200.Sha256sum).To(Equal("sha"))
 			Expect(*resUpl.JSON200.UploadedChunks).To(HaveLen(1))
 
@@ -452,6 +461,13 @@ var _ = Describe("Upload Part API", func() {
 			_, err := testingSuite.container.GetInitializeSessionUseCase().Execute(ctx, solutionArchive)
 			Expect(err).NotTo(HaveOccurred())
 
+			badRangeLabels := map[string]string{
+				"name":    "platform",
+				"version": "127.0.4-badrange",
+				"code":    "400",
+			}
+			badRequestsBefore, _ := utils.MetricValue("registry_nsa_upload_requests_total", badRangeLabels)
+
 			By("sending a malformed Content-Range header")
 			resUpl, err := testingSuite.ExternClientWithResponse.UploadChunkWithBodyWithResponse(
 				context.TODO(),
@@ -468,6 +484,10 @@ var _ = Describe("Upload Part API", func() {
 			By("returning a documented http/400 response")
 			Expect(resUpl.HTTPResponse.StatusCode).To(Equal(400))
 			Expect(resUpl.ApplicationproblemJSON400).NotTo(BeNil())
+
+			By("counting the http/400 response")
+			badRequests, _ := utils.MetricValue("registry_nsa_upload_requests_total", badRangeLabels)
+			Expect(badRequests).To(Equal(badRequestsBefore + 1))
 		})
 	})
 
