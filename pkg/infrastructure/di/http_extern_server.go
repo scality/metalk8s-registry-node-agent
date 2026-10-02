@@ -25,7 +25,7 @@ func (c *Container) GetHTTPExternServer() *http.Server {
 
 		// Add a middleware to check if the SolutionArchive version parameter
 		// is present in the path
-		// SolutionArchive name cannot be validated because the router send http/301
+		// SolutionArchive name cannot be validated because the router send http/307
 		// when the sequence "//" is sent in the path before any middleware execution
 		validateVersion := func(next http.Handler) http.Handler {
 			return http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
