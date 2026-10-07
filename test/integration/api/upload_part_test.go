@@ -32,6 +32,7 @@ var _ = Describe("Upload Part API", func() {
 			}
 			_, err := testingSuite.container.GetInitializeSessionUseCase().Execute(ctx, solutionArchive)
 			Expect(err).NotTo(HaveOccurred())
+			testingSuite.container.GetMetricsRecorder().SetArchiveState(solutionArchive, true, false, false)
 
 			By("successfully upload the chunk")
 			resUpl, err := testingSuite.ExternClientWithResponse.UploadChunkWithBodyWithResponse(
@@ -154,6 +155,13 @@ var _ = Describe("Upload Part API", func() {
 
 	Context("When uploading a chunk without an opened session", func() {
 		It("should fail the process", func() {
+			unknownLabels := map[string]string{
+				"name":    "unknown",
+				"version": "unknown",
+				"code":    "404",
+			}
+			unknownRequestsBefore, _ := utils.MetricValue("registry_nsa_upload_requests_total", unknownLabels)
+
 			resUpl, err := testingSuite.ExternClientWithResponse.UploadChunkWithBodyWithResponse(
 				context.TODO(),
 				"artesca-base",
@@ -168,6 +176,16 @@ var _ = Describe("Upload Part API", func() {
 
 			By("returning an http/404 response")
 			Expect(resUpl.HTTPResponse.StatusCode).To(Equal(404))
+
+			By("counting the http/404 response without identifying the archive")
+			unknownRequests, _ := utils.MetricValue("registry_nsa_upload_requests_total", unknownLabels)
+			Expect(unknownRequests).To(Equal(unknownRequestsBefore + 1))
+			_, found := utils.MetricValue("registry_nsa_upload_requests_total", map[string]string{
+				"name":    "artesca-base",
+				"version": "3.0.0-preview.3",
+				"code":    "404",
+			})
+			Expect(found).To(BeFalse())
 		})
 	})
 
@@ -460,6 +478,7 @@ var _ = Describe("Upload Part API", func() {
 			}
 			_, err := testingSuite.container.GetInitializeSessionUseCase().Execute(ctx, solutionArchive)
 			Expect(err).NotTo(HaveOccurred())
+			testingSuite.container.GetMetricsRecorder().SetArchiveState(solutionArchive, true, false, false)
 
 			badRangeLabels := map[string]string{
 				"name":    "platform",

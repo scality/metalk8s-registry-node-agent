@@ -3,6 +3,7 @@ package metricsrecorder
 import (
 	"errors"
 	"strconv"
+	"sync"
 
 	"github.com/prometheus/client_golang/prometheus"
 
@@ -12,6 +13,7 @@ import (
 const (
 	labelName    = "name"
 	labelVersion = "version"
+	labelUnknown = "unknown"
 
 	stateInitialized = "initialized"
 	stateAvailable   = "available"
@@ -22,6 +24,18 @@ type Prometheus struct {
 	archiveState      *prometheus.GaugeVec
 	integrityFailures *prometheus.CounterVec
 	uploadRequests    *prometheus.CounterVec
+
+	mu              sync.Mutex
+	trackedArchives map[archiveKey]struct{}
+}
+
+type archiveKey struct {
+	name    string
+	version string
+}
+
+func keyOf(solutionArchive *domain.SolutionArchive) archiveKey {
+	return archiveKey{name: solutionArchive.Name, version: solutionArchive.Version}
 }
 
 func NewPrometheus(registerer prometheus.Registerer) *Prometheus {
@@ -38,6 +52,7 @@ func NewPrometheus(registerer prometheus.Registerer) *Prometheus {
 			Name: "registry_nsa_upload_requests_total",
 			Help: "Number of upload requests handled by the external API, by solution archive and HTTP status code.",
 		}, []string{labelName, labelVersion, "code"})),
+		trackedArchives: map[archiveKey]struct{}{},
 	}
 }
 
@@ -60,6 +75,10 @@ func (p *Prometheus) SetArchiveState(
 	solutionArchive *domain.SolutionArchive,
 	initialized, available, served bool,
 ) {
+	p.mu.Lock()
+	p.trackedArchives[keyOf(solutionArchive)] = struct{}{}
+	p.mu.Unlock()
+
 	for state, reached := range map[string]bool{
 		stateInitialized: initialized,
 		stateAvailable:   available,
@@ -70,6 +89,10 @@ func (p *Prometheus) SetArchiveState(
 }
 
 func (p *Prometheus) ForgetArchive(solutionArchive *domain.SolutionArchive) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	delete(p.trackedArchives, keyOf(solutionArchive))
+
 	labels := prometheus.Labels{labelName: solutionArchive.Name, labelVersion: solutionArchive.Version}
 	p.archiveState.DeletePartialMatch(labels)
 	p.integrityFailures.DeletePartialMatch(labels)
@@ -80,8 +103,17 @@ func (p *Prometheus) IncIntegrityFailure(solutionArchive *domain.SolutionArchive
 	p.integrityFailures.WithLabelValues(solutionArchive.Name, solutionArchive.Version, string(stage)).Inc()
 }
 
+// IncUploadRequest labels the request with the archive only when it is tracked, so that
+// arbitrary request paths cannot create unbounded series.
 func (p *Prometheus) IncUploadRequest(solutionArchive *domain.SolutionArchive, statusCode int) {
-	p.uploadRequests.WithLabelValues(solutionArchive.Name, solutionArchive.Version, strconv.Itoa(statusCode)).Inc()
+	p.mu.Lock()
+	defer p.mu.Unlock()
+
+	name, version := labelUnknown, labelUnknown
+	if _, tracked := p.trackedArchives[keyOf(solutionArchive)]; tracked {
+		name, version = solutionArchive.Name, solutionArchive.Version
+	}
+	p.uploadRequests.WithLabelValues(name, version, strconv.Itoa(statusCode)).Inc()
 }
 
 func boolToFloat(b bool) float64 {

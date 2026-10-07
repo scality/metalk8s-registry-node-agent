@@ -40,6 +40,7 @@ func TestForgetArchive(t *testing.T) {
 	p.IncUploadRequest(other, 200)
 
 	p.ForgetArchive(testArchive)
+	p.IncUploadRequest(testArchive, 200)
 
 	if got := testutil.CollectAndCount(p.archiveState); got != 3 {
 		t.Errorf("archive state series: got %d, want 3", got)
@@ -47,8 +48,11 @@ func TestForgetArchive(t *testing.T) {
 	if got := testutil.CollectAndCount(p.integrityFailures); got != 0 {
 		t.Errorf("integrity failure series: got %d, want 0", got)
 	}
-	if got := testutil.CollectAndCount(p.uploadRequests); got != 1 {
-		t.Errorf("upload request series: got %d, want 1", got)
+	if got := testutil.CollectAndCount(p.uploadRequests); got != 2 {
+		t.Errorf("upload request series: got %d, want 2", got)
+	}
+	if got := testutil.ToFloat64(p.uploadRequests.WithLabelValues(labelUnknown, labelUnknown, "200")); got != 1 {
+		t.Errorf("forgotten archive: got %v, want 1 under %q", got, labelUnknown)
 	}
 }
 
@@ -70,6 +74,7 @@ func TestIncIntegrityFailure(t *testing.T) {
 func TestIncUploadRequest(t *testing.T) {
 	p := NewPrometheus(prometheus.NewRegistry())
 
+	p.SetArchiveState(testArchive, true, false, false)
 	p.IncUploadRequest(testArchive, 200)
 	p.IncUploadRequest(testArchive, 400)
 	p.IncUploadRequest(testArchive, 400)
@@ -79,11 +84,27 @@ func TestIncUploadRequest(t *testing.T) {
 	}
 }
 
+func TestIncUploadRequestUnknownArchive(t *testing.T) {
+	p := NewPrometheus(prometheus.NewRegistry())
+
+	p.IncUploadRequest(&domain.SolutionArchive{Name: "typo", Version: "1.0.0"}, 404)
+	p.IncUploadRequest(&domain.SolutionArchive{Name: "bogus", Version: "2.0.0"}, 404)
+
+	if got := testutil.CollectAndCount(p.uploadRequests); got != 1 {
+		t.Errorf("upload request series: got %d, want 1", got)
+	}
+	if got := testutil.ToFloat64(p.uploadRequests.WithLabelValues(labelUnknown, labelUnknown, "404")); got != 2 {
+		t.Errorf("code 404: got %v, want 2", got)
+	}
+}
+
 func TestNewPrometheusReusesRegisteredCollectors(t *testing.T) {
 	registry := prometheus.NewRegistry()
 	first := NewPrometheus(registry)
 	second := NewPrometheus(registry)
 
+	first.SetArchiveState(testArchive, true, false, false)
+	second.SetArchiveState(testArchive, true, false, false)
 	first.IncUploadRequest(testArchive, 200)
 	second.IncUploadRequest(testArchive, 200)
 

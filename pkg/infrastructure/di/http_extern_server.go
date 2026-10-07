@@ -156,8 +156,8 @@ func (c *Container) GetHTTPExternServer() *http.Server {
 	return c.httpExternServer
 }
 
-// countUploadRequests records the targeted solution archive and the HTTP status code
-// of every upload request whose path carries a solution archive version.
+// countUploadRequests records the HTTP status code of every upload request whose path
+// carries a solution archive version, along with the archive it targets.
 func countUploadRequests(metrics service.MetricsRecorder, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
 		recorder := &statusRecorder{ResponseWriter: writer, statusCode: http.StatusOK}
