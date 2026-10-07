@@ -76,7 +76,7 @@ type NodeSolutionArchiveStatus struct {
 
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
-// +kubebuilder:resource:scope=Cluster
+// +kubebuilder:resource:scope=Cluster,shortName=nsa
 
 // +kubebuilder:printcolumn:name="Name",type="string",JSONPath=".spec.name"
 // +kubebuilder:printcolumn:name="Version",type="string",JSONPath=".spec.version"
