@@ -15,6 +15,7 @@ import (
 	"github.com/scality/metalk8s-registry-node-agent/pkg/domain"
 	"github.com/scality/metalk8s-registry-node-agent/pkg/library"
 	"github.com/scality/metalk8s-registry-node-agent/pkg/presentation/http/extern"
+	"github.com/scality/metalk8s-registry-node-agent/test/utils"
 )
 
 const uploadPartTestString = "\x00\nIs there any interesting thing here\n"
@@ -31,6 +32,7 @@ var _ = Describe("Upload Part API", func() {
 			}
 			_, err := testingSuite.container.GetInitializeSessionUseCase().Execute(ctx, solutionArchive)
 			Expect(err).NotTo(HaveOccurred())
+			testingSuite.container.GetMetricsRecorder().SetArchiveState(solutionArchive, true, false, false)
 
 			By("successfully upload the chunk")
 			resUpl, err := testingSuite.ExternClientWithResponse.UploadChunkWithBodyWithResponse(
@@ -49,6 +51,14 @@ var _ = Describe("Upload Part API", func() {
 			Expect(resUpl.HTTPResponse.StatusCode).To(Equal(200))
 			Expect(*resUpl.JSON200.IsCompleted).To(BeFalse())
 			Expect(*resUpl.JSON200.Version).To(Equal("3.0.0-preview.2"))
+
+			By("counting the http/200 response")
+			okRequests, _ := utils.MetricValue("registry_nsa_upload_requests_total", map[string]string{
+				"name":    "artesca-base",
+				"version": "3.0.0-preview.2",
+				"code":    "200",
+			})
+			Expect(okRequests).To(BeNumerically(">=", 1))
 			Expect(*resUpl.JSON200.Sha256sum).To(Equal("sha"))
 			Expect(*resUpl.JSON200.UploadedChunks).To(HaveLen(1))
 
@@ -145,6 +155,13 @@ var _ = Describe("Upload Part API", func() {
 
 	Context("When uploading a chunk without an opened session", func() {
 		It("should fail the process", func() {
+			unknownLabels := map[string]string{
+				"name":    "unknown",
+				"version": "unknown",
+				"code":    "404",
+			}
+			unknownRequestsBefore, _ := utils.MetricValue("registry_nsa_upload_requests_total", unknownLabels)
+
 			resUpl, err := testingSuite.ExternClientWithResponse.UploadChunkWithBodyWithResponse(
 				context.TODO(),
 				"artesca-base",
@@ -159,6 +176,16 @@ var _ = Describe("Upload Part API", func() {
 
 			By("returning an http/404 response")
 			Expect(resUpl.HTTPResponse.StatusCode).To(Equal(404))
+
+			By("counting the http/404 response without identifying the archive")
+			unknownRequests, _ := utils.MetricValue("registry_nsa_upload_requests_total", unknownLabels)
+			Expect(unknownRequests).To(Equal(unknownRequestsBefore + 1))
+			_, found := utils.MetricValue("registry_nsa_upload_requests_total", map[string]string{
+				"name":    "artesca-base",
+				"version": "3.0.0-preview.3",
+				"code":    "404",
+			})
+			Expect(found).To(BeFalse())
 		})
 	})
 
@@ -451,6 +478,14 @@ var _ = Describe("Upload Part API", func() {
 			}
 			_, err := testingSuite.container.GetInitializeSessionUseCase().Execute(ctx, solutionArchive)
 			Expect(err).NotTo(HaveOccurred())
+			testingSuite.container.GetMetricsRecorder().SetArchiveState(solutionArchive, true, false, false)
+
+			badRangeLabels := map[string]string{
+				"name":    "platform",
+				"version": "127.0.4-badrange",
+				"code":    "400",
+			}
+			badRequestsBefore, _ := utils.MetricValue("registry_nsa_upload_requests_total", badRangeLabels)
 
 			By("sending a malformed Content-Range header")
 			resUpl, err := testingSuite.ExternClientWithResponse.UploadChunkWithBodyWithResponse(
@@ -468,6 +503,10 @@ var _ = Describe("Upload Part API", func() {
 			By("returning a documented http/400 response")
 			Expect(resUpl.HTTPResponse.StatusCode).To(Equal(400))
 			Expect(resUpl.ApplicationproblemJSON400).NotTo(BeNil())
+
+			By("counting the http/400 response")
+			badRequests, _ := utils.MetricValue("registry_nsa_upload_requests_total", badRangeLabels)
+			Expect(badRequests).To(Equal(badRequestsBefore + 1))
 		})
 	})
 

@@ -22,6 +22,7 @@ type DownloadPart struct {
 	multipartInspector service.MultipartInspector
 	rootAPIPath        string
 	chunkSize          int64
+	metrics            service.MetricsRecorder
 }
 
 func NewDownloadPart(
@@ -35,6 +36,7 @@ func NewDownloadPart(
 	multipartInspector service.MultipartInspector,
 	rootAPIPath string,
 	chunkSize int64,
+	metrics service.MetricsRecorder,
 ) *DownloadPart {
 	return &DownloadPart{
 		logger:             logger.With(slog.String("use_case", "download_part")),
@@ -47,6 +49,7 @@ func NewDownloadPart(
 		multipartInspector: multipartInspector,
 		rootAPIPath:        rootAPIPath,
 		chunkSize:          chunkSize,
+		metrics:            metrics,
 	}
 }
 
@@ -200,6 +203,7 @@ func (uc *DownloadPart) Execute(
 
 		// Close verifies the Content-Digest trailer against the computed hash.
 		if err := body.Close(); err != nil {
+			uc.metrics.IncIntegrityFailure(solutionArchive, domain.IntegrityStageChunkDigest)
 			return errors.Wrap(err,
 				errors.WithIdentifier(213),
 				errors.WithDetail("error on verifying the Content-Digest trailer of the solution archive chunk"),

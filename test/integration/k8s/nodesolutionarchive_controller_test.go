@@ -30,7 +30,26 @@ import (
 	"k8s.io/utils/ptr"
 
 	metalk8sv1alpha1 "github.com/scality/metalk8s-registry-node-agent/api/v1alpha1"
+	"github.com/scality/metalk8s-registry-node-agent/test/utils"
 )
+
+func archiveState(name, version, state string) func() float64 {
+	return func() float64 {
+		value, _ := utils.MetricValue("registry_nsa_state", map[string]string{
+			"name": name, "version": version, "state": state,
+		})
+		return value
+	}
+}
+
+func archiveStateExists(name, version string) func() bool {
+	return func() bool {
+		_, exists := utils.MetricValue("registry_nsa_state", map[string]string{
+			"name": name, "version": version, "state": "initialized",
+		})
+		return exists
+	}
+}
 
 // nolint:dupl
 var _ = Describe("NodeSolutionArchive Controller", func() {
@@ -86,6 +105,11 @@ var _ = Describe("NodeSolutionArchive Controller", func() {
 			Expect(*createdResource.Status.Initialized).To(BeTrue())
 			Expect(*createdResource.Status.Available).To(BeFalse())
 			Expect(*createdResource.Status.Served).To(BeFalse())
+
+			By("exposing the state of the resource as metrics")
+			Eventually(archiveState("solution-1", "1.2.0", "initialized"), timeout, interval).Should(Equal(1.0))
+			Expect(archiveState("solution-1", "1.2.0", "available")()).To(Equal(0.0))
+			Expect(archiveState("solution-1", "1.2.0", "served")()).To(Equal(0.0))
 		})
 	})
 
@@ -136,6 +160,11 @@ var _ = Describe("NodeSolutionArchive Controller", func() {
 			Expect(*createdResource.Status.Initialized).To(BeTrue())
 			Expect(*createdResource.Status.Available).To(BeTrue())
 			Expect(*createdResource.Status.Served).To(BeTrue())
+
+			By("exposing the state of the resource as metrics")
+			Eventually(archiveState("solution-2", "4.2.1", "served"), timeout, interval).Should(Equal(1.0))
+			Expect(archiveState("solution-2", "4.2.1", "initialized")()).To(Equal(1.0))
+			Expect(archiveState("solution-2", "4.2.1", "available")()).To(Equal(1.0))
 		})
 	})
 
@@ -186,6 +215,12 @@ var _ = Describe("NodeSolutionArchive Controller", func() {
 			Expect(*createdResource.Status.Initialized).To(BeTrue())
 			Expect(*createdResource.Status.Available).To(BeFalse())
 			Expect(*createdResource.Status.Served).To(BeFalse())
+
+			By("counting the archive checksum failure")
+			checksumFailures, _ := utils.MetricValue("registry_nsa_integrity_failures_total", map[string]string{
+				"name": "solution-2", "version": "4.2.1", "stage": "archive_checksum",
+			})
+			Expect(checksumFailures).To(BeNumerically(">=", 1))
 		})
 	})
 
@@ -322,6 +357,8 @@ var _ = Describe("NodeSolutionArchive Controller", func() {
 
 			Expect(createdResource.Spec).To(Equal(resource.Spec))
 			Expect(*createdResource.Status.Initialized).To(BeFalse())
+			Eventually(archiveStateExists("solution-4", "4.2.8"), timeout, interval).Should(BeTrue())
+			Expect(archiveState("solution-4", "4.2.8", "initialized")()).To(Equal(0.0))
 
 			By("deleting the NodeSolutionArchive")
 			err = k8sClient.Delete(ctx, resource)
@@ -329,6 +366,9 @@ var _ = Describe("NodeSolutionArchive Controller", func() {
 
 			// Wait for all reconciliations loop to be done
 			time.Sleep(1 * time.Second)
+
+			By("dropping the state metrics of the deleted resource")
+			Eventually(archiveStateExists("solution-4", "4.2.8"), timeout, interval).Should(BeFalse())
 		})
 	})
 })

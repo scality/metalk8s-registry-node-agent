@@ -53,6 +53,7 @@ func (c *Container) GetValidateSolutionArchiveUseCase() *usecase.ValidateSolutio
 			c.getFileSystemArchiveLister(),
 			c.getFileSystemArchiveRemover(),
 			c.getInMemoryArchiveLocker(),
+			c.GetMetricsRecorder(),
 		)
 	}
 	return c.validateSolutionArchiveUseCase
@@ -107,6 +108,7 @@ func (c *Container) GetDownloadPartUseCase() *usecase.DownloadPart {
 			c.getFileSystemMultipartInspector(),
 			c.getRootExternAPIPath(),
 			c.getChunkSize(),
+			c.GetMetricsRecorder(),
 		)
 	}
 	return c.downloadPartUseCase

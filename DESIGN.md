@@ -461,7 +461,15 @@ The agent never trusts a peer's `status.url` blindly: chunks fetched from that U
 ## 12. Observability
 
 - **Logging**: structured logs via the standard library `log/slog` (use cases) and `zap` / `controller-runtime` (controller, webhook). Verbosity is controlled by `LOGGER_LOG_LEVEL` (use cases) and `--zap-log-level` (controller).
-- **Metrics**: controller-runtime exposes the standard set (workqueue depth, reconcile latency, errors). Domain-specific metrics (`/metrics` upload/download counters and durations) are not yet implemented.
+- **Metrics**: controller-runtime exposes the standard set (workqueue depth, reconcile latency, errors). Domain-specific metrics are registered on the same registry, through the `service.MetricsRecorder` interface (implementation in `pkg/infrastructure/metricsrecorder`), so use cases never import Prometheus:
+
+  | Metric                                  | Type    | Labels                                                   |
+  |-----------------------------------------|---------|----------------------------------------------------------|
+  | `registry_nsa_state`                    | Gauge   | `name`, `version`, `state=initialized\|available\|served` |
+  | `registry_nsa_integrity_failures_total` | Counter | `name`, `version`, `stage=chunk_digest\|archive_checksum` |
+  | `registry_nsa_upload_requests_total`    | Counter | `name`, `version`, `code` |
+
+  The node is implicit: each agent pod is a distinct scrape target of the `ServiceMonitor` (labelled `scality.metalk8s/monitor: "true"`). The per-archive series (`name` / `version`) are dropped when the NSA finalizer runs. Upload requests targeting an archive with no local NSA are counted under `name` / `version` = `unknown`, which keeps the cardinality bounded.
 - **Resource status**: `kubectl get nsa` shows `Initialized`, `Available`, `Served` columns so operators can spot any node lagging behind without reading logs.
 
 ## 13. Streaming and cache

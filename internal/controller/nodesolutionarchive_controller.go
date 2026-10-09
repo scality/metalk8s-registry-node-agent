@@ -24,6 +24,7 @@ import (
 
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/utils/ptr"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -116,6 +117,10 @@ func (r *NodeSolutionArchiveReconciler) Reconcile(ctx context.Context, req ctrl.
 				log.Error(err, "error removing finalizer")
 				return ctrl.Result{}, err
 			}
+			r.Container.GetMetricsRecorder().ForgetArchive(&domain.SolutionArchive{
+				Name:    nodeSolutionArchive.Spec.Name,
+				Version: nodeSolutionArchive.Spec.Version,
+			})
 		}
 
 		// Stop reconciliation as the item is being deleted
@@ -128,6 +133,7 @@ func (r *NodeSolutionArchiveReconciler) Reconcile(ctx context.Context, req ctrl.
 		if err := r.Status().Patch(ctx, nodeSolutionArchive, client.MergeFrom(original)); err != nil {
 			log.Error(err, "unable to patch NodeSolutionArchive status")
 		}
+		r.recordArchiveState(nodeSolutionArchive)
 	}()
 
 	// Retrieve the Status of the NodeSolutionArchive
@@ -256,6 +262,19 @@ func (r *NodeSolutionArchiveReconciler) deleteSolutionArchiveResources(ctx conte
 	}
 
 	return r.Container.GetRemoveSessionUseCase().Execute(ctx, solutionArchive)
+}
+
+func (r *NodeSolutionArchiveReconciler) recordArchiveState(nodeSolutionArchive *metalk8sv1alpha1.NodeSolutionArchive) {
+	status := nodeSolutionArchive.Status
+	r.Container.GetMetricsRecorder().SetArchiveState(
+		&domain.SolutionArchive{
+			Name:    nodeSolutionArchive.Spec.Name,
+			Version: nodeSolutionArchive.Spec.Version,
+		},
+		ptr.Deref(status.Initialized, false),
+		ptr.Deref(status.Available, false),
+		ptr.Deref(status.Served, false),
+	)
 }
 
 func getNodeName(o client.Object) string {
