@@ -470,7 +470,7 @@ The agent never trusts a peer's `status.url` blindly: chunks fetched from that U
   | `registry_nsa_upload_requests_total`    | Counter | `name`, `version`, `code` |
 
   The node is implicit: each agent pod is a distinct scrape target of the `ServiceMonitor` (labelled `scality.metalk8s/monitor: "true"`). The per-archive series (`name` / `version`) are dropped when the NSA finalizer runs. Upload requests targeting an archive with no local NSA are counted under `name` / `version` = `unknown`, which keeps the cardinality bounded.
-- **Resource status**: `kubectl get nsa` shows `Initialized`, `Available`, `Served` columns so operators can spot any node lagging behind without reading logs.
+- **Resource status**: `kubectl get nsoa` shows `Initialized`, `Available`, `Served` columns so operators can spot any node lagging behind without reading logs.
 
 ## 13. Streaming and cache
 

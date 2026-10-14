@@ -12,7 +12,7 @@ spec:
     listKind: NodeSolutionArchiveList
     plural: nodesolutionarchives
     shortNames:
-    - nsa
+    - nsoa
     singular: nodesolutionarchive
   scope: Cluster
   versions:
