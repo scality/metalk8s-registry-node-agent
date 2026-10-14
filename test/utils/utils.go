@@ -44,7 +44,7 @@ import (
 
 const (
 	// renovate: datasource=github-releases depName=prometheus-operator/prometheus-operator
-	prometheusOperatorVersion = "v0.77.1"
+	prometheusOperatorVersion = "v0.94.1"
 	prometheusOperatorURL     = "https://github.com/prometheus-operator/prometheus-operator/" +
 		"releases/download/%s/bundle.yaml"
 
