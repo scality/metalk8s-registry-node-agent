@@ -49,7 +49,7 @@ const (
 		"releases/download/%s/bundle.yaml"
 
 	// renovate: datasource=github-releases depName=cert-manager/cert-manager
-	certmanagerVersion = "v1.16.3"
+	certmanagerVersion = "v1.21.2"
 	certmanagerURLTmpl = "https://github.com/cert-manager/cert-manager/releases/download/%s/cert-manager.yaml"
 )
 
