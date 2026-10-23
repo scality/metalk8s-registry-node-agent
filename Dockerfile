@@ -57,7 +57,7 @@ RUN CGO_ENABLED=0 GOOS=${TARGETOS:-linux} GOARCH=${TARGETARCH} go build -a -o se
 ################################################
 # Use Alpine as minimal base image with mount/umount utilities
 # Alpine includes util-linux package with mount/umount by default
-FROM alpine:3.24@sha256:28bd5fe8b56d1bd048e5babf5b10710ebe0bae67db86916198a6eec434943f8b
+FROM alpine:3.24@sha256:71e9b7bae160ba167fa17414401b94cbcdaf3c32feeab9298bd794a2a0614c35
 WORKDIR /
 # Install util-linux for mount/umount utilities, libcap for capabilities
 # and ca-certificates for HTTPS connections
