@@ -19,7 +19,7 @@ jobs:
 
   create-release:
     needs: build
-    uses: scality/workflows/.github/workflows/promote.yaml@b7c7c5acf3cb73fdc905f2484a2dec59780b6e63 # v2.11.0
+    uses: scality/workflows/.github/workflows/promote.yaml@284fcb6c972f27f628e342199064ba8ccd5df8c2 # v2.12.0
     permissions:
       contents: write
 
