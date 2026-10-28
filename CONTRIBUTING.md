@@ -7,7 +7,7 @@ is built and why see [DESIGN.md](DESIGN.md).
 ## Development environment
 
 The repository ships a devcontainer (`.devcontainer/`) with Go and the pinned tooling
-(golangci-lint, operator-sdk, kind, kubectl) already installed; the Makefile downloads the rest
+(golangci-lint, kubebuilder, kind, kubectl) already installed; the Makefile downloads the rest
 (controller-gen, kustomize, setup-envtest) into `bin/` on demand. Outside the devcontainer you
 need the Go version pinned in [`go.mod`](go.mod) on your `PATH`, plus `docker` to build images and
 a Kubernetes cluster with cert-manager to deploy.

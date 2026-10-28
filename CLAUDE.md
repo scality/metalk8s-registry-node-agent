@@ -6,6 +6,6 @@ This is a **Go Kubernetes operator** for managing solution archive distribution 
 - Validation webhooks (`internal/webhook/`)
 - Clean architecture with domain/usecase/service/infrastructure layers (`pkg/`)
 - OpenAPI-generated HTTP handlers for internal and external APIs (`pkg/presentation/http/`)
-- Built with Kubebuilder (operator-sdk), controller-runtime, Ginkgo/Gomega for testing
+- Built with Kubebuilder, controller-runtime, Ginkgo/Gomega for testing
 - Linted with golangci-lint v2 (revive, staticcheck, errcheck, govet, etc.)
 - Architecture is described here: @DESIGN.md
