@@ -3,7 +3,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.20.0
+    controller-gen.kubebuilder.io/version: v0.22.0
   name: nodesolutionarchives.metalk8s.scality.com
 spec:
   group: metalk8s.scality.com
@@ -39,7 +39,7 @@ spec:
     schema:
       openAPIV3Schema:
         description: NodeSolutionArchive is the Schema for the nodesolutionarchives
-          API.
+          API
         properties:
           apiVersion:
             description: |-
@@ -59,7 +59,7 @@ spec:
           metadata:
             type: object
           spec:
-            description: NodeSolutionArchiveSpec defines the desired state of NodeSolutionArchive.
+            description: spec defines the desired state of NodeSolutionArchive
             properties:
               name:
                 description: Name of the SolutionArchive
@@ -121,12 +121,22 @@ spec:
               rule: (!has(self.validation) && !has(oldSelf.validation)) || ((has(self.validation)
                 && has(oldSelf.validation)) && (self.validation == oldSelf.validation))
           status:
-            description: NodeSolutionArchiveStatus defines the observed state of NodeSolutionArchive.
+            description: status defines the observed state of NodeSolutionArchive
             properties:
               available:
                 description: Availability of the SolutionArchive on the Node
                 type: boolean
               conditions:
+                description: |-
+                  conditions represent the current state of the NodeSolutionArchive resource.
+                  Each condition has a unique type and reflects the status of a specific aspect of the resource.
+
+                  Standard condition types include:
+                  - "Initialized": the solution archive is ready to be uploaded
+                  - "Available": the images are available in the registry
+                  - "Served": the images are served in the registry
+
+                  The status of each condition is one of True, False, or Unknown.
                 items:
                   description: Condition contains details for one aspect of the current
                     state of this API Resource.
@@ -182,6 +192,9 @@ spec:
                   - type
                   type: object
                 type: array
+                x-kubernetes-list-map-keys:
+                - type
+                x-kubernetes-list-type: map
               initialized:
                 description: SolutionArchive on the Node is initialized and thus archive
                   is ready to be uploaded
@@ -194,6 +207,8 @@ spec:
                   archive between nodes)
                 type: string
             type: object
+        required:
+        - spec
         type: object
     served: true
     storage: true

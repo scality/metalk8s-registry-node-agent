@@ -8,7 +8,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 USER vscode
 
 # renovate: datasource=github-releases depName=kubernetes-sigs/kubebuilder extractVersion=^v(?<version>.*)$
-ARG KUBEBUILDER_VERSION=4.6.0
+ARG KUBEBUILDER_VERSION=4.16.0
 
 RUN curl -sSfLO https://github.com/kubernetes-sigs/kubebuilder/releases/download/v${KUBEBUILDER_VERSION}/kubebuilder_linux_amd64 && \
     chmod +x kubebuilder_linux_amd64 && \

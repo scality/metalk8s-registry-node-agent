@@ -28,17 +28,16 @@ var _ = Describe("NodeSolutionArchive Webhook", func() {
 	var (
 		obj       *metalk8sv1alpha1.NodeSolutionArchive
 		oldObj    *metalk8sv1alpha1.NodeSolutionArchive
-		validator NodeSolutionArchiveCustomValidator
+		validator NodeSolutionArchiveValidator
 	)
 
 	BeforeEach(func() {
 		obj = &metalk8sv1alpha1.NodeSolutionArchive{}
 		oldObj = &metalk8sv1alpha1.NodeSolutionArchive{}
-		validator = NodeSolutionArchiveCustomValidator{}
+		validator = NodeSolutionArchiveValidator{}
 		Expect(validator).NotTo(BeNil(), "Expected validator to be initialized")
 		Expect(oldObj).NotTo(BeNil(), "Expected oldObj to be initialized")
 		Expect(obj).NotTo(BeNil(), "Expected obj to be initialized")
-		// TODO (user): Add any setup logic common to all tests
 	})
 
 	AfterEach(func() {
