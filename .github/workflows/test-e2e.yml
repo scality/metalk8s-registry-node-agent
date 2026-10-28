@@ -28,6 +28,14 @@ jobs:
       - name: Verify kind installation
         run: kind version
 
+      # The kind nodes share the runner kernel. The default inotify limits are
+      # too low for 4 nodes plus the agent file watcher, which then fails with
+      # "too many open files". Values from the kind known issues page.
+      - name: Raise the inotify limits
+        run: |
+          sysctl fs.inotify.max_user_instances fs.inotify.max_user_watches
+          sudo sysctl -w fs.inotify.max_user_instances=512 fs.inotify.max_user_watches=524288
+
       - name: Install genisoimage for ISO creation
         run: sudo apt update && sudo apt install -y genisoimage
 
