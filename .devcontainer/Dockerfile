@@ -7,12 +7,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 USER vscode
 
-# renovate: datasource=github-releases depName=operator-framework/operator-sdk extractVersion=^v(?<version>.*)$
-ARG OPERATOR_SDK_VERSION=1.42.3
+# renovate: datasource=github-releases depName=kubernetes-sigs/kubebuilder extractVersion=^v(?<version>.*)$
+ARG KUBEBUILDER_VERSION=4.16.0
 
-RUN curl -sSfLO https://github.com/operator-framework/operator-sdk/releases/download/v${OPERATOR_SDK_VERSION}/operator-sdk_linux_amd64 && \
-    chmod +x operator-sdk_linux_amd64 && \
-    sudo mv operator-sdk_linux_amd64 /usr/local/bin/operator-sdk
+RUN curl -sSfLO https://github.com/kubernetes-sigs/kubebuilder/releases/download/v${KUBEBUILDER_VERSION}/kubebuilder_linux_amd64 && \
+    chmod +x kubebuilder_linux_amd64 && \
+    sudo mv kubebuilder_linux_amd64 /usr/local/bin/kubebuilder
 
 # renovate: datasource=github-releases depName=golangci/golangci-lint extractVersion=^v(?<version>.*)$
 ARG GOLANGCI_LINT_VERSION=2.14.0

@@ -52,9 +52,12 @@ type SolutionArchiveSpec struct {
 	Validation *SolutionArchiveValidation `json:"validation,omitempty"`
 }
 
-// NodeSolutionArchiveSpec defines the desired state of NodeSolutionArchive.
+// NodeSolutionArchiveSpec defines the desired state of NodeSolutionArchive
 // +kubebuilder:validation:XValidation:rule="(!has(self.validation) && !has(oldSelf.validation)) || ((has(self.validation) && has(oldSelf.validation)) && (self.validation == oldSelf.validation))",message="Validation cannot be updated"
 type NodeSolutionArchiveSpec struct {
+	// The following markers will use OpenAPI v3 schema to validate the value
+	// More info: https://book.kubebuilder.io/reference/markers/crd-validation.html
+
 	SolutionArchiveSpec `json:",inline"`
 	// Name of the Node
 	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
@@ -63,12 +66,27 @@ type NodeSolutionArchiveSpec struct {
 
 // NodeSolutionArchiveStatus defines the observed state of NodeSolutionArchive.
 type NodeSolutionArchiveStatus struct {
+	// For Kubernetes API conventions, see:
+	// https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#typical-status-properties
+
 	// SolutionArchive on the Node is initialized and thus archive is ready to be uploaded
 	Initialized *bool `json:"initialized,omitempty"`
 	// Availability of the SolutionArchive on the Node
 	Available *bool `json:"available,omitempty"`
 	// The SolutionArchive is mounted on the Node
-	Served     *bool              `json:"served,omitempty"`
+	Served *bool `json:"served,omitempty"`
+	// conditions represent the current state of the NodeSolutionArchive resource.
+	// Each condition has a unique type and reflects the status of a specific aspect of the resource.
+	//
+	// Standard condition types include:
+	// - "Initialized": the solution archive is ready to be uploaded
+	// - "Available": the images are available in the registry
+	// - "Served": the images are served in the registry
+	//
+	// The status of each condition is one of True, False, or Unknown.
+	// +listType=map
+	// +listMapKey=type
+	// +optional
 	Conditions []metav1.Condition `json:"conditions,omitempty"`
 	// URL of the SolutionArchive (used internally to replicate archive between nodes)
 	URL string `json:"url,omitempty"`
@@ -84,28 +102,35 @@ type NodeSolutionArchiveStatus struct {
 // +kubebuilder:printcolumn:name="Initialized",type="boolean",JSONPath=".status.initialized"
 // +kubebuilder:printcolumn:name="Available",type="boolean",JSONPath=".status.available"
 // +kubebuilder:printcolumn:name="Served",type="boolean",JSONPath=".status.served"
-// NodeSolutionArchive is the Schema for the nodesolutionarchives API.
+// NodeSolutionArchive is the Schema for the nodesolutionarchives API
 type NodeSolutionArchive struct {
-	metav1.TypeMeta   `json:",inline"`
-	metav1.ObjectMeta `json:"metadata,omitempty"`
+	metav1.TypeMeta `json:",inline"`
 
-	Spec   NodeSolutionArchiveSpec   `json:"spec,omitempty"`
-	Status NodeSolutionArchiveStatus `json:"status,omitempty"`
+	// metadata is a standard object metadata
+	// +optional
+	metav1.ObjectMeta `json:"metadata,omitzero"`
+
+	// spec defines the desired state of NodeSolutionArchive
+	// +required
+	Spec NodeSolutionArchiveSpec `json:"spec"`
+
+	// status defines the observed state of NodeSolutionArchive
+	// +optional
+	Status NodeSolutionArchiveStatus `json:"status,omitzero"`
 }
 
 // +kubebuilder:object:root=true
 
-// NodeSolutionArchiveList contains a list of NodeSolutionArchive.
+// NodeSolutionArchiveList contains a list of NodeSolutionArchive
 type NodeSolutionArchiveList struct {
 	metav1.TypeMeta `json:",inline"`
-	metav1.ListMeta `json:"metadata,omitempty"`
+	metav1.ListMeta `json:"metadata,omitzero"`
 	Items           []NodeSolutionArchive `json:"items"`
 }
 
 func init() {
 	SchemeBuilder.Register(func(s *runtime.Scheme) error {
-		s.AddKnownTypes(GroupVersion, &NodeSolutionArchive{}, &NodeSolutionArchiveList{})
-		metav1.AddToGroupVersion(s, GroupVersion)
+		s.AddKnownTypes(SchemeGroupVersion, &NodeSolutionArchive{}, &NodeSolutionArchiveList{})
 		return nil
 	})
 }
