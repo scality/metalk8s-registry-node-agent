@@ -1,4 +1,4 @@
-FROM mcr.microsoft.com/devcontainers/go:1.27-trixie@sha256:17bf9e845391f8dfad8d967f203ecd66e2be1c1b67016e56292ea37001edc23f
+FROM mcr.microsoft.com/devcontainers/go:1.27-trixie@sha256:32aad7e9eefed4fe99987cc4efef2f9723bd57c556f171143ecf65e0ba855ff3
 
 # genisoimage is used to generate an ISO file for test E2E
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -15,7 +15,7 @@ RUN curl -sSfLO https://github.com/kubernetes-sigs/kubebuilder/releases/download
     sudo mv kubebuilder_linux_amd64 /usr/local/bin/kubebuilder
 
 # renovate: datasource=github-releases depName=golangci/golangci-lint extractVersion=^v(?<version>.*)$
-ARG GOLANGCI_LINT_VERSION=2.14.0
+ARG GOLANGCI_LINT_VERSION=2.15.0
 
 RUN curl -sSfL  https://raw.githubusercontent.com/golangci/golangci-lint/HEAD/install.sh | sudo sh -s -- v${GOLANGCI_LINT_VERSION}
 
