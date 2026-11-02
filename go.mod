@@ -4,7 +4,7 @@ go 1.27.3
 
 require (
 	github.com/fsnotify/fsnotify v1.10.1
-	github.com/getkin/kin-openapi v0.149.0
+	github.com/getkin/kin-openapi v0.152.0
 	github.com/hashicorp/go-version v1.9.0
 	github.com/moby/sys/mountinfo v0.7.2
 	github.com/oapi-codegen/nethttp-middleware v1.2.0
