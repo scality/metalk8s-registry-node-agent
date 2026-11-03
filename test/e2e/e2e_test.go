@@ -170,16 +170,20 @@ var _ = Describe("Manager", Ordered, func() {
 	AfterEach(func() {
 		specReport := CurrentSpecReport()
 		if specReport.Failed() {
+			// Select the pods by label: the pod name map is only filled once every
+			// pod runs, so it is empty when the manager fails to start.
 			By("Fetching controller manager pod logs")
-			for _, nodeName := range nodeNames {
-				controllerPodName := controllerPodNameByNode[nodeName]
-
-				cmd := exec.Command("kubectl", "logs", controllerPodName, "-n", namespace)
+			// --previous holds the output of a container that crashed and restarted.
+			// --ignore-errors keeps going when a healthy pod has no previous container.
+			for _, previous := range []bool{false, true} {
+				cmd := exec.Command("kubectl", "logs", "-l", "control-plane=controller-manager",
+					"-n", namespace, "--all-containers", "--prefix", "--tail=-1", "--ignore-errors",
+					fmt.Sprintf("--previous=%t", previous))
 				controllerLogs, err := utils.Run(cmd)
 				if err == nil {
-					_, _ = fmt.Fprintf(GinkgoWriter, "Controller logs:\n %s", controllerLogs)
+					_, _ = fmt.Fprintf(GinkgoWriter, "Controller logs (previous=%t):\n %s", previous, controllerLogs)
 				} else {
-					_, _ = fmt.Fprintf(GinkgoWriter, "Failed to get Controller logs: %s", err)
+					_, _ = fmt.Fprintf(GinkgoWriter, "Failed to get Controller logs (previous=%t): %s", previous, err)
 				}
 			}
 
@@ -202,15 +206,12 @@ var _ = Describe("Manager", Ordered, func() {
 			}
 
 			By("Fetching controller manager pod description")
-			for _, nodeName := range nodeNames {
-				controllerPodName := controllerPodNameByNode[nodeName]
-				cmd = exec.Command("kubectl", "describe", "pod", controllerPodName, "-n", namespace)
-				podDescription, err := utils.Run(cmd)
-				if err == nil {
-					fmt.Println("Pod description:\n", podDescription)
-				} else {
-					fmt.Println("Failed to describe controller pod")
-				}
+			cmd = exec.Command("kubectl", "describe", "pods", "-l", "control-plane=controller-manager", "-n", namespace)
+			podDescription, err := utils.Run(cmd)
+			if err == nil {
+				fmt.Println("Pod description:\n", podDescription)
+			} else {
+				fmt.Println("Failed to describe controller pod")
 			}
 		}
 	})
