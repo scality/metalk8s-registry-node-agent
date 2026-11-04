@@ -14,12 +14,6 @@ on:
         type: string
         required: false
         default: ""
-      upload-sbom:
-        description: >-
-          Whether to upload the sbom to the repository
-        type: boolean
-        required: false
-        default: false
   workflow_call:
     inputs:
       image-name:
@@ -33,12 +27,6 @@ on:
         type: string
         required: false
         default: ""
-      upload-sbom:
-        description: >-
-          Whether to upload the sbom to the repository
-        type: boolean
-        required: false
-        default: false
   
 jobs:
   generate-sbom:
@@ -62,13 +50,3 @@ jobs:
           version: ${{ inputs.image-version }}
           output_dir: /tmp
           output_file: sbom.json
-
-      - name: Upload sbom to repository
-        if: inputs.upload-sbom == true
-        uses: scality/sbom-upload@61aa17125ab1475f19d39dcb397902b283a60649 # v1.0.8
-        with:
-          url: ${{ vars.DEPENDENCY_TRACK_HOSTNAME }}
-          api-key: ${{ secrets.DEPENDENCY_TRACK_APIKEY }}
-          project-sbom: /tmp/sbom.json
-          parent-project-name: ${{ github.repository }}
-          parent-project-collection-logic: "NONE"
