@@ -64,4 +64,3 @@ jobs:
     with:
       image-name: ${{ needs.build.outputs.image-name }}
       image-version: ${{ needs.build.outputs.image-version }}
-      upload-sbom: false
