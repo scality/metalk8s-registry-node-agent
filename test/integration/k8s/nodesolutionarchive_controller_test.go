@@ -35,7 +35,7 @@ import (
 
 func archiveState(name, version, state string) func() float64 {
 	return func() float64 {
-		value, _ := utils.MetricValue("registry_nsa_state", map[string]string{
+		value, _ := utils.MetricValue("registry_nsoa_state", map[string]string{
 			"name": name, "version": version, "state": state,
 		})
 		return value
@@ -44,7 +44,7 @@ func archiveState(name, version, state string) func() float64 {
 
 func archiveStateExists(name, version string) func() bool {
 	return func() bool {
-		_, exists := utils.MetricValue("registry_nsa_state", map[string]string{
+		_, exists := utils.MetricValue("registry_nsoa_state", map[string]string{
 			"name": name, "version": version, "state": "initialized",
 		})
 		return exists
@@ -217,7 +217,7 @@ var _ = Describe("NodeSolutionArchive Controller", func() {
 			Expect(*createdResource.Status.Served).To(BeFalse())
 
 			By("counting the archive checksum failure")
-			checksumFailures, _ := utils.MetricValue("registry_nsa_integrity_failures_total", map[string]string{
+			checksumFailures, _ := utils.MetricValue("registry_nsoa_integrity_failures_total", map[string]string{
 				"name": "solution-2", "version": "4.2.1", "stage": "archive_checksum",
 			})
 			Expect(checksumFailures).To(BeNumerically(">=", 1))
