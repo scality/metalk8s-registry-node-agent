@@ -9,8 +9,8 @@ require (
 	github.com/moby/sys/mountinfo v0.7.3
 	github.com/oapi-codegen/nethttp-middleware v1.3.1
 	github.com/oapi-codegen/runtime v1.8.0
-	github.com/onsi/ginkgo/v2 v2.33.1
-	github.com/onsi/gomega v1.43.1
+	github.com/onsi/ginkgo/v2 v2.34.0
+	github.com/onsi/gomega v1.44.0
 	github.com/prometheus/client_golang v1.25.0
 	github.com/scality/go-errors v1.3.0
 	github.com/sethvargo/go-envconfig v1.4.3
