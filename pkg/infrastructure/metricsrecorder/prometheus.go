@@ -41,15 +41,15 @@ func keyOf(solutionArchive *domain.SolutionArchive) archiveKey {
 func NewPrometheus(registerer prometheus.Registerer) *Prometheus {
 	return &Prometheus{
 		archiveState: register(registerer, prometheus.NewGaugeVec(prometheus.GaugeOpts{
-			Name: "registry_nsa_state",
+			Name: "registry_nsoa_state",
 			Help: "State of a NodeSolutionArchive on this node (1 when the state is reached).",
 		}, []string{labelName, labelVersion, "state"})),
 		integrityFailures: register(registerer, prometheus.NewCounterVec(prometheus.CounterOpts{
-			Name: "registry_nsa_integrity_failures_total",
+			Name: "registry_nsoa_integrity_failures_total",
 			Help: "Number of integrity check failures of a solution archive, by stage.",
 		}, []string{labelName, labelVersion, "stage"})),
 		uploadRequests: register(registerer, prometheus.NewCounterVec(prometheus.CounterOpts{
-			Name: "registry_nsa_upload_requests_total",
+			Name: "registry_nsoa_upload_requests_total",
 			Help: "Number of upload requests handled by the external API, by solution archive and HTTP status code.",
 		}, []string{labelName, labelVersion, "code"})),
 		trackedArchives: map[archiveKey]struct{}{},

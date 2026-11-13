@@ -53,7 +53,7 @@ var _ = Describe("Upload Part API", func() {
 			Expect(*resUpl.JSON200.Version).To(Equal("3.0.0-preview.2"))
 
 			By("counting the http/200 response")
-			okRequests, _ := utils.MetricValue("registry_nsa_upload_requests_total", map[string]string{
+			okRequests, _ := utils.MetricValue("registry_nsoa_upload_requests_total", map[string]string{
 				"name":    "artesca-base",
 				"version": "3.0.0-preview.2",
 				"code":    "200",
@@ -160,7 +160,7 @@ var _ = Describe("Upload Part API", func() {
 				"version": "unknown",
 				"code":    "404",
 			}
-			unknownRequestsBefore, _ := utils.MetricValue("registry_nsa_upload_requests_total", unknownLabels)
+			unknownRequestsBefore, _ := utils.MetricValue("registry_nsoa_upload_requests_total", unknownLabels)
 
 			resUpl, err := testingSuite.ExternClientWithResponse.UploadChunkWithBodyWithResponse(
 				context.TODO(),
@@ -178,9 +178,9 @@ var _ = Describe("Upload Part API", func() {
 			Expect(resUpl.HTTPResponse.StatusCode).To(Equal(404))
 
 			By("counting the http/404 response without identifying the archive")
-			unknownRequests, _ := utils.MetricValue("registry_nsa_upload_requests_total", unknownLabels)
+			unknownRequests, _ := utils.MetricValue("registry_nsoa_upload_requests_total", unknownLabels)
 			Expect(unknownRequests).To(Equal(unknownRequestsBefore + 1))
-			_, found := utils.MetricValue("registry_nsa_upload_requests_total", map[string]string{
+			_, found := utils.MetricValue("registry_nsoa_upload_requests_total", map[string]string{
 				"name":    "artesca-base",
 				"version": "3.0.0-preview.3",
 				"code":    "404",
@@ -485,7 +485,7 @@ var _ = Describe("Upload Part API", func() {
 				"version": "127.0.4-badrange",
 				"code":    "400",
 			}
-			badRequestsBefore, _ := utils.MetricValue("registry_nsa_upload_requests_total", badRangeLabels)
+			badRequestsBefore, _ := utils.MetricValue("registry_nsoa_upload_requests_total", badRangeLabels)
 
 			By("sending a malformed Content-Range header")
 			resUpl, err := testingSuite.ExternClientWithResponse.UploadChunkWithBodyWithResponse(
@@ -505,7 +505,7 @@ var _ = Describe("Upload Part API", func() {
 			Expect(resUpl.ApplicationproblemJSON400).NotTo(BeNil())
 
 			By("counting the http/400 response")
-			badRequests, _ := utils.MetricValue("registry_nsa_upload_requests_total", badRangeLabels)
+			badRequests, _ := utils.MetricValue("registry_nsoa_upload_requests_total", badRangeLabels)
 			Expect(badRequests).To(Equal(badRequestsBefore + 1))
 		})
 	})
