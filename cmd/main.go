@@ -335,7 +335,7 @@ func main() {
 	// Start a garbage collector
 	// It will remove unused solutions archives
 	go func() {
-		setupLog.Info("starting garbage collector")
+		setupLog.Info("starting garbage collector", "disabled", cfg.DisableGC)
 		container.GetCleanArchivesUseCase().Execute(ctx)
 	}()
 

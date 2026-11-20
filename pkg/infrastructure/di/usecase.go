@@ -144,6 +144,7 @@ func (c *Container) GetCleanArchivesUseCase() *usecase.CleanArchive {
 			c.getFileSystemArchiveCleaner(),
 			c.GetFileSystemFileWatcher(),
 			c.deleteChan,
+			c.config.DisableGC,
 		)
 	}
 	return c.cleanArchivesUseCase
