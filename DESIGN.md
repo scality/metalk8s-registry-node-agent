@@ -20,7 +20,7 @@ The **MetalK8s Registry Node Agent** ("the agent") proposes a workflow with a Ku
 - **Peer-to-peer replication**: once an archive is available on a single registry node, the other registry nodes pull it from peers (no central storage required).
 - **End-to-end integrity**: optionally, verify the SHA-256 of the full archive against the value declared in the CR, and the SHA-256 of every downloaded chunk on the wire (`Content-Digest` trailer, RFC 9530).
 - **Defense in depth**: TLS for confidentiality, mTLS for authentication on both the upload (external) and download (internal) endpoints.
-- **Self-healing storage**: a periodic garbage collector removes archives, buckets and mount points that no longer match any active resource.
+- **Self-healing storage**: a periodic garbage collector removes archives, buckets and mount points that no longer match any active resource. It can be disabled with `REGISTRY_DISABLE_GC=true`, for example to copy an archive on disk before its resource is created.
 - **Operational visibility**: status sub-resource exposes `Initialized`, `Available`, `Served` flags and `Conditions`; standard liveness / readiness probes are exposed for Kubernetes.
 
 ### 2.2 Non-Goals
