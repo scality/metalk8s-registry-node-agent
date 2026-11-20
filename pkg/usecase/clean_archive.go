@@ -9,30 +9,49 @@ import (
 	"github.com/scality/metalk8s-registry-node-agent/pkg/service"
 )
 
+// CleanArchive is the garbage collector that removes archives and mounts
+// with no matching NodeSolutionArchive.
 type CleanArchive struct {
 	logger      *slog.Logger
 	cleaner     service.ArchiveCleaner
 	fileWatcher service.FileWatcher
 	deleteChan  chan domain.FileEventDetails
+	disabled    bool
 }
 
+// NewCleanArchive returns a CleanArchive. When disabled is true, the
+// deletion requests are read but nothing is removed.
 func NewCleanArchive(
 	logger *slog.Logger,
 	cleaner service.ArchiveCleaner,
 	fileWatcher service.FileWatcher,
 	deleteChan chan domain.FileEventDetails,
+	disabled bool,
 ) *CleanArchive {
 	return &CleanArchive{
 		logger:      logger.With(slog.String("use_case", "clean_archive")),
 		cleaner:     cleaner,
 		fileWatcher: fileWatcher,
 		deleteChan:  deleteChan,
+		disabled:    disabled,
 	}
 }
 
+// Execute reads deletion requests until the channel is closed. It removes
+// the unused archive or mount, unless the garbage collector is disabled.
 func (uc *CleanArchive) Execute(ctx context.Context) {
-	uc.logger.DebugContext(ctx, "Cleaning archives")
+	if uc.disabled {
+		uc.logger.InfoContext(ctx, "garbage collector disabled, unused archives are kept")
+	} else {
+		uc.logger.DebugContext(ctx, "Cleaning archives")
+	}
 	for eventDetails := range uc.deleteChan {
+		if uc.disabled {
+			uc.logger.DebugContext(ctx, "garbage collector disabled, skipping clean",
+				slog.String("path", eventDetails.FullPathName),
+			)
+			continue
+		}
 		switch eventDetails.Origin {
 		case domain.SolutionArchivesOrigin:
 			err := uc.cleaner.CleanUnusedSolutionArchives(
