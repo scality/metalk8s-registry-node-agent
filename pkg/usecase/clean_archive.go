@@ -47,7 +47,7 @@ func (uc *CleanArchive) Execute(ctx context.Context) {
 	}
 	for eventDetails := range uc.deleteChan {
 		if uc.disabled {
-			uc.logger.DebugContext(ctx, "garbage collector disabled, skipping clean",
+			uc.logger.InfoContext(ctx, "garbage collector disabled, skipping clean",
 				slog.String("path", eventDetails.FullPathName),
 			)
 			continue
