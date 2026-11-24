@@ -80,3 +80,10 @@ var (
 var (
 	ErrSolutionArchiveCleanerInternal error = errors.New("Internal Error")
 )
+
+var (
+	// ErrCAPoolLoad reports a CA bundle file that cannot be read or holds no valid certificate.
+	ErrCAPoolLoad error = errors.New("CA Pool Load Error")
+	// ErrCAPoolVerify reports a peer certificate that the current CA pool does not accept.
+	ErrCAPoolVerify error = errors.New("CA Pool Verify Error")
+)

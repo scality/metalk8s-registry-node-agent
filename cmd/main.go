@@ -349,6 +349,15 @@ func main() {
 		}
 	}
 
+	// Add the CA bundle watchers to the manager so renewed CAs are trusted live.
+	setupLog.Info("Adding application CA watchers to manager")
+	for _, caWatcher := range container.GetCAWatchers() {
+		if err := mgr.Add(caWatcher); err != nil {
+			setupLog.Error(err, "unable to add application CA watcher to manager")
+			os.Exit(1)
+		}
+	}
+
 	if err := mgr.AddHealthzCheck("healthz", healthz.Ping); err != nil {
 		setupLog.Error(err, "Failed to set up health check")
 		os.Exit(1)

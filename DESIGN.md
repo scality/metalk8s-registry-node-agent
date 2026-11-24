@@ -449,7 +449,7 @@ The agent assumes **strict per-archive serialisation**:
 | Concern               | Mitigation                                                                 |
 |-----------------------|----------------------------------------------------------------------------|
 | Confidentiality       | TLS on both APIs.      |
-| Authentication        | mTLS on both APIs; client CAs are operator-supplied and rotated by `cert-manager`. |
+| Authentication        | mTLS on both APIs; client CAs are operator-supplied and rotated by `cert-manager`. Key pairs and CA files are reloaded without a restart. |
 | Authorization         | Kubernetes RBAC for NSA + status + finalizers (kubebuilder markers in the controller). |
 | Integrity (at rest)   | SHA-256 of the full archive recomputed by `ValidateArchive`.               |
 | Integrity (on wire)   | Per-chunk SHA-256 in the `Content-Digest` trailer (RFC 9530).              |

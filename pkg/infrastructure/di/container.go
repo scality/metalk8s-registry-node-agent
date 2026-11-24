@@ -8,6 +8,7 @@ import (
 
 	"github.com/scality/metalk8s-registry-node-agent/cmd/config"
 	"github.com/scality/metalk8s-registry-node-agent/pkg/domain"
+	"github.com/scality/metalk8s-registry-node-agent/pkg/infrastructure/capool"
 	"github.com/scality/metalk8s-registry-node-agent/pkg/infrastructure/externaldownloader"
 	"github.com/scality/metalk8s-registry-node-agent/pkg/presentation/http/extern"
 	"github.com/scality/metalk8s-registry-node-agent/pkg/presentation/http/handler"
@@ -39,6 +40,9 @@ type Container struct {
 	externServerCertWatcher   *certwatcher.CertWatcher
 	internServerCertWatcher   *certwatcher.CertWatcher
 	internClientCertWatcher   *certwatcher.CertWatcher
+	externClientCAWatcher     *capool.Watcher
+	internClientCAWatcher     *capool.Watcher
+	internServerCAWatcher     *capool.Watcher
 	rootExternAPIPath         string
 	rootInternAPIPath         string
 	chunkSize                 int64
