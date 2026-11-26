@@ -67,6 +67,7 @@ The agent can be configured using environment variables:
 | `INTERN_CLIENT_AUTHN_CERT_FILE_PATH` | Path to mTLS Client Certificate for download feature | none |
 | `INTERN_CLIENT_AUTHN_KEY_FILE_PATH` | Path to mTLS Client Key for download feature | none |
 | `LOGGER_LOG_LEVEL` | Logging level | `info` |
+| `REGISTRY_DISABLE_GC` | Keep archives and mounts that match no `NodeSolutionArchive` (disables the garbage collector) | `false` |
 
 ### Kubernetes Configuration
 

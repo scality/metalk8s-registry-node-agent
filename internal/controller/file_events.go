@@ -334,7 +334,7 @@ func (f *FileEvents) queueReconcile(cr *metalk8sv1alpha1.NodeSolutionArchive) {
 
 // queueDeletion queues an eventDetails for deletion
 func (f *FileEvents) queueDeletion(eventDetails domain.FileEventDetails) {
-	f.logger.InfoContext(f.ctx, "queueing for deletion",
+	f.logger.InfoContext(f.ctx, "no matching Custom Resource, sending to garbage collector",
 		slog.Any("object_name", eventDetails.ObjectName),
 	)
 	f.deleteChan <- eventDetails

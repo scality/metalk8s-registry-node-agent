@@ -43,6 +43,10 @@ type (
 		// therefore how long an out-of-band unmount can stay unnoticed when the
 		// kernel does not report it through POLLPRI.
 		MountWatcherPollTimeoutMS int `env:"MOUNT_WATCHER_POLL_TIMEOUT_MS, default=600000"`
+
+		// DisableGC stops the removal of archives and mounts that match no
+		// NodeSolutionArchive.
+		DisableGC bool `env:"REGISTRY_DISABLE_GC, default=false"`
 	}
 
 	Extern struct {
