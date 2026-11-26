@@ -288,7 +288,7 @@ Channels are created in `cmd/main.go` and closed in reverse order at shutdown (`
 
 ## 6. Storage Layout
 
-Two directories are managed (locations are configurable):
+Two directories are managed (locations are configurable). At start, the `setup` init container reads the same variables and gives both directories to the non-root user of the agent:
 
 ```
 ${SOLUTION_ARCHIVES_LOCATION}/        # default: /archives

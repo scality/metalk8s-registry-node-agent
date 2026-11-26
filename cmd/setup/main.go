@@ -11,17 +11,31 @@ const (
 	NonRootGID = 65532
 )
 
+const (
+	devicesLocation                 = "/devices"
+	solutionArchivesLocationEnv     = "SOLUTION_ARCHIVES_LOCATION" // Must match Environment.SolutionArchivesLocation
+	defaultSolutionArchivesLocation = "/archives"                  // Must match Environment.SolutionArchivesLocation
+	solutionsLocationEnv            = "SOLUTIONS_LOCATION"         // Must match Environment.SolutionsLocation
+	defaultSolutionsLocation        = "/solutions"                 // Must match Environment.SolutionsLocation
+)
+
+// envOrDefault returns the value of the environment variable key, or fallback when it is unset or empty.
+func envOrDefault(key, fallback string) string {
+	if value, ok := os.LookupEnv(key); ok && value != "" {
+		return value
+	}
+	return fallback
+}
+
 func main() {
-	err := os.Chown("/devices", NonRootUID, NonRootGID)
-	if err != nil {
-		log.Fatalf("Error setting up permissions for /devices: %v", err)
+	paths := []string{
+		devicesLocation,
+		envOrDefault(solutionArchivesLocationEnv, defaultSolutionArchivesLocation),
+		envOrDefault(solutionsLocationEnv, defaultSolutionsLocation),
 	}
-	err = os.Chown("/archives", NonRootUID, NonRootGID)
-	if err != nil {
-		log.Fatalf("Error setting up permissions for /archives: %v", err)
-	}
-	err = os.Chown("/solutions", NonRootUID, NonRootGID)
-	if err != nil {
-		log.Fatalf("Error setting up permissions for /solutions: %v", err)
+	for _, path := range paths {
+		if err := os.Chown(path, NonRootUID, NonRootGID); err != nil {
+			log.Fatalf("Error setting up permissions for %s: %v", path, err)
+		}
 	}
 }

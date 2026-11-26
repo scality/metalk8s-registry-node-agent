@@ -51,8 +51,8 @@ The agent can be configured using environment variables:
 
 | Variable | Description | Default |
 |----------|-------------|---------|
-| `SOLUTION_ARCHIVES_LOCATION` | Root directory for solution archive storage | `/archives` |
-| `SOLUTIONS_LOCATION` | Root directory for solution archive storage | `/solutions` |
+| `SOLUTION_ARCHIVES_LOCATION` | Root directory for solution archive storage (also used by the `setup` init container) | `/archives` |
+| `SOLUTIONS_LOCATION` | Root directory for mounted solutions (also used by the `setup` init container) | `/solutions` |
 | `NODE_NAME` | Node name for which the controller listens for events | none |
 | `EXTERN_ADDR` | HTTP server address for upload feature | `:5001` |
 | `INTERN_ADDR` | HTTP server address for download between nodes | `:5002` |
@@ -68,6 +68,8 @@ The agent can be configured using environment variables:
 | `INTERN_CLIENT_AUTHN_KEY_FILE_PATH` | Path to mTLS Client Key for download feature | none |
 | `LOGGER_LOG_LEVEL` | Logging level | `info` |
 | `REGISTRY_DISABLE_GC` | Keep archives and mounts that match no `NodeSolutionArchive` (disables the garbage collector) | `false` |
+
+The `setup` init container gives these directories to the non-root user (UID/GID 65532). If you change them, set the same values on the `setup` and `manager` containers and change the volume `mountPath` values.
 
 ### Kubernetes Configuration
 
