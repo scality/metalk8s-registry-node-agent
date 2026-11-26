@@ -32,8 +32,8 @@ func (c *Container) getInternTLSConfig() *tls.Config {
 	return c.InternTLSConfig
 }
 
-// getInternTLSClientConfig returns the TLS config used to download from peer
-// nodes. The server certificate is checked against the current internal server CA.
+// getInternTLSClientConfig returns the base TLS config used to download from
+// peer nodes. It gives the client certificate.
 func (c *Container) getInternTLSClientConfig() *tls.Config {
 	if c.InternTLSClientConfig == nil {
 		internClientCertWatcher := c.getInternClientCertWatcher()
@@ -42,10 +42,6 @@ func (c *Container) getInternTLSClientConfig() *tls.Config {
 			GetClientCertificate: func(_ *tls.CertificateRequestInfo) (*tls.Certificate, error) {
 				return internClientCertWatcher.GetCertificate(nil)
 			},
-			// The default check would use a fixed RootCAs pool. VerifyConnection
-			// checks the chain and the host name with a pool that follows renewals.
-			InsecureSkipVerify: true, //nolint:gosec // Replaced by VerifyConnection below.
-			VerifyConnection:   c.getInternServerCAWatcher().VerifyServerConnection,
 		}
 	}
 	return c.InternTLSClientConfig

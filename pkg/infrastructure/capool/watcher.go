@@ -7,6 +7,7 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"log/slog"
+	"net"
 	"os"
 	"sync"
 	"sync/atomic"
@@ -105,13 +106,37 @@ func (w *Watcher) VerifyClientConnection(state tls.ConnectionState) error {
 	})
 }
 
-// VerifyServerConnection checks the server certificate and host name of a TLS
-// connection against the current pool. It is meant for tls.Config.VerifyConnection.
-func (w *Watcher) VerifyServerConnection(state tls.ConnectionState) error {
-	return w.verify(state, x509.VerifyOptions{
-		DNSName:   state.ServerName,
-		KeyUsages: []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
-	})
+// DialTLSContext returns a TLS dial function for http.Transport, based on a
+// copy of base. It checks the server certificate against the current pool and
+// the dialed host, which can be an IP address.
+func (w *Watcher) DialTLSContext(base *tls.Config) func(ctx context.Context, network, addr string) (net.Conn, error) {
+	return func(ctx context.Context, network, addr string) (net.Conn, error) {
+		host, _, err := net.SplitHostPort(addr)
+		if err != nil {
+			return nil, errors.Wrap(domain.ErrCAPoolVerify,
+				errors.WithIdentifier(259),
+				errors.WithDetail("invalid address to dial"),
+				errors.WithProperty("address", addr),
+				errors.CausedBy(err),
+			)
+		}
+
+		config := base.Clone()
+		if config.ServerName == "" {
+			config.ServerName = host
+		}
+		// The default check would use a fixed RootCAs pool. VerifyConnection checks
+		// the chain and the dialed host with a pool that follows renewals.
+		config.InsecureSkipVerify = true //nolint:gosec // Replaced by VerifyConnection below.
+		config.VerifyConnection = func(state tls.ConnectionState) error {
+			return w.verify(state, x509.VerifyOptions{
+				DNSName:   host,
+				KeyUsages: []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
+			})
+		}
+
+		return (&tls.Dialer{Config: config}).DialContext(ctx, network, addr)
+	}
 }
 
 // verify checks the peer certificate chain of state with opts and the current pool.

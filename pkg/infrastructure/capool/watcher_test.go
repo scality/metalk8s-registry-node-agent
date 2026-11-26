@@ -78,6 +78,12 @@ func newCA(t *testing.T, name string) *testCA {
 // leaf returns a key pair signed by ca, for a client or a server on 127.0.0.1.
 func (ca *testCA) leaf(t *testing.T, usage x509.ExtKeyUsage) tls.Certificate {
 	t.Helper()
+	return ca.leafFor(t, usage, "127.0.0.1")
+}
+
+// leafFor returns a key pair signed by ca, for a client or a server on ip.
+func (ca *testCA) leafFor(t *testing.T, usage x509.ExtKeyUsage, ip string) tls.Certificate {
+	t.Helper()
 	key := newKey(t)
 	template := &x509.Certificate{
 		SerialNumber: big.NewInt(serialNumber.Add(1)),
@@ -86,7 +92,7 @@ func (ca *testCA) leaf(t *testing.T, usage x509.ExtKeyUsage) tls.Certificate {
 		NotAfter:     time.Now().Add(time.Hour),
 		KeyUsage:     x509.KeyUsageDigitalSignature,
 		ExtKeyUsage:  []x509.ExtKeyUsage{usage},
-		IPAddresses:  []net.IP{net.ParseIP("127.0.0.1")},
+		IPAddresses:  []net.IP{net.ParseIP(ip)},
 	}
 	der, err := x509.CreateCertificate(rand.Reader, template, ca.cert, &key.PublicKey, ca.key)
 	if err != nil {
@@ -190,21 +196,69 @@ func TestVerifyClientConnectionRejects(t *testing.T) {
 	}
 }
 
-func TestVerifyServerConnectionChecksHostName(t *testing.T) {
-	ca := newCA(t, "ca")
+// serveTLS starts an HTTPS server on 127.0.0.1 with cert and returns its URL.
+func serveTLS(t *testing.T, cert tls.Certificate) string {
+	t.Helper()
+	listener, err := tls.Listen("tcp", "127.0.0.1:0", &tls.Config{Certificates: []tls.Certificate{cert}})
+	if err != nil {
+		t.Fatalf("listen: %v", err)
+	}
+	server := &http.Server{
+		Handler: http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+			w.WriteHeader(http.StatusNoContent)
+		}),
+		ErrorLog:          log.New(io.Discard, "", 0),
+		ReadHeaderTimeout: testTimeout,
+	}
+	go func() { _ = server.Serve(listener) }()
+	t.Cleanup(func() { _ = server.Close() })
+	return "https://" + listener.Addr().String()
+}
+
+// getStatus sends a GET to url with client and drains the response.
+func getStatus(client *http.Client, url string) error {
+	response, err := client.Get(url)
+	if err != nil {
+		return err
+	}
+	_, _ = io.Copy(io.Discard, response.Body)
+	return response.Body.Close()
+}
+
+func TestDialTLSContextChecksHostName(t *testing.T) {
+	ca, other := newCA(t, "ca"), newCA(t, "other")
 	path := filepath.Join(t.TempDir(), "ca.crt")
 	writeFile(t, path, ca.pem)
 	w := newWatcher(t, path)
 
-	state := clientState(ca.leaf(t, x509.ExtKeyUsageServerAuth))
-	state.ServerName = "127.0.0.1"
-	if err := w.VerifyServerConnection(state); err != nil {
+	client := &http.Client{Transport: &http.Transport{
+		DialTLSContext:    w.DialTLSContext(&tls.Config{MinVersion: tls.VersionTLS12}),
+		DisableKeepAlives: true,
+	}}
+
+	if err := getStatus(client, serveTLS(t, ca.leaf(t, x509.ExtKeyUsageServerAuth))); err != nil {
 		t.Errorf("valid server rejected: %v", err)
 	}
 
-	state.ServerName = "other.example"
-	if err := w.VerifyServerConnection(state); !errors.Is(err, domain.ErrCAPoolVerify) {
-		t.Errorf("wrong host name: got %v, want ErrCAPoolVerify", err)
+	cases := map[string]tls.Certificate{
+		"wrong IP":    ca.leafFor(t, x509.ExtKeyUsageServerAuth, "10.0.0.1"),
+		"unknown CA":  other.leaf(t, x509.ExtKeyUsageServerAuth),
+		"client-only": ca.leaf(t, x509.ExtKeyUsageClientAuth),
+	}
+	for name, cert := range cases {
+		if err := getStatus(client, serveTLS(t, cert)); !errors.Is(err, domain.ErrCAPoolVerify) {
+			t.Errorf("%s: got %v, want ErrCAPoolVerify", name, err)
+		}
+	}
+}
+
+func TestDialTLSContextRejectsBadAddress(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "ca.crt")
+	writeFile(t, path, newCA(t, "ca").pem)
+	dial := newWatcher(t, path).DialTLSContext(&tls.Config{MinVersion: tls.VersionTLS12})
+
+	if _, err := dial(context.Background(), "tcp", "no-port"); !errors.Is(err, domain.ErrCAPoolVerify) {
+		t.Errorf("got %v, want ErrCAPoolVerify", err)
 	}
 }
 
@@ -327,25 +381,18 @@ func TestMutualTLSAfterRenewal(t *testing.T) {
 	serverURL := "https://" + listener.Addr().String()
 
 	newClient := func(withCert bool) *http.Client {
-		config := &tls.Config{
-			InsecureSkipVerify: true, //nolint:gosec // Replaced by VerifyConnection.
-			VerifyConnection:   serverCAWatcher.VerifyServerConnection,
-		}
+		config := &tls.Config{MinVersion: tls.VersionTLS12}
 		if withCert {
 			config.GetClientCertificate = func(*tls.CertificateRequestInfo) (*tls.Certificate, error) {
 				return clientCert.Load(), nil
 			}
 		}
-		return &http.Client{Transport: &http.Transport{TLSClientConfig: config, DisableKeepAlives: true}}
+		return &http.Client{Transport: &http.Transport{
+			DialTLSContext:    serverCAWatcher.DialTLSContext(config),
+			DisableKeepAlives: true,
+		}}
 	}
-	get := func(client *http.Client) error {
-		response, err := client.Get(serverURL)
-		if err != nil {
-			return err
-		}
-		_, _ = io.Copy(io.Discard, response.Body)
-		return response.Body.Close()
-	}
+	get := func(client *http.Client) error { return getStatus(client, serverURL) }
 
 	client := newClient(true)
 	if err := get(client); err != nil {

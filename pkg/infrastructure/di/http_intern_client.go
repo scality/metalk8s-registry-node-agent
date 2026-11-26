@@ -15,11 +15,14 @@ import (
 
 func (c *Container) GetHTTPInternClient() *http.Client {
 	if c.httpInternClient == nil {
-		c.httpInternClient = &http.Client{
-			Transport: &http.Transport{
-				TLSClientConfig: c.getInternTLSClientConfig(),
-			},
+		transport := &http.Transport{}
+		if c.InternTLSClientConfig != nil {
+			// A config set from outside (tests) keeps its own server check.
+			transport.TLSClientConfig = c.InternTLSClientConfig
+		} else {
+			transport.DialTLSContext = c.getInternServerCAWatcher().DialTLSContext(c.getInternTLSClientConfig())
 		}
+		c.httpInternClient = &http.Client{Transport: transport}
 	}
 
 	return c.httpInternClient
